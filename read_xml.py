@@ -75,14 +75,11 @@ class Case(object):
 						other core parameters that do not change during a cycle depletion.
 						The geometric objects inside the core are defined in separate input blocks; the [CORE] block
 						simply describes how all of these objects are placed together.'''
-						do_core_stuff = True
-						
-						
 						# The CORE block will contain the deck's global materials
 						# and some other stuff
 						for core_child in child:
 							cname = core_child.attrib["name"].lower()	# for brevity
-							if cname == "materials":
+							if core_child.tag == "ParameterList" and cname == "materials":
 								# Create a material object for each listed material
 								for mat in core_child:
 									
@@ -105,18 +102,35 @@ class Case(object):
 										else:
 											print "Warning: unused property", p
 									
+									# Check if isotopic fractions each have an associated element
+									if len(mfracs) != len(miso_names):
+										warning = "Unequal number of isotopes and associated fractions in material", mname
+										raise IndexError(warning)
+									
 									# Instantiate a new material and add it to the dictionary
 									a_material = Material(mname, mdens, mfracs, miso_names)
 									self.materials[mname] = a_material
-										
-										
-
+																
+							elif core_child.tag == "ParameterList":
+								print "Unknown parameter list: " + cname + ". Ignoring."
 								
+							elif core_child.tag == "Parameter":
+								# TODO: This is where the program gets boundary conditions and various other core properties.
+								# Things to watch for: apitch, assm_map, bc_bot, bc_rad, bc_top, core_size, height,
+								# 	rated_flow, rated_power, and shape
+								continue
+								
+									
 							else:
-								print core_child
+								print "Entry", core_child.tag, "is neither a Parameter nor ParameterList. Ignoring."
 						
 					elif name == "ASSEMBLIES":
-						do_assemblies_stuff = True
+						'''Cell cards are used to describe pin cells. A pin cell is defined as a configuration of concentric
+						cylinders (or rings) centered in a square region of coolant. Cell configurations can be used to
+						model fuel rods or guide tubes. Parameters include cell ID, a list of radii for each ring
+						in the cell, and a list of materials that compose each ring.'''
+						# TODO: Get cells, materials, and all that stuff from the Assemblies block
+						# TODO: Check for duplicate materials. (Probably at the end of __init__)
 					elif name == "STATES":
 						do_states_stuff = True
 					elif name == "CONTROL":
@@ -152,7 +166,7 @@ class Case(object):
 
 		if self.materials:
 			print "Materials:"
-			for mat in self.materials:
+			for mat in self.materials.values():
 				print ' - ', str(mat)
 		else:
 			print "No materials found."
@@ -176,7 +190,7 @@ class Material(object):
 
 	def __str__(self):
 		'''Use this to print a brief description of each material'''
-		description = self.key_name + ' @ ' + str(self.density) + ' g/cc (' + str(len(self.mat_names)) + ' isotopes)'
+		description = self.key_name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.mat_names)) + ' isotopes)'
 		return description
 
 
@@ -184,13 +198,14 @@ class Material(object):
 # Instantiate a case with a simple VERA XML.gold
 case2a = Case("2a_dep.xml.gold")
 print "Testing:",  case2a
+'''
 # 'root' should be the master ParameterList
 print "Let's see what 'root' has:"
 print "root.tag:\t", case2a.root.tag
 print "root.attrib:\t", case2a.root.attrib
 print "root.attrib[\"name\"]\t", case2a.root.attrib["name"]
+'''
 
-name = "Placeholder name"
 print "\nInspecting the children"
 for child in case2a.root:
 	# Expect to see the case_id, which is the name of this deck
@@ -200,11 +215,9 @@ for child in case2a.root:
 		print child.attrib["name"]
 		
 
-case2a.describe()
+#case2a.describe()
 
-# This line should fix the describe() function
-for val in case2a.materials.values():
-	print str(val)
+
 
 # useful stuff later on
 ''''
