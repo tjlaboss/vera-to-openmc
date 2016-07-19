@@ -4,6 +4,7 @@
 # This is my first time working with XML in Python. Bear with me.
 
 import xml.etree.ElementTree as ET
+from docutils.utils.math.latex2mathml import mfrac
 
 
 '''The VERAin XML files have the following structure:
@@ -42,6 +43,12 @@ class Case(object):
 		self.usable = ("CORE", "INSERT", "STATES", "CONTROL", "DETECTOR", "ASSEMBLIES") # Relevant to OpenMC
 		self.ignore = ("SHIFT", "MPACT", "INSILICO")			# Blocks specific to other codes 
 		
+		# Initialize some parameters with empty lists
+		self.materials = {}
+		self.states = []
+		# and more to come... 
+		
+		
 		# Get and categorize a few important params
 		# All entries should be either "Parameter" or "ParameterList"
 		for child in self.root:
@@ -57,11 +64,71 @@ class Case(object):
 			
 			elif child.tag == "ParameterList":
 				# Proper use of recursion could probably save me a lot of effort here.
-				if child.attrib["name"].upper() in self.ignore:
-					print "Ignoring block", child.attrib["name"]
-				elif child.attrib["name"].upper() in self.usable:
+				name = child.attrib["name"].upper()	# for brevity
+				if name in self.ignore:
+					print "Ignoring block", name
+				elif name in self.usable:
 					# Then handle them appropriately
-					print "Todo: write this block of code"
+					if name == "CORE":
+						'''The [CORE] block describes the nuclear reactor core configuration. This block describes the core
+						layout, including the placement of nuclear fuel assemblies, control rods, detectors, inserts, and
+						other core parameters that do not change during a cycle depletion.
+						The geometric objects inside the core are defined in separate input blocks; the [CORE] block
+						simply describes how all of these objects are placed together.'''
+						do_core_stuff = True
+						
+						
+						# The CORE block will contain the deck's global materials
+						# and some other stuff
+						for core_child in child:
+							cname = core_child.attrib["name"].lower()	# for brevity
+							if cname == "materials":
+								# Create a material object for each listed material
+								for mat in core_child:
+									
+									# Initialize the 4 material properties
+									mname = ""; mdense = 0.0; mfracs = []; miso_names = []
+										
+									for property in mat:
+										p = property.attrib["name"]
+										v = property.attrib["value"]
+										if p == "key_name":
+											mname = v
+										elif p == "density":
+											mdens = float(v)
+										elif p == "mat_fracs":
+											# Convert a string to a list of floating point numbers
+											mfracs = map(float, v.strip('}').strip('{').split(','))
+										elif p == "mat_names":
+											# Convert a string to a list of strings
+											miso_names = v.strip('}').strip('{').split(',')
+										else:
+											print "Warning: unused property", p
+									
+									# Instantiate a new material and add it to the dictionary
+									a_material = Material(mname, mdens, mfracs, miso_names)
+									self.materials[mname] = a_material
+										
+										
+
+								
+							else:
+								print core_child
+						
+					elif name == "ASSEMBLIES":
+						do_assemblies_stuff = True
+					elif name == "STATES":
+						do_states_stuff = True
+					elif name == "CONTROL":
+						do_controlt_stuff = True
+					elif name == "DETECTOR":
+						do_detector_stuff = True
+					elif name == "INSERT":
+						do_insert_stuff = True
+					
+					# tmp
+					else:
+						print name
 				
 				else:
 					print "Unexpected block encountered:\t", child.attrib["name"]
@@ -78,6 +145,39 @@ class Case(object):
 		'''Return the name of the VERA input case if I try to print this object'''
 		return self.case_id
 
+	def describe(self):
+		'''Print out some useful information about this object.'''
+		print "\ncase_id:", self.case_id
+		
+
+		if self.materials:
+			print "Materials:"
+			for mat in self.materials:
+				print ' - ', str(mat)
+		else:
+			print "No materials found."
+
+		if self.states:
+			print "States:"
+			for stat in self.states:
+				print stat
+		else:
+			print "No states found."
+
+
+
+class Material(object):
+	'''Basics of a material card'''
+	def __init__(self, key_name, density, mat_fracs, mat_names):
+		self.key_name = key_name
+		self.density = density
+		self.mat_fracs = mat_fracs
+		self.mat_names = mat_names
+
+	def __str__(self):
+		'''Use this to print a brief description of each material'''
+		description = self.key_name + ' @ ' + str(self.density) + ' g/cc (' + str(len(self.mat_names)) + ' isotopes)'
+		return description
 
 
 
@@ -100,6 +200,11 @@ for child in case2a.root:
 		print child.attrib["name"]
 		
 
+case2a.describe()
+
+# This line should fix the describe() function
+for val in case2a.materials.values():
+	print str(val)
 
 # useful stuff later on
 ''''
