@@ -4,7 +4,6 @@
 # This is my first time working with XML in Python. Bear with me.
 
 import xml.etree.ElementTree as ET
-from docutils.utils.math.latex2mathml import mfrac
 
 
 '''The VERAin XML files have the following structure:
@@ -84,7 +83,7 @@ class Case(object):
 								for mat in core_child:
 									
 									# Initialize the 4 material properties
-									mname = ""; mdense = 0.0; mfracs = []; miso_names = []
+									mname = ""; mdens = 0.0; mfracs = []; miso_names = []
 										
 									for property in mat:
 										p = property.attrib["name"]
@@ -131,10 +130,15 @@ class Case(object):
 						in the cell, and a list of materials that compose each ring.'''
 						# TODO: Get cells, materials, and all that stuff from the Assemblies block
 						# TODO: Check for duplicate materials. (Probably at the end of __init__)
+						
+						for asmbly_child in child:
+							cname = asmbly.attrib["name"].lower()	# for brevity
+						
+						
 					elif name == "STATES":
 						do_states_stuff = True
 					elif name == "CONTROL":
-						do_controlt_stuff = True
+						do_control_stuff = True
 					elif name == "DETECTOR":
 						do_detector_stuff = True
 					elif name == "INSERT":
