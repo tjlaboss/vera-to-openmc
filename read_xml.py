@@ -47,9 +47,14 @@ class Case(object):
 		self.states = []
 		# and more to come... 
 		
+		# Then populate
+		self.__read_xml()
 		
-		# Get and categorize a few important params
-		# All entries should be either "Parameter" or "ParameterList"
+		
+	
+	def __read_xml(self):
+		'''Get and categorize the important parameters from self.source_file
+		All entries should be either "Parameter" or "ParameterList"'''
 		for child in self.root:
 			if child.tag == "Parameter":
 				# Get the name of the case
@@ -79,36 +84,10 @@ class Case(object):
 						for core_child in child:
 							cname = core_child.attrib["name"].lower()	# for brevity
 							if core_child.tag == "ParameterList" and cname == "materials":
-								# Create a material object for each listed material
 								for mat in core_child:
-									
-									# Initialize the 4 material properties
-									mname = ""; mdens = 0.0; mfracs = []; miso_names = []
-										
-									for property in mat:
-										p = property.attrib["name"]
-										v = property.attrib["value"]
-										if p == "key_name":
-											mname = v
-										elif p == "density":
-											mdens = float(v)
-										elif p == "mat_fracs":
-											# Convert a string to a list of floating point numbers
-											mfracs = map(float, v.strip('}').strip('{').split(','))
-										elif p == "mat_names":
-											# Convert a string to a list of strings
-											miso_names = v.strip('}').strip('{').split(',')
-										else:
-											print "Warning: unused property", p
-									
-									# Check if isotopic fractions each have an associated element
-									if len(mfracs) != len(miso_names):
-										warning = "Unequal number of isotopes and associated fractions in material", mname
-										raise IndexError(warning)
-									
-									# Instantiate a new material and add it to the dictionary
-									a_material = Material(mname, mdens, mfracs, miso_names)
-									self.materials[mname] = a_material
+									# Create a material object for each listed material
+									new_material = self.__get_material(mat)
+									self.materials[new_material.key_name] = new_material
 																
 							elif core_child.tag == "ParameterList":
 								print "Unknown parameter list: " + cname + ". Ignoring."
@@ -132,7 +111,24 @@ class Case(object):
 						# TODO: Check for duplicate materials. (Probably at the end of __init__)
 						
 						for asmbly_child in child:
-							cname = asmbly.attrib["name"].lower()	# for brevity
+							cname = asmbly_child.attrib["name"].lower()	# for brevity	
+							for asmbly_grandchild in asmbly_child:
+								gname = asmbly_grandchild.attrib["name"].lower()
+								if asmbly_grandchild.tag == "ParameterList":
+									if gname == "cells":
+										# TODO: Extract the information about the cells
+										print "reached cells"
+										continue
+									elif gname ==  "fuels":
+										# More materials be here
+										print "reached fuels"
+										continue
+									else:
+										print "Unknown Assembly_ASSY ParameterList", gname, "-- ignoring"
+								elif asmbly_grandchild.tag == "Parameter":
+									print "Unsure what to do with Parameter", gname, "at this point"
+								else:
+									print "Entry", asmbly_grandchild.tag, "is neither a Parameter nor ParameterList. Ignoring."
 						
 						
 					elif name == "STATES":
@@ -158,6 +154,45 @@ class Case(object):
 				print "Expected either Parameter or ParameterList. There is probably something wrong with the XMl."
 		 
 		# note; end of the for loop
+	
+	
+	def __get_material(self, mat):
+		'''When a material or fuel block is encountered in the XML,
+		extract the useful information.
+		
+		Creates an instance of the Material object and returns it.'''
+		
+		# Initialize the 4 material properties
+		mname = ""; mdens = 0.0; mfracs = []; miso_names = []
+			
+		for prop in mat:
+			p = prop.attrib["name"]
+			v = prop.attrib["value"]
+			if p == "key_name":
+				mname = v
+			elif p == "density":
+				mdens = float(v)
+			elif p == "mat_fracs":
+				# Convert a string to a list of floating point numbers
+				mfracs = map(float, v.strip('}').strip('{').split(','))
+			elif p == "mat_names":
+				# Convert a string to a list of strings
+				miso_names = v.strip('}').strip('{').split(',')
+			else:
+				print "Warning: unused property", p
+		
+		# Check if isotopic fractions each have an associated element
+		if len(mfracs) != len(miso_names):
+			warning = "Unequal number of isotopes and associated fractions in material", mname
+			raise IndexError(warning)
+		
+		# Instantiate a new material and add it to the dictionary
+		a_material = Material(mname, mdens, mfracs, miso_names)
+		return a_material
+		
+		
+
+	
 		
 	def __str__(self):
 		'''Return the name of the VERA input case if I try to print this object'''
