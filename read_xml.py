@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 </ParameterList>
 
 One big ParameterList of ParameterLists containing Parameters and ParameterLists (themselves containing other Parameters and ParameterLists)
-The goal here is to extract all of the information needed to construct OpenCG or OpenMC objects. Haven't figured that out yet.
+The goal here is to extract all of the information needed to construct OpenCG or OpenMC objects. Haven't figured out how to do that part yet.
 '''
 
 class Case(object):
@@ -25,9 +25,9 @@ class Case(object):
 	This is a class of such a case.'''
 	
 	def __init__(self, source_file):
-		'''Initialize with a few key values from the XML'''
+		'''Loads the VERA XML file, creates some placeholder variables, and calls __read_xml()'''
 		
-		# Location in the filesystem of the VERA XML.gold
+		# Location in the file system of the VERA XML.gold
 		self.source_file = source_file
 		
 		# Read the XML file from disk
@@ -47,7 +47,7 @@ class Case(object):
 		self.states = []
 		# and more to come... 
 		
-		# Then populate
+		# Then populate everything:
 		self.__read_xml()
 		
 		
@@ -152,7 +152,7 @@ class Case(object):
 			else:
 				print "child.tag =", child.tag, "-- Ignoring."
 				print "Expected either Parameter or ParameterList. There is probably something wrong with the XMl."
-		 
+		
 		# note; end of the for loop
 	
 	
@@ -160,7 +160,11 @@ class Case(object):
 		'''When a material or fuel block is encountered in the XML,
 		extract the useful information.
 		
-		Creates an instance of the Material object and returns it.'''
+		Inputs:
+			mat: The ParameterList object describing a VERA material
+		
+		Outputs:
+			a_material: Instance of the Material object populated with the properties from the XML.'''
 		
 		# Initialize the 4 material properties
 		mname = ""; mdens = 0.0; mfracs = []; miso_names = []
@@ -189,9 +193,6 @@ class Case(object):
 		# Instantiate a new material and add it to the dictionary
 		a_material = Material(mname, mdens, mfracs, miso_names)
 		return a_material
-		
-		
-
 	
 		
 	def __str__(self):
@@ -199,23 +200,24 @@ class Case(object):
 		return self.case_id
 
 	def describe(self):
-		'''Print out some useful information about this object.'''
-		print "\ncase_id:", self.case_id
+		'''Returns some useful information about this object as a string.'''
+		d = "\ncase_id: " + self.case_id
 		
-
 		if self.materials:
-			print "Materials:"
+			d += "\nMaterials:"
 			for mat in self.materials.values():
-				print ' - ', str(mat)
+				d += '\n - ' + str(mat)
 		else:
-			print "No materials found."
+			d += "\nNo materials found."
 
 		if self.states:
-			print "States:"
+			d += "\nStates:"
 			for stat in self.states:
-				print stat
+				d += str(stat)
 		else:
-			print "No states found."
+			d += "No states found."
+		
+		return d
 
 
 
@@ -254,14 +256,9 @@ for child in case2a.root:
 		print child.attrib["name"]
 		
 
-#case2a.describe()
+#print case2a.describe()
 
 
-
-# useful stuff later on
-''''
-'mat_fracs.strip('}').strip('{').split(',')  # extracts material fractions from the provided string array
-'''
 
 
 
