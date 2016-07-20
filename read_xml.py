@@ -88,6 +88,8 @@ class Case(object):
 									# Create a material object for each listed material
 									new_material = self.__get_material(mat)
 									self.materials[new_material.key_name] = new_material
+									# WARNING: Right now, this overwrites any material that has the same key.
+									# Check if the objects are the same (that is, have the same attributes) before doing this.
 																
 							elif core_child.tag == "ParameterList":
 								print "Unknown parameter list: " + cname + ". Ignoring."
@@ -120,9 +122,15 @@ class Case(object):
 										print "reached cells"
 										continue
 									elif gname ==  "fuels":
-										# More materials be here
-										print "reached fuels"
-										continue
+										# More materials are found here
+										# TODO: "Fuel" and "Material" blocks are written differently.
+										# Probably need to create a Fuel class that creates the appropriate Material object.
+										for mat in asmbly_grandchild:
+											# Create a material object for each listed material
+											new_material = self.__get_material(mat)
+											self.materials[new_material.key_name] = new_material
+											# WARNING: Right now, this overwrites any material that has the same key.
+											# Check if the objects are the same (that is, have the same attributes) before doing this.
 									else:
 										print "Unknown Assembly_ASSY ParameterList", gname, "-- ignoring"
 								elif asmbly_grandchild.tag == "Parameter":
@@ -153,7 +161,7 @@ class Case(object):
 				print "child.tag =", child.tag, "-- Ignoring."
 				print "Expected either Parameter or ParameterList. There is probably something wrong with the XMl."
 		
-		# note; end of the for loop
+		# note; end of the giant for loop
 	
 	
 	def __get_material(self, mat):
@@ -233,6 +241,63 @@ class Material(object):
 		'''Use this to print a brief description of each material'''
 		description = self.key_name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.mat_names)) + ' isotopes)'
 		return description
+
+
+class Fuel(Material):
+	'''A Material that is described differently.
+	
+	Fuel materials are defined with fuel cards. Fuel materials are heavy metal oxides which are
+	usually UO 2 with different U-235 enrichments. Fuel materials may also include MOX fuel, which
+	consists of mixtures of uranium, plutonium and other actinides. Fuel materials are different from
+	structural materials in that they deplete and have additional properties as described below.'''
+	
+	
+	'''
+	fuel user-mat density thden / U-235 enrichment {HM material i =HM enrichment i , i=1, N}
+	{ / gad material=gad fraction }
+	
+	Where:
+		* user-mat is a user-defined fuel name.
+		* density is the fuel material density in g/cc.
+		* thden is the percent of theoretical density in the pellet (%). The theoretical density
+			is only used to look up material properties in the fuel performance, it is not used
+			to calculate number densities. There is no "double counting" between density and thden.
+		* U-235 enrichment is the U-235 enrichment in the fuel in weight % (No default).
+			- If U-234 and U-236 are not specified, they will automatically be added to the fuel by
+				a pre-determined function (see below)
+			- If the sum of the heavy metal (HM) enrichments does not equal 100%, the remainder
+				of the HM composition will be assigned to U-238.
+		* HM material i is the material name for HM isotope i (Pu-239, Pu-241, etc.) (optional) The
+			names of the HM materials must be valid library-names.
+		* HM enrichment i is the enrichment of HM isotope i in weight % (optional)
+		* gad material is the material name for the gadolina oxide (or other material) (optional). The
+			gad material is usually a mixture defined on a separate mat card.
+		* gad fraction is the weight percent of the gad material relative to the total fuel mass (optional)
+			Oxygen should not be included on the fuel card. The correct amount of oxygen will automatically
+			be added to the HM to create an oxide (either UO 2 or (HM)O 2 ).
+			The density is the "stack density" or "smeared density" and should include the volume of the
+			pellet dishing and chamfers. It is calculated as the total mass of the fuel pellets divided by the
+			total volume of the fuel
+		
+			                               (fuel mass)
+			stack density =   ----------------------------------------
+								pi*(pellet radius)^2 * (fuel height)
+		
+		The thden refers to the actual theoretical density of the pellet. This quantity is used in fuel
+		performance codes to evaluate material properties.
+	'''
+	
+	# So if I understand that all correctly, for the purposes of OpenMC, I only need to 
+	# extract the key_name; density; fuel_names; and enrichment.
+	#
+	# From those, calculate the weight fractions for each isotope, 
+	# and add the proper quantity of oxygen to the material.
+	#
+	# This may be better suited to a Case.__get_fuel() method that just creates a vanilla
+	# Material object, instead.
+	
+	
+	
 
 
 
