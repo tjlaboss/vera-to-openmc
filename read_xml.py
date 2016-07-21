@@ -4,6 +4,7 @@
 # This is my first time working with XML in Python. Bear with me.
 
 import xml.etree.ElementTree as ET
+from _snack import label
 
 
 '''The VERAin XML files have the following structure:
@@ -44,6 +45,7 @@ class Case(object):
 		
 		# Initialize some parameters with empty lists
 		self.materials = {}
+		self.assemblies = {}
 		self.states = []
 		# and more to come... 
 		
@@ -113,15 +115,21 @@ class Case(object):
 						# TODO: Check for duplicate materials. (Probably at the end of __init__)
 						
 						for asmbly in child:
-							cname = asmbly.attrib["name"].lower()	# for brevity	
+							cname = asmbly.attrib["name"].lower()	# for brevity
+							# dictionary of all independent parameters for this assembly
+							asmbly_params = {}
+							grids = {}
+									
 							for asmbly_child in asmbly:
-								gname = asmbly_child.attrib["name"].lower()
-								if asmbly_child.tag == "ParameterList":
-									if gname == "cells":
+								aname = asmbly_child.attrib["name"].lower()
+								if asmbly_child.tag == "Parameter":
+									asmbly_params[aname] = asmbly_child.attrib["value"]
+								elif asmbly_child.tag == "ParameterList":
+									if aname == "cells":
 										# TODO: Extract the information about the cells
 										print "reached cells"
 										continue
-									elif gname ==  "fuels":
+									elif aname ==  "fuels":
 										# More materials are found here
 										# TODO: "Fuel" and "Material" blocks are written differently.
 										# Probably need to create a Fuel class that creates the appropriate Material object.
@@ -131,21 +139,31 @@ class Case(object):
 											self.materials[new_material.key_name] = new_material
 											# WARNING: Right now, this overwrites any material that has the same key.
 											# TODO: Check if the objects are the same (that is, have the same attributes) before doing this.
+									elif aname ==  "spacergrids":
+										for grid in asmbly_child:
+											new_grid = self.__get_grid(grid)
+											grids[new_grid.name] = new_grid
+												
+									
 									else:
-										print "Unknown ASSEMBLIES.ParameterList", gname, "-- ignoring"
-								elif asmbly_child.tag == "Parameter":
-									print "Unsure what to do with Parameter", gname, "at this point"
+										print "Unknown ASSEMBLIES.ParameterList", aname, "-- ignoring"
+								
 								else:
-									print "Entry", asmbly_child.tag, "is neither a Parameter nor ParameterList. Ignoring."
+									print "Entry", asmbly_child.tag, "is neitherPass on the assembly Parameters to the instance a Parameter nor ParameterList. Ignoring."
+							
+							# Instantiate an Assembly object and pass it the parameters
+							new_assembly = Assembly(name = cname, spacergrids = grids, params = asmbly_params)
+							self.assemblies[cname] = new_assembly
+							print "Unsure what to do with", len(asmbly_params), "Parameters at this point."
 						
 						
 					elif name == "STATES":
 						do_states_stuff = True
-					elif name == "CONTROL":
+					elif name == "CONTROLS":
 						do_control_stuff = True
-					elif name == "DETECTOR":
+					elif name == "DETECTORS":
 						do_detector_stuff = True
-					elif name == "INSERT":
+					elif name == "INSERTS":
 						do_insert_stuff = True
 					
 					# tmp
@@ -154,8 +172,7 @@ class Case(object):
 				
 				else:
 					print "Unexpected block encountered:\t", child.attrib["name"]
-					print "This may be a flaw within the XML file, or a shortcoming of this script."
-					print "Ignoring for now."
+					print "This may be a flaw within the XML file, or a shortcoming of this script. Ignoring for now."
 			
 			else:
 				print "child.tag =", child.tag, "-- Ignoring."
@@ -168,7 +185,7 @@ class Case(object):
 		'''When a material or fuel block is encountered in the XML,
 		extract the useful information.
 		
-		Inputs:
+		Inputs:Pass on the assembly Parameters to the instance
 			mat: The ParameterList object describing a VERA material
 		
 		Outputs:
@@ -300,6 +317,46 @@ class Case(object):
 		a_material = Material(mname, mdens, mfracs, miso_names)
 		return a_material
 	
+	
+	def __get_grid(self, grid):
+		'''Same as self.__get_material, but for a grid
+		
+		Inputs:
+			grid: The ParameterList object describing a spacer grid
+		
+		Outputs:
+			a_grid: Instance of the Material object populated with the properties from the XML.'''
+		
+		# Initialize the 5 grid properties
+		name = grid.attrib["name"]
+		height = 0.0; mass = 0.0; label = ""; mat = None
+			
+		for prop in grid:
+			p = prop.attrib["name"]
+			v = prop.attrib["value"]
+			if p == "height":
+				height = float(v)
+			elif p == "mass":
+				mass = float(v)
+			elif p == "label":
+				label = ""
+			elif p == "material":
+				# Check if the material has been defined yet. If not, throw an error
+				# This is probably not the desired behavior. Because this way "spacergrid"
+				# must necessarily be evaluated after all material/fuel blocks in this case. 
+				try:
+					mat = self.materials[v]
+				except KeyError as e:
+					print "**Error: material", e, "has not been defined."
+			else:
+				print "Warning: unused property", p
+		
+		
+		# Instantiate a new material and add it to the dictionary
+		a_material = SpacerGrid(name, height, mass, label, mat)
+		return a_material
+	
+	
 		
 	def __str__(self):
 		'''Return the name of the VERA input case if I try to print this object'''
@@ -327,6 +384,58 @@ class Case(object):
 		return d
 
 
+class Assembly(object):
+	'''VERA decks often contain descriptions of fuel assemblies.
+	Although I am not sure how to represent these in OpenMC/OpenCG yet,
+	it is useful to store assemblies as objects owned by a Case instance.
+	
+	Inputs:
+		name: 		String containing the unique Assembly name
+		cellmaps: 	List of CellMap objects
+		cells:		List of Cell objects
+		label:		...
+	'''
+	
+	def __init__(self, name, params = {}, cellmaps = {}, spacergrids = {}): # more inputs to come
+		self.name = name
+		self.cellmaps = cellmaps
+	
+		''' At this point, I'm thinking there has to be a better way to do this than to
+		go through and grab ever parameter. Is there some way I can automate this so that
+		
+			<Parameter name="lower_nozzle_comp" type="string" value="ss"/>	# for example
+			<Parameter name="lower_nozzle_mass" type="double" value="6250.0"/>
+		
+		gets translated to
+		
+			self.lower_nozzle_comp = str("ss")
+			self.lower_nozzle_mass = float("6250.0") ??
+		
+		There must be. Will use a dictionary for now.'''
+		
+		self.params = params		# Note: I probably want to unpack these somehow
+		
+		
+	def __str__(self):
+		return self.name
+	
+
+class SpacerGrid(object):
+	'''Object to hold properties of an assembly's spacer grids'''
+	
+	def __init__(self, name, height, mass, label, material):
+		self.name = name		# string (serves as dictionary key in Case.grids)
+		self.height = height	# float
+		self.mass = mass		# float
+		self.label = label		# string
+		self.material = material# instance of class Material
+		
+	def __str__(self):
+		return self.name
+		
+		
+
+
 
 class Material(object):
 	'''Basics of a material card'''
@@ -343,8 +452,6 @@ class Material(object):
 
 
 
-	
-	
 	
 
 
