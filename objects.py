@@ -3,15 +3,30 @@
 # Module containing useful objects for read_xml.py
 
 
+class Material(object):
+	'''Basics of a material card'''
+	def __init__(self, key_name, density, mat_fracs, mat_names):
+		self.key_name = key_name
+		self.density = density
+		self.mat_fracs = mat_fracs
+		self.mat_names = mat_names
+
+	def __str__(self):
+		'''Use this to print a brief description of each material'''
+		description = self.key_name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.mat_names)) + ' isotopes)'
+		return description
+	
+
 class Assembly(object):
 	'''VERA decks often contain descriptions of fuel assemblies.
 	Although I am not sure how to represent these in OpenMC/OpenCG yet,
 	it is useful to store assemblies as objects owned by a Case instance.
 	
 	Inputs:
-		name: 		String containing the unique Assembly name
-		cellmaps: 	List of CellMap objects
-		cells:		List of Cell objects
+		name: 			String containing the unique Assembly name
+		cellmaps: 		Dictionary of CellMap objects
+		spacergrids:	Dictionary of SpacerGrid objects
+		cells:			List of Cell objects
 		label:		...
 	'''
 	
@@ -41,32 +56,42 @@ class Assembly(object):
 
 
 class SpacerGrid(object):
-	'''Object to hold properties of an assembly's spacer grids'''
+	'''Object to hold properties of an assembly's spacer grids
+	
+	Inputs:
+		name: 		String containing the name, which serves as a dictionary key in Case.grids
+		height:		float
+		mass:		float
+		label:		string
+		material:	instance of class Material
+		'''
 	
 	def __init__(self, name, height, mass, label, material):
-		self.name = name		# string (serves as dictionary key in Case.grids)
-		self.height = height	# float
-		self.mass = mass		# float
-		self.label = label		# string
-		self.material = material# instance of class Material
+		self.name = name		
+		self.height = height	
+		self.mass = mass		
+		self.label = label		
+		self.material = material
 		
 	def __str__(self):
 		return self.name
 		
 		
 
-
-
-class Material(object):
-	'''Basics of a material card'''
-	def __init__(self, key_name, density, mat_fracs, mat_names):
-		self.key_name = key_name
-		self.density = density
-		self.mat_fracs = mat_fracs
-		self.mat_names = mat_names
-
+class CellMap(object):
+	'''
+	Inputs:
+		name: 		String containing the unique Assembly name
+		cell_map: 	List of integers describing the assembly layout
+		label:		string
+	'''
+	def __init__(self, name, label, cell_map):
+		self.name = name 
+		self.label = label
+		self.cell_map = cell_map
+	
 	def __str__(self):
-		'''Use this to print a brief description of each material'''
-		description = self.key_name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.mat_names)) + ' isotopes)'
-		return description
+		return self.name 
+
+
 

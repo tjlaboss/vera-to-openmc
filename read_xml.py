@@ -119,6 +119,7 @@ class Case(object):
 							# dictionary of all independent parameters for this assembly
 							asmbly_params = {}
 							grids = {}
+							maps = {}
 									
 							for asmbly_child in asmbly:
 								aname = asmbly_child.attrib["name"].lower()
@@ -139,6 +140,10 @@ class Case(object):
 											self.materials[new_material.key_name] = new_material
 											# WARNING: Right now, this overwrites any material that has the same key.
 											# TODO: Check if the objects are the same (that is, have the same attributes) before doing this.
+									elif aname == "cellmaps":
+										for map in asmbly_child:
+											new_map = self.__get_map(map)
+											maps[new_map.name] = new_map
 									elif aname ==  "spacergrids":
 										for grid in asmbly_child:
 											new_grid = self.__get_grid(grid)
@@ -152,7 +157,7 @@ class Case(object):
 									print "Entry", asmbly_child.tag, "is neitherPass on the assembly Parameters to the instance a Parameter nor ParameterList. Ignoring."
 							
 							# Instantiate an Assembly object and pass it the parameters
-							new_assembly = objects.Assembly(name = cname, spacergrids = grids, params = asmbly_params)
+							new_assembly = objects.Assembly(name = cname, cellmaps = maps, spacergrids = grids, params = asmbly_params)
 							self.assemblies[cname] = new_assembly
 							print "Unsure what to do with", len(asmbly_params), "Parameters at this point."
 						
@@ -306,7 +311,7 @@ class Case(object):
 				# A studiously ignored property
 				continue
 			else:
-				print "Warning: unused property", p
+				print "Warning: unused property", p, "in", mname
 		
 		# Check if isotopic fractions each have an associated element
 		if len(mfracs) != len(miso_names):
@@ -325,7 +330,7 @@ class Case(object):
 			grid: The ParameterList object describing a spacer grid
 		
 		Outputs:
-			a_grid: Instance of the Material object populated with the properties from the XML.'''
+			a_grid: Instance of the SpacerGrid object populated with the properties from the XML.'''
 		
 		# Initialize the 5 grid properties
 		name = grid.attrib["name"]
@@ -339,7 +344,7 @@ class Case(object):
 			elif p == "mass":
 				mass = float(v)
 			elif p == "label":
-				label = ""
+				label = str(v)
 			elif p == "material":
 				# Check if the material has been defined yet. If not, throw an error
 				# This is probably not the desired behavior. Because this way "spacergrid"
@@ -349,12 +354,42 @@ class Case(object):
 				except KeyError as e:
 					print "**Error: material", e, "has not been defined."
 			else:
-				print "Warning: unused property", p
+				print "Warning: unused property", p, "in", name
 		
 		
 		# Instantiate a new material and add it to the dictionary
-		a_material = objects.SpacerGrid(name, height, mass, label, mat)
-		return a_material
+		a_grid = objects.SpacerGrid(name, height, mass, label, mat)
+		return a_grid
+	
+	def __get_map(self, cmap):
+		'''Same as self.__get_grid, but for a cellmap
+		
+		Inputs:
+			cmap: The ParameterList object describing a cell map
+		
+		Outputs:
+			a_map: Instance of the CellMap object populated with the properties from the XML.'''
+		
+		# Initialize the 3 cell map properties
+		name = cmap.attrib["name"]
+		label = ""; map_itself = ()
+			
+		for prop in cmap:
+			p = prop.attrib["name"]
+			v = prop.attrib["value"]
+			if p == "cell_map":
+				# Convert to a list of integers
+				# function name is unrelated
+				map_itself = map(int, v.strip('}').strip('{').split(','))
+			elif p == "label":
+				label = str(v)
+			else:
+				print "Warning: unused property", p, "in", name
+		
+		
+		# Instantiate a new material and add it to the dictionary
+		a_cell_map = objects.CellMap(name, label, map_itself)
+		return a_cell_map
 	
 	
 		
