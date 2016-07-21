@@ -450,7 +450,9 @@ for child in case2a.root:
 		
 
 #print case2a.describe()
-
+for a in case2a.assemblies:
+	for g in case2a.assemblies[a].spacergrids:
+		print a, '\t:\t', g
 
 
 

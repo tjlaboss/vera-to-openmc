@@ -33,6 +33,7 @@ class Assembly(object):
 	def __init__(self, name, params = {}, cellmaps = {}, spacergrids = {}): # more inputs to come
 		self.name = name
 		self.cellmaps = cellmaps
+		self.spacergrids = spacergrids
 	
 		''' At this point, I'm thinking there has to be a better way to do this than to
 		go through and grab ever parameter. Is there some way I can automate this so that
