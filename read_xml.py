@@ -57,7 +57,13 @@ class Case(object):
 		# and more to come... 
 		
 		# Initialize an important material
-		#mod = objects.Material()
+		'''The outside of each cell is automatically filled with the special material "mod", which refers to
+		the moderator (or coolant). The composition of "mod" is calculated by the codes using the local
+		T/H conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.'''
+		# TODO: Figure out how to implement this
+		# For now, just make it pure H20 at 1 g/cc so that this program runs
+		mod = objects.Material(key_name = "mod", density = 1.0, mat_names=["h-1", "o-16"], mat_fracs=[2.0/18, 16.0/18])
+		self.materials["mod"] = mod
 		
 		# Then populate everything:
 		self.errors = 0
@@ -136,7 +142,7 @@ class Case(object):
 								elif asmbly_child.tag == "ParameterList":
 									if aname == "cells":
 										for cell in asmbly_child:
-											new_cell = self.__get_cell(cell)
+											new_cell = self.__get_cell(cell, cname)
 											cells[new_cell.name] = new_cell
 									elif aname ==  "fuels":
 										# More materials are found here
@@ -400,11 +406,12 @@ class Case(object):
 		return a_cell_map
 	
 	
-	def __get_cell(self, cell):
+	def __get_cell(self, cell, asname):
 		'''Reads the CELL block
 		
 		Inputs:
-			cell:	The ParameterList object describing a cell
+			cell:		The ParameterList object describing a cell
+			asname:		Name of the assembly in which the cell exists   
 		
 		Outputs:
 			TBD
@@ -455,9 +462,9 @@ class Case(object):
 		# Check if the information was parsed properly
 		# If not, warn the user and keep at it
 		if len(radii) != num_rings:
-			print "Error: there are", num_rings, "rings of", name, "but", len(radii), "radii were found!"
+			print "Error: there are", num_rings, "rings of", name, "but", len(radii), "radii were found!", '(' + asname + ')'
 		if len(mats) != num_rings:
-			print "Error: there are", num_rings, "rings of", name, "but", len(mats), "materials were found!"
+			print "Error: there are", num_rings, "rings of", name, "but", len(mats), "known materials were found!", '(' + asname + ')'
 			
 			
 		a_cell = objects.Cell(name, num_rings, radii, mats, label)
