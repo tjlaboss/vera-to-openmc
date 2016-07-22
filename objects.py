@@ -24,14 +24,15 @@ class Assembly(object):
 	
 	Inputs:
 		name: 			String containing the unique Assembly name
+		cells:			List of Cell objects in this assembly
 		cellmaps: 		Dictionary of CellMap objects
 		spacergrids:	Dictionary of SpacerGrid objects
-		cells:			List of Cell objects
 		label:		...
 	'''
 	
-	def __init__(self, name, params = {}, cellmaps = {}, spacergrids = {}): # more inputs to come
+	def __init__(self, name, cells, params = {}, cellmaps = {}, spacergrids = {}): # more inputs to come
 		self.name = name
+		self.cells = cells
 		self.cellmaps = cellmaps
 		self.spacergrids = spacergrids
 	
@@ -81,7 +82,7 @@ class SpacerGrid(object):
 
 class CellMap(object):
 	'''
-	Inputs:
+	Inputs: 
 		name: 		String containing the unique Assembly name
 		cell_map: 	List of integers describing the assembly layout
 		label:		string
@@ -95,4 +96,34 @@ class CellMap(object):
 		return self.name 
 
 
+class Cell(object):
+	'''
+	Inputs: 
+		name: 		String containing the unique Cell name
+		num_rings:	Number of concentric rings of different materials
+		radii:		List of length {num_rings} containing the lengths of the respective rings
+		mats:		List of length {num_rings} referencing Material objects of the respective rings
+		label:		string
+	'''
+	
+	
+	def __init__(self, name, num_rings, radii, mats, label):
+		self.name = name
+		self.num_rings = num_rings
+		self.radii = radii
+		self.mats = mats
+		self.label = label
+	
+	def __str__(self):
+		return self.name
+
+
+# What to do if somebody tries to run the module
+if __name__ == "__main__":
+	print '''This is a module containing classes
+ - Material(key_name, density, mat_fracs, mat_names)
+ - Assembly(name, [params, cellmaps, spacergrids])
+ - SpacerGrid(name, height, mass, label, material)
+ - CellMap(name, label, cell_map)
+'''
 

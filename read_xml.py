@@ -2,6 +2,13 @@
 #
 # Learning how to read XML with Python modules
 # This is my first time working with XML in Python. Bear with me.
+#
+# For this program, I want to keep running if errors are encountered in the XML to allow the user
+# to fix everything in as few iterations as possible. Therefore, when it detects that something is
+# not quite right, it prints out an error message but keeps moving. These events are counted to
+# Case.errors, so that somebody using an instance of the Case object can check if they can proceed
+# with the results of the XML reading.
+
 
 import xml.etree.ElementTree as ET
 import objects
@@ -49,7 +56,11 @@ class Case(object):
 		self.states = []
 		# and more to come... 
 		
+		# Initialize an important material
+		#mod = objects.Material()
+		
 		# Then populate everything:
+		self.errors = 0
 		self.__read_xml()
 		
 		
@@ -107,10 +118,6 @@ class Case(object):
 								print "Entry", core_child.tag, "is neither a Parameter nor ParameterList. Ignoring."
 						
 					elif name == "ASSEMBLIES":
-						'''Cell cards are used to describe pin cells. A pin cell is defined as a configuration of concentric
-						cylinders (or rings) centered in a square region of coolant. Cell configurations can be used to
-						model fuel rods or guide tubes. Parameters include cell ID, a list of radii for each ring
-						in the cell, and a list of materials that compose each ring.'''
 						# TODO: Get cells, materials, and all that stuff from the Assemblies block
 						# TODO: Check for duplicate materials. (Probably at the end of __init__)
 						
@@ -120,6 +127,7 @@ class Case(object):
 							asmbly_params = {}
 							grids = {}
 							maps = {}
+							cells = {}
 									
 							for asmbly_child in asmbly:
 								aname = asmbly_child.attrib["name"].lower()
@@ -127,9 +135,9 @@ class Case(object):
 									asmbly_params[aname] = asmbly_child.attrib["value"]
 								elif asmbly_child.tag == "ParameterList":
 									if aname == "cells":
-										# TODO: Extract the information about the cells
-										print "reached cells"
-										continue
+										for cell in asmbly_child:
+											new_cell = self.__get_cell(cell)
+											cells[new_cell.name] = new_cell
 									elif aname ==  "fuels":
 										# More materials are found here
 										# TODO: "Fuel" and "Material" blocks are written differently.
@@ -141,8 +149,8 @@ class Case(object):
 											# WARNING: Right now, this overwrites any material that has the same key.
 											# TODO: Check if the objects are the same (that is, have the same attributes) before doing this.
 									elif aname == "cellmaps":
-										for map in asmbly_child:
-											new_map = self.__get_map(map)
+										for cmap in asmbly_child:
+											new_map = self.__get_map(cmap)
 											maps[new_map.name] = new_map
 									elif aname ==  "spacergrids":
 										for grid in asmbly_child:
@@ -157,7 +165,7 @@ class Case(object):
 									print "Entry", asmbly_child.tag, "is neitherPass on the assembly Parameters to the instance a Parameter nor ParameterList. Ignoring."
 							
 							# Instantiate an Assembly object and pass it the parameters
-							new_assembly = objects.Assembly(name = cname, cellmaps = maps, spacergrids = grids, params = asmbly_params)
+							new_assembly = objects.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
 							self.assemblies[cname] = new_assembly
 							print "Unsure what to do with", len(asmbly_params), "Parameters at this point."
 						
@@ -392,6 +400,69 @@ class Case(object):
 		return a_cell_map
 	
 	
+	def __get_cell(self, cell):
+		'''Reads the CELL block
+		
+		Inputs:
+			cell:	The ParameterList object describing a cell
+		
+		Outputs:
+			TBD
+		'''
+		
+		'''Cell cards are used to describe pin cells. A pin cell is defined as a configuration of concentric
+		cylinders (or rings) centered in a square region of coolant. Cell configurations can be used to
+		model fuel rods or guide tubes. Parameters include cell ID, a list of radii for each ring
+		in the cell, and a list of materials that compose each ring.'''
+		
+		# The plan is to extract the information describing each concentric layer of the
+		# pin cells, and then export an object containing that information. In OpenMC/CG,
+		# use this information to create several surfaces of concentric cylinders, and to create
+		# a universe for the pin cell bounded by the outermost layer and defined by the materials.
+		
+		# Initialize the relevant variables:
+		name = cell.attrib["name"]
+		num_rings = 0; radii = []; mats = []; label = "" 
+
+		
+		for prop in cell:
+			p = prop.attrib["name"]
+			v = prop.attrib["value"]
+			if p == "num_rings":
+				num_rings = int(v)
+			elif p == "radii":
+				# Convert to a list of floating point nums
+				radii = map(float, v.strip('}').strip('{').split(','))
+			elif p == "mats":
+				# Convert to a list of strings...
+				m = v.strip('}').strip('{').split(',')
+				# ...which serve as the keys to the dictionary self.materials
+				# Populate the list 'mats' with those material objects
+				for mat in m:
+					try:
+						mats.append(self.materials[mat])
+					except KeyError as e:
+						# Keep parsing, but warn the user that the input is not valid
+						print "Error: The material", e, "does not appear to have been defined yet."
+			elif p == "label":
+				label = str(v)
+			elif p == "type":
+				# ignore
+				continue
+			else:
+				print "Warning: unused property", p, "in", name
+		
+		# Check if the information was parsed properly
+		# If not, warn the user and keep at it
+		if len(radii) != num_rings:
+			print "Error: there are", num_rings, "rings of", name, "but", len(radii), "radii were found!"
+		if len(mats) != num_rings:
+			print "Error: there are", num_rings, "rings of", name, "but", len(mats), "materials were found!"
+			
+			
+		a_cell = objects.Cell(name, num_rings, radii, mats, label)
+		return a_cell
+	
 		
 	def __str__(self):
 		'''Return the name of the VERA input case if I try to print this object'''
@@ -450,9 +521,9 @@ for child in case2a.root:
 		
 
 #print case2a.describe()
-for a in case2a.assemblies:
-	for g in case2a.assemblies[a].spacergrids:
-		print a, '\t:\t', g
+#for a in case2a.assemblies:
+#	for g in case2a.assemblies[a].spacergrids:
+#		print a, '\t:\t', g
 
 
 
