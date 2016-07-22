@@ -66,9 +66,10 @@ class Case(object):
 		self.materials["mod"] = mod
 		
 		# Then populate everything:
-		self.errors = 0
+		self.errors = 0; self.warnings = 0
 		self.__read_xml()
 		
+		print "There were", self.warnings, "warnings and", self.errors, "errors."
 		
 	
 	def __read_xml(self):
@@ -82,8 +83,10 @@ class Case(object):
 				# case_id is the only parameter I expect to see at this level
 				# If there are more, they'll go here. Notify the user.
 				else:
-					print "child.tag is", child.tag + "; name is",  child.attrib["name"]
+					print "Error: child.tag is", child.tag + "; name is",  child.attrib["name"]
 					print "The script does not know how to handle this; ignoring.\n"
+					self.errors += 1
+					
 			
 			elif child.tag == "ParameterList":
 				# Proper use of recursion could probably save me a lot of effort here.
@@ -112,6 +115,7 @@ class Case(object):
 																
 							elif core_child.tag == "ParameterList":
 								print "Unknown parameter list: " + cname + ". Ignoring."
+								self.warnings += 1
 								
 							elif core_child.tag == "Parameter":
 								# TODO: This is where the program gets boundary conditions and various other core properties.
@@ -121,11 +125,13 @@ class Case(object):
 								
 									
 							else:
-								print "Entry", core_child.tag, "is neither a Parameter nor ParameterList. Ignoring."
+								print "Error: Entry", core_child.tag, "is neither a Parameter nor ParameterList. Ignoring."
+								self.errors += 1
+								
 						
 					elif name == "ASSEMBLIES":
 						# TODO: Get cells, materials, and all that stuff from the Assemblies block
-						# TODO: Check for duplicate materials. (Probably at the end of __init__)
+						# TODO: Check for duplicate materials. (Probably at the end of __init__ after running this function)
 						
 						for asmbly in child:
 							cname = asmbly.attrib["name"].lower()	# for brevity
@@ -147,13 +153,11 @@ class Case(object):
 									elif aname ==  "fuels":
 										# More materials are found here
 										# TODO: "Fuel" and "Material" blocks are written differently.
-										# Probably need to create a Fuel class that creates the appropriate Material object.
+										# The method self.__get_fuel() really needs some work.
 										for fuel in asmbly_child:
 											# Create a material object for each listed material
 											new_material = self.__get_fuel(fuel)
 											self.materials[new_material.key_name] = new_material
-											# WARNING: Right now, this overwrites any material that has the same key.
-											# TODO: Check if the objects are the same (that is, have the same attributes) before doing this.
 									elif aname == "cellmaps":
 										for cmap in asmbly_child:
 											new_map = self.__get_map(cmap)
@@ -166,9 +170,12 @@ class Case(object):
 									
 									else:
 										print "Unknown ASSEMBLIES.ParameterList", aname, "-- ignoring"
+										self.warnings += 1
 								
 								else:
-									print "Entry", asmbly_child.tag, "is neitherPass on the assembly Parameters to the instance a Parameter nor ParameterList. Ignoring."
+									print "Error: Entry", asmbly_child.tag, "is neither a Parameter nor ParameterList. Ignoring for now."
+									self.errors += 1
+									
 							
 							# Instantiate an Assembly object and pass it the parameters
 							new_assembly = objects.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
@@ -190,12 +197,14 @@ class Case(object):
 						print name
 				
 				else:
-					print "Unexpected block encountered:\t", child.attrib["name"]
+					print "Warning: Unexpected block encountered:\t", child.attrib["name"]
 					print "This may be a flaw within the XML file, or a shortcoming of this script. Ignoring for now."
+					self.warnings += 1
 			
 			else:
-				print "child.tag =", child.tag, "-- Ignoring."
+				print "Error: child.tag =", child.tag, "-- Ignoring."
 				print "Expected either Parameter or ParameterList. There is probably something wrong with the XMl."
+				self.errors += 1
 		
 		# note; end of the giant for loop
 	
@@ -232,7 +241,10 @@ class Case(object):
 		# Check if isotopic fractions each have an associated element
 		if len(mfracs) != len(miso_names):
 			warning = "Unequal number of isotopes and associated fractions in material", mname
-			raise IndexError(warning)
+			#raise IndexError(warning)
+			print warning
+			self.warnings += 1
+			
 		
 		# Instantiate a new material and add it to the dictionary
 		a_material = objects.Material(mname, mdens, mfracs, miso_names)
@@ -326,11 +338,16 @@ class Case(object):
 				continue
 			else:
 				print "Warning: unused property", p, "in", mname
+				self.warnings += 1
+				
 		
 		# Check if isotopic fractions each have an associated element
 		if len(mfracs) != len(miso_names):
 			warning = "Unequal number of isotopes and associated fractions in material", mname
-			raise IndexError(warning)
+			#raise IndexError(warning)
+			print warning
+			self.errors += 1
+			
 		
 		# Instantiate a new material and add it to the dictionary
 		a_material = objects.Material(mname, mdens, mfracs, miso_names)
@@ -367,8 +384,10 @@ class Case(object):
 					mat = self.materials[v]
 				except KeyError as e:
 					print "**Error: material", e, "has not been defined."
+					self.errors += 1
 			else:
 				print "Warning: unused property", p, "in", name
+				self.warnings += 1
 		
 		
 		# Instantiate a new material and add it to the dictionary
@@ -399,6 +418,7 @@ class Case(object):
 				label = str(v)
 			else:
 				print "Warning: unused property", p, "in", name
+				self.warnings += 1
 		
 		
 		# Instantiate a new material and add it to the dictionary
@@ -458,13 +478,16 @@ class Case(object):
 				continue
 			else:
 				print "Warning: unused property", p, "in", name
+				self.warnings += 1
 		
 		# Check if the information was parsed properly
 		# If not, warn the user and keep at it
 		if len(radii) != num_rings:
 			print "Error: there are", num_rings, "rings of", name, "but", len(radii), "radii were found!", '(' + asname + ')'
+			self.errors += 1
 		if len(mats) != num_rings:
 			print "Error: there are", num_rings, "rings of", name, "but", len(mats), "known materials were found!", '(' + asname + ')'
+			self.errors += 1
 			
 			
 		a_cell = objects.Cell(name, num_rings, radii, mats, label)
