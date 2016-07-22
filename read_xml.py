@@ -58,8 +58,8 @@ class Case(object):
 		
 		# Initialize an important material
 		'''The outside of each cell is automatically filled with the special material "mod", which refers to
-		the moderator (or coolant). The composition of "mod" is calculated by the codes using the local
-		T/H conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.'''
+		the moderator (or coolant). The composition of "mod" is calculated by the codes using the local T/H
+		conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.'''
 		# TODO: Figure out how to implement this
 		# For now, just make it pure H20 at 1 g/cc so that this program runs
 		mod = objects.Material(key_name = "mod", density = 1.0, mat_names=["h-1", "o-16"], mat_fracs=[2.0/18, 16.0/18])
@@ -180,7 +180,7 @@ class Case(object):
 							# Instantiate an Assembly object and pass it the parameters
 							new_assembly = objects.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
 							self.assemblies[cname] = new_assembly
-							print "Unsure what to do with", len(asmbly_params), "Parameters at this point."
+							print "Unsure what to do with", len(asmbly_params), "Parameters in", cname, "at this point."
 						
 						
 					elif name == "STATES":
@@ -461,16 +461,15 @@ class Case(object):
 				# Convert to a list of floating point nums
 				radii = map(float, v.strip('}').strip('{').split(','))
 			elif p == "mats":
-				# Convert to a list of strings...
-				m = v.strip('}').strip('{').split(',')
-				# ...which serve as the keys to the dictionary self.materials
-				# Populate the list 'mats' with those material objects
-				for mat in m:
+				# Convert to a list of strings, which serve as the keys to the dictionary self.materials
+				mats = v.strip('}').strip('{').split(',')
+				# Check if the materials are defined
+				for m in mats:
 					try:
-						mats.append(self.materials[mat])
-					except KeyError as e:
-						# Keep parsing, but warn the user that the input is not valid
-						print "Error: The material", e, "does not appear to have been defined yet."
+						self.materials[m]
+					except KeyError:
+						print "Error: material", m, "has not been defined yet. (" + asname + ')'
+						self.errors += 1
 			elif p == "label":
 				label = str(v)
 			elif p == "type":
@@ -486,7 +485,7 @@ class Case(object):
 			print "Error: there are", num_rings, "rings of", name, "but", len(radii), "radii were found!", '(' + asname + ')'
 			self.errors += 1
 		if len(mats) != num_rings:
-			print "Error: there are", num_rings, "rings of", name, "but", len(mats), "known materials were found!", '(' + asname + ')'
+			print "Error: there are", num_rings, "rings of", name, "but", len(mats), "materials were provided!", '(' + asname + ')'
 			self.errors += 1
 			
 			
@@ -515,7 +514,32 @@ class Case(object):
 			for stat in self.states:
 				d += str(stat)
 		else:
-			d += "No states found."
+			d += "\nNo states found."
+		
+		if self.assemblies:
+			d += "\nAssemblies:"
+			for a in self.assemblies.values():
+				d += "\n - " + a.name + "\t(" + str(len(a.cells)) + " cells, " + str(len(a.params)) + " parameters)"
+		else:
+			d += "\nNo assemblies found."
+		
+		
+		if self.errors == 1:
+			d += "\n1 error "
+		elif self.errors > 1:
+			d += "\n" + str(self.errors) + " errors "
+		else:
+			d += "\nNo errors"
+		if self.warnings == 1:
+			d += "and 1 warning "
+		elif self.warnings > 1:
+			d += "and " + str(self.warnings) + " warnings "
+		elif self.errors and not self.warnings:
+			d += "and no warnings "
+		else:
+			d += "or warnings "
+		d += "found.\n"
+		
 		
 		return d
 
@@ -528,31 +552,28 @@ class Case(object):
 
 
 # Instantiate a case with a simple VERA XML.gold
-#case2a = Case("2a_dep.xml.gold")
-case7 = Case("p7.xml.gold")
-case2a = case7
+#filename = "p7.xml.gold"
+filename = "2a_dep.xml.gold"
+test_case = Case(filename)
 
-#print "Testing:",  case2a
+#print "Testing:",  test_case
 '''
 # 'root' should be the master ParameterList
 print "Let's see what 'root' has:"
-print "root.tag:\t", case2a.root.tag
-print "root.attrib:\t", case2a.root.attrib
-print "root.attrib[\"name\"]\t", case2a.root.attrib["name"]
+print "root.tag:\t", test_case.root.tag
+print "root.attrib:\t", test_case.root.attrib
+print "root.attrib[\"name\"]\t", test_case.root.attrib["name"]
 '''
 
 print "\nInspecting the children"
-for child in case2a.root:
-	# Expect to see the case_id, which is the name of this deck
-	if False:
-		print "You broke the universe."
-	elif child.tag == "ParameterList":
+for child in test_case.root:
+	if child.tag == "ParameterList":
 		print child.attrib["name"]
 		
 
-#print case2a.describe()
-#for a in case2a.assemblies:
-#	for g in case2a.assemblies[a].spacergrids:
+print test_case.describe()
+#for a in test_case.assemblies:
+#	for g in test_case.assemblies[a].spacergrids:
 #		print a, '\t:\t', g
 
 

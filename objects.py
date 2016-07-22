@@ -125,5 +125,6 @@ if __name__ == "__main__":
  - Assembly(name, [params, cellmaps, spacergrids])
  - SpacerGrid(name, height, mass, label, material)
  - CellMap(name, label, cell_map)
+ - Cell(name, num_rings, radii, mats, label)
 '''
 
