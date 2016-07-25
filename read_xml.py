@@ -69,6 +69,12 @@ class Case(object):
 		self.errors = 0; self.warnings = 0
 		self.__read_xml()
 		
+		
+		# ID Counters
+		self.openmc_surface_count = 0; self.openmc_cell_count = 0 ;self.openmc_material_count = 0 
+		self.opencg_surface_count = 0; self.opencg_cell_count = 0 ;self.opencg_material_count = 0
+		
+		
 		print "There were", self.warnings, "warnings and", self.errors, "errors."
 		
 	
@@ -542,7 +548,36 @@ class Case(object):
 		
 		
 		return d
-
+	
+	
+	
+	def get_openmc_material(self, material):
+		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
+		create and return an instance of openmc.Material.
+		
+		NOTE: This section is largely a placeholder for now, as I am still
+		figuring out how to properly use this IDE and haven't imported openmc yet.
+		'''
+		
+		id = self.openmc_material_count
+		self.openmc_material_count += 1
+		
+		
+		
+		openmc_material = "This is still a placeholder! " + material.key_name + ' matID:' + str(id)
+		''''
+		openmc_material = openmc.material.Material(id, material.key_name)
+		openmc_material.set_density("g/cc", material.density)
+		for i in range(len(material.mat_names)):
+			nuclide = material.mat_names[i]
+			frac = material.mat_fracs[i]
+			# TODO: Figure out from VERAin whether wt% or atom fraction
+			openmc_material.add_nuclide(nuclide, frac, 'wo')
+		'''
+		
+		
+		return openmc_material
+	
 
 
 
@@ -572,9 +607,18 @@ for child in test_case.root:
 		
 
 print test_case.describe()
-#for a in test_case.assemblies:
+#for a in test_case.assemblies.values():
 #	for g in test_case.assemblies[a].spacergrids:
 #		print a, '\t:\t', g
+#	print a.params
+
+test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
+print test_mat
+
+
+
+
+
 
 
 
