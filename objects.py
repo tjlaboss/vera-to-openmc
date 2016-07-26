@@ -25,9 +25,10 @@ class Assembly(object):
 	Inputs:
 		name: 			String containing the unique Assembly name
 		cells:			List of Cell objects in this assembly
+		params:			Dictionary of all the other parameters provided
+						in the Assembly block
 		cellmaps: 		Dictionary of CellMap objects
 		spacergrids:	Dictionary of SpacerGrid objects
-		label:		...
 	'''
 	
 	def __init__(self, name, cells, params = {}, cellmaps = {}, spacergrids = {}): # more inputs to come
