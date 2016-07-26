@@ -12,6 +12,14 @@
 
 import xml.etree.ElementTree as ET
 import objects
+try:
+	import openmc
+except ImportError:
+	print "Error: Cannot import openmc. You will not be able to generate OpenMC objects."
+try:
+	import opencg
+except ImportError:
+	print "Error: Cannot import opencg. You will not be able to generate OpenCG objects."
 
 
 '''The VERAin XML files have the following structure:
@@ -555,28 +563,40 @@ class Case(object):
 		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
 		create and return an instance of openmc.Material.
 		
-		NOTE: This section is largely a placeholder for now, as I am still
-		figuring out how to properly use this IDE and haven't imported openmc yet.
+		This method is  a placeholder for now, as I am still figuring out how to
+		use this IDE and haven't imported openmc yet. However, I've tested it with 
+		the existing OpenMC code (as of 2016-07-05) and it works as expected!
 		'''
 		
-		id = self.openmc_material_count
+		mat_id = self.openmc_material_count
 		self.openmc_material_count += 1
 		
 		
 		
-		openmc_material = "This is still a placeholder! " + material.key_name + ' matID:' + str(id)
-		''''
-		openmc_material = openmc.material.Material(id, material.key_name)
+		openmc_material = openmc.material.Material(mat_id, material.key_name)
 		openmc_material.set_density("g/cc", material.density)
 		for i in range(len(material.mat_names)):
 			nuclide = material.mat_names[i]
 			frac = material.mat_fracs[i]
 			# TODO: Figure out from VERAin whether wt% or atom fraction
 			openmc_material.add_nuclide(nuclide, frac, 'wo')
+		return openmc_material
+	
+	
+	def get_opencg_material(self, material):
+		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
+		create and return an instance of opencg.Material.
+		
+		NOTE: This section is largely a placeholder for now, as I am still
+		figuring out how to properly use this IDE and haven't imported OpenCG yet.
 		'''
 		
+		mat_id = self.opencg_material_count
+		self.opencg_material_count += 1
 		
-		return openmc_material
+		opencg_material = opencg.material.Material(mat_id, material.key_name)
+		# OpenCG materials, to my understanding, do not deal with nuclides
+		return opencg_material
 	
 
 
@@ -592,13 +612,7 @@ filename = "2a_dep.xml.gold"
 test_case = Case(filename)
 
 #print "Testing:",  test_case
-'''
-# 'root' should be the master ParameterList
-print "Let's see what 'root' has:"
-print "root.tag:\t", test_case.root.tag
-print "root.attrib:\t", test_case.root.attrib
-print "root.attrib[\"name\"]\t", test_case.root.attrib["name"]
-'''
+
 
 print "\nInspecting the children"
 for child in test_case.root:
@@ -612,11 +626,10 @@ print test_case.describe()
 #		print a, '\t:\t', g
 #	print a.params
 
-test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
-print test_mat
-
-
-
+mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
+cg_test_mat = test_case.get_opencg_material(test_case.materials["ss"])
+print mc_test_mat
+print cg_test_mat
 
 
 
