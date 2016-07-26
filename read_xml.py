@@ -694,28 +694,30 @@ class Case(object):
 				if (s.r == r) and (s.x0 == 0) and (s.y0 == 0) and (s.type == "z-cylinder"):
 					# Then the cylinder is the same
 					surf_id = s.id
-					break # from the "for s in" loop
+					break 
+			if not surf_id:
+				# Generate new surface and get its surf_id
+				surf_id = self.opencg_surface_count
+				self.opencg_surface_count += 1
+				s = opencg.ZCylinder(surf_id, '', "interface", 0, 0, r)
+				cell_surfs[surf_id] = s
+				
+				# Thought: Currently, this method returns a list of the new surfaces.
+				# Would it be better just to add them directly to the registry from within?
+				#self.opencg_surfaces[str(surf_id)] = s
+				
+			
+			# Otherwise, the surface s already exists
+			# Proceed to define the cell inside that surface:
+			new_cell = opencg.universe.Cell(cell_id, name)
+			new_cell.add_surface(s, -1)
 			if ring == 0:
 				# Inner ring
-				if not surf_id:
-					# Generate new surface and get its surf_id
-					surf_id = self.opencg_surface_count
-					self.opencg_surface_count += 1
-					s = opencg.ZCylinder(surf_id, '', "interface", 0, 0, r)
-					cell_surfs[surf_id] = s
-					
-					# Thought: Currently, this method returns a list of the new surfaces.
-					# Would it be better just to add them directly to the registry from within?
-					#self.opencg_surfaces[str(surf_id)] = s
-				# Otherwise, the surface s already exists
-				new_cell = opencg.universe.Cell(cell_id, name)
-				# TODO: Define the cell as being within the surface
+				last_s = s
 			else:
-				# Then this OpenCG cell is outside the previous, inside the current
-				new_cell = opencg.universe.Cell(cell_id, name)
-				# TODO: Implement
-			print "Warning: the cell", name, "has not been defined in terms of surfaces yet."
-			self.warnings += 1
+				# Then this OpenCG cell is outside the previous (last_s), inside the current (s.id)
+				new_cell.add_surface(last_s, 1)
+				last_s = s
 			
 			
 			# The next line is a quick hack for debugging purposes
@@ -761,7 +763,8 @@ for a in test_case.assemblies.values():
 		print a, '\t:\t', g
 	#print a.params
 	for c in a.cells.values():
-		print c
+		#print c
+		continue
 
 #mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
 #cg_test_mat = test_case.get_opencg_material(test_case.materials["ss"])
