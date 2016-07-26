@@ -615,7 +615,6 @@ class Case(object):
 		
 		openmc_cells = []
 		cell_surfs = {}
-		#known_surfs = []
 		
 		# First, define the OpenMC surfaces (Z cylinders)
 		for ring in range(vera_cell.num_rings):
@@ -626,33 +625,33 @@ class Case(object):
 			# Check if the outer bounding surface exists
 			surf_id = None
 			for s in self.openmc_surfaces:
-				if (s.r == r) and (s.x0 == 0) and (s.y0 == 0) and (s.type == "z-cylinder"):
-					# Then the cylinder is the same
-					surf_id = s.id
-					break # from the "for s in" loop
+				if (s.type == "z-cylinder"):
+					if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
+						# Then the cylinder is the same
+						surf_id = s.id
+						break # from the "for s in" loop
 			if not surf_id:
 				# Generate new surface and get its surf_id
 				surf_id = self.openmc_surface_count
 				self.opencg_surface_count += 1
 				s = openmc.ZCylinder(surf_id, "transmission", 0, 0, r)
 				cell_surfs[surf_id] = s
-				
-				
 				# Thought: Currently, this method returns a list of the new surfaces.
 				# Would it be better just to add them directly to the registry from within?
 				#self.openmc_surfaces[str(surf_id)] = s
-			
-			last_id = s.id 	# used for concentric cylinders, either way
+				
+			# Otherwise, the surface s already exists
+			# Proceed to define the cell inside that surface:
+			last_id = s
+			new_cell = openmc.universe.Cell(cell_id, name)
+			new_cell.add_surface(s, -1)
 			if ring == 0:
 				# Inner ring
-				# Otherwise, the surface s already exists
-				new_cell = openmc.universe.Cell(cell_id, name)
-				# TODO: Define the cell as being within the surface
+				continue
 			else:
 				# Then this OpenMC cell is outside the previous (last_id), inside the current
-				new_cell = openmc.universe.Cell(cell_id, name)
-				# TODO: Implement
-			print "Warning: the cell", name, "has not been defined in terms of surfaces yet."
+				new_cell.add_surface(last_id, 1)
+			
 			
 			
 			# The next line is a quick hack for debugging purposes
@@ -663,8 +662,9 @@ class Case(object):
 			openmc_cells.append(new_cell)
 		
 		# end of "for ring" loop
-		
-		return openmc_cells, cell_surfs
+		universe = self.openmc_universe_count
+		self.openmc_universe_count += 1
+		return openmc_cells, cell_surfs, universe
 
 				
 		
@@ -691,10 +691,11 @@ class Case(object):
 			# Check if this surface exists
 			surf_id = 0
 			for s in self.opencg_surfaces:
-				if (s.r == r) and (s.x0 == 0) and (s.y0 == 0) and (s.type == "z-cylinder"):
-					# Then the cylinder is the same
-					surf_id = s.id
-					break 
+				if (s.type == "z-cylinder"):
+					if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
+						# Then the cylinder is the same
+						surf_id = s.id
+						break 
 			if not surf_id:
 				# Generate new surface and get its surf_id
 				surf_id = self.opencg_surface_count
@@ -728,8 +729,9 @@ class Case(object):
 			opencg_cells.append(new_cell)
 		
 		# end of "for ring" loop
-		
-		return opencg_cells, cell_surfs
+		universe = self.opencg_universe_count
+		self.opencg_universe_count += 1
+		return opencg_cells, cell_surfs, universe
 	
 	
 	
