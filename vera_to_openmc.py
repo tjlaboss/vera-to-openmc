@@ -89,15 +89,14 @@ class MC_Case(Case):
 				
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
-			last_id = s
+			last_s = s
 			new_cell = openmc.universe.Cell(cell_id, name)
-			new_cell.add_surface(s, -1)
 			if ring == 0:
 				# Inner ring
-				continue
+				new_cell.region = -s
 			else:
-				# Then this OpenMC cell is outside the previous (last_id), inside the current
-				new_cell.add_surface(last_id, 1)
+				# Then this OpenMC cell is outside the previous (last_s), inside the current
+				new_cell.region = -s & +last_s
 			
 			
 			
