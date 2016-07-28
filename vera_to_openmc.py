@@ -28,9 +28,13 @@ class MC_Case(Case):
 		self.openmc_surface_count = 1; self.openmc_cell_count = 1 ;self.openmc_material_count = 1; self.openmc_universe_count = 1
 		
 		
+		
 		# Create the essential moderator material
-		# FIXME: This uses a simple form of water as a placeholder and
-		# does NOT represent the actual material composition of the moderator!
+		'''The outside of each cell is automatically filled with the special material "mod", which refers to
+		the moderator (or coolant). The composition of "mod" is calculated by the codes using the local T/H
+		conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.
+		FIXME: The material uses a simple form of water as a placeholder and does NOT represent the actual
+		composition of the moderator!'''
 		mod_id = self.openmc_material_count
 		self.openmc_material_count += 1
 		self.mod = openmc.Material(mod_id, "mod")
@@ -61,12 +65,17 @@ class MC_Case(Case):
 	
 	def get_openmc_pincell(self, vera_cell):
 		'''Inputs:
-			vera_cell:		instance of objects.Cell from the vera deck
+			vera_cell:			instance of objects.Cell from the vera deck
 		
 		Outputs:
-			openmc_cells:	list of instance of openmc.universe.Cell
-			cell_surfs:		dictionary of the surfaces that openmc_cell is bounded by
-							{surf_id : openmc.surface.Surface} '''
+			pincell_universe:	instance of openmc.Universe, containing:
+				.cells:				list of instances of openmc.universe.Cell, describing the
+									geometry and composition of this pin cell's universe
+				.universe_id:	integer; unique identifier of the Universe
+				.name:			string; more descriptive name of the universe (pin cell)			
+			
+			cell_surfs:			dictionary of the new surfaces that openmc_cell is bounded by
+								{surf_id : openmc.surface.Surface} '''
 		
 		openmc_cells = []
 		cell_surfs = {}
@@ -135,13 +144,66 @@ class MC_Case(Case):
 	
 	
 	
+	def get_openmc_assembly(self, vera_asmbly):
+		'''Creates the  assembly geometry and lattices of pin cells
+		required to define an assembly in OpenMC.
+		
+		Inputs:
+			vera_asmbly:		instance of objects.Assembly
+		
+		Outputs:
+			openmc_asmbly:		instance of openmc.Assembly; blah blah
+		'''
+		
+		ps = vera_asmbly.params
+		u_num = self.openmc_universe_count
+		self.openmc_universe_count += 1
+		
+		try:
+			asname = ps["title"]
+		except KeyError:
+			# Then no title was specified; generate one
+			try:
+				asname = "Assembly " + ps["label"] + "-verse" + str(u_num)
+			except KeyError:
+				# Least descriptive, but should work in all cases
+				asname = "Assembly " + vera_asmbly.name + "-verse" + str(u_num)
+		
+		openmc_asmbly = openmc.RectLattice(u_num, asname)
+		print openmc_asmbly
+		
+		# Get what properties are available from vera_asmbly.params, such as:
+		# axial_elevations, axial_labels, grid_elev, grid_map,
+		# lower_nozzle_comp, lower_nozzle_height, lower_nozzle_mass,
+		# upper_nozzle_comp, upper_nozzle_height, upper_nozzle_mass,
+		# ppitch, title, num_pins, label
+
+		
+		try:
+			pitch = float(ps["ppitch"])		# pin pitch in cm
+			npins = int(ps["num_pins"])		# (npins)x(npins) array
+		except KeyError as e:
+			print "Error: no", e, "specified; cannot generate lattice."
+			#import sys; sys.exit()
+		else:
+			openmc_asmbly.pitch = (pitch, pitch)
+			openmc_asmbly.lower_left = [-pitch * float(npins) / 2.0] * 2
+			
+			#TEST: delete next line
+			#openmc_asmbly.universes = [[self.get_openmc_pincell(vera_asmbly.cells["Cell_1"])[0]] * npins] * npins
+		
+		
+		return None
+		#return openmc_asmbly
+	
+	
+	
 
 if __name__ == "__main__":
 	# Instantiate a case with a simple VERA XML.gold
 	#filename = "p7.xml.gold"
 	filename = "2a_dep.xml.gold"
 	test_case = MC_Case(filename)
-	
 	#print "Testing:",  test_case
 	
 	
@@ -150,7 +212,6 @@ if __name__ == "__main__":
 		if child.tag == "ParameterList":
 			print child.attrib["name"]
 			
-	
 	print
 	
 	#print test_case.describe()
@@ -162,13 +223,17 @@ if __name__ == "__main__":
 			#print c
 			continue
 	
-	mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
-	print mc_test_mat
+	#mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
+	#print mc_test_mat
 	
 	#print test_case.mod
 	
-	pincell_cells = test_case.get_openmc_pincell(c)[0]
-	print pincell_cells
+	pincell= test_case.get_openmc_pincell(c)[0]
+	#print pincell_cells
+	all_pins = [pincell, ]
+	print all_pins
+	
+	print test_case.get_openmc_assembly(a)
 	
 	
 	
