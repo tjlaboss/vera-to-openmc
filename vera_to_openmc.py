@@ -4,6 +4,7 @@
 # the required files for an OpenMC input.
 
 from read_xml import Case
+from openmc.opencg_compatible import get_openmc_material
 
 try:
 	import openmc
@@ -27,14 +28,21 @@ class MC_Case(Case):
 		self.openmc_surface_count = 1; self.openmc_cell_count = 1 ;self.openmc_material_count = 1; self.openmc_universe_count = 1
 		
 		
+		# Create the essential moderator material
+		# FIXME: This uses a simple form of water as a placeholder and
+		# does NOT represent the actual material composition of the moderator!
+		mod_id = self.openmc_material_count
+		self.openmc_material_count += 1
+		self.mod = openmc.Material(mod_id, "mod")
+		self.mod.set_density("g/cc", 1.0)
+		self.mod.add_nuclide("h-1", 2.0/3, 'ao')
+		self.mod.add_nuclide("o-16", 1.0/3, 'ao')
+		
+		
 		
 	def get_openmc_material(self, material):
 		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
 		create and return an instance of openmc.Material.
-		
-		This method is  a placeholder for now, as I am still figuring out how to
-		use this IDE and haven't imported openmc yet. However, I've tested it with 
-		the existing OpenMC code (as of 2016-07-05) and it works as expected!
 		'''
 		
 		mat_id = self.openmc_material_count
@@ -96,7 +104,7 @@ class MC_Case(Case):
 				new_cell.region = -s
 			else:
 				# Then this OpenMC cell is outside the previous (last_s), inside the current
-				new_cell.region = -s & +last_s
+				new_cell.region = -s & +last_s 
 			
 			
 			
@@ -108,9 +116,22 @@ class MC_Case(Case):
 			openmc_cells.append(new_cell)
 		
 		# end of "for ring" loop
-		universe = self.openmc_universe_count
+		
+		# Then add the moderator outside the pincell
+		mod_cell_id = self.openmc_cell_count
+		self.openmc_cell_count += 1
+		mod_cell = openmc.universe.Cell(mod_cell_id, vera_cell.name + "-Mod")
+		mod_cell.fill = self.mod
+		mod_cell.region = +last_s
+		openmc_cells.append(mod_cell)
+		
+		# Create a new universe in which the pin cell exists 
+		u_num = self.openmc_universe_count
 		self.openmc_universe_count += 1
-		return openmc_cells, cell_surfs, universe
+		pincell_universe = openmc.universe.Universe(u_num, vera_cell.name + "-verse")
+		pincell_universe.add_cells(openmc_cells)
+		
+		return pincell_universe, cell_surfs 
 	
 	
 	
@@ -143,6 +164,8 @@ if __name__ == "__main__":
 	
 	mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
 	print mc_test_mat
+	
+	#print test_case.mod
 	
 	pincell_cells = test_case.get_openmc_pincell(c)[0]
 	print pincell_cells
