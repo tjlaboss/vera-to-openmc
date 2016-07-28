@@ -134,6 +134,7 @@ class CG_Case(Case):
 	
 	
 	
+	
 if __name__ == "__main__":
 	# Instantiate a case with a simple VERA XML.gold
 	#filename = "p7.xml.gold"

@@ -103,10 +103,24 @@ class Case(object):
 								for mat in core_child:
 									# Create a material object for each listed material
 									new_material = self.__get_material(mat)
-									self.materials[new_material.key_name] = new_material
-									# WARNING: Right now, this overwrites any material that has the same key.
-									# Check if the objects are the same (that is, have the same attributes) before doing this.
-																
+									newname = new_material.key_name
+									# Check if a material with this name already exists
+									# If it does, keep adding exclamation marks to it until it doesn't,
+									# giving a warning each time
+									exists = True
+									while exists: 
+										try:
+											self.materials[newname]
+										except KeyError:
+											exists = False
+											self.materials[newname] = new_material
+										else:
+											exists = True
+											# If the material does exist, what should happen?
+											print "Error: a material of the name", new_material.key_name, "already exists."
+											self.errors += 1
+											newname = new_material.key_name + '!'
+																	
 							elif core_child.tag == "ParameterList":
 								print "Unknown parameter list: " + cname + ". Ignoring."
 								self.warnings += 1
@@ -151,7 +165,23 @@ class Case(object):
 										for fuel in asmbly_child:
 											# Create a material object for each listed material
 											new_material = self.__get_fuel(fuel)
-											self.materials[new_material.key_name] = new_material
+											newname = new_material.key_name
+											# Check if a material with this name already exists
+											# If it does, keep adding exclamation marks to it until it doesn't,
+											# giving a warning each time
+											exists = True
+											while exists: 
+												try:
+													self.materials[newname]
+												except KeyError:
+													exists = False
+													self.materials[newname] = new_material
+												else:
+													exists = True
+													# If the material does exist, what should happen?
+													print "Error: a material of the name", new_material.key_name, "already exists."
+													self.errors += 1
+													newname = new_material.key_name + '!'
 									elif aname == "cellmaps":
 										for cmap in asmbly_child:
 											new_map = self.__get_map(cmap)
@@ -240,7 +270,7 @@ class Case(object):
 			self.warnings += 1
 			
 		
-		# Instantiate a new material and add it to the dictionary
+		# Instantiate a new material return it
 		a_material = objects.Material(mname, mdens, mfracs, miso_names)
 		return a_material
 	

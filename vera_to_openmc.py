@@ -27,6 +27,7 @@ class MC_Case(Case):
 		# so I'm starting the count at 1 here instead of 0.
 		self.openmc_surface_count = 1; self.openmc_cell_count = 1 ;self.openmc_material_count = 1; self.openmc_universe_count = 1
 		
+		self.openmc_materials = {}
 		
 		
 		# Create the essential moderator material
@@ -41,7 +42,7 @@ class MC_Case(Case):
 		self.mod.set_density("g/cc", 1.0)
 		self.mod.add_nuclide("h-1", 2.0/3, 'ao')
 		self.mod.add_nuclide("o-16", 1.0/3, 'ao')
-		
+		self.openmc_materials["mod"] = self.mod
 		
 		
 	def get_openmc_material(self, material):
@@ -116,9 +117,19 @@ class MC_Case(Case):
 				new_cell.region = -s & +last_s 
 			
 			
+			# Fill the cell in with a material
+			m = vera_cell.mats[ring]
+			try:
+				fill = self.openmc_materials[m]
+			except KeyError:
+				# Then the material doesn't exist yet in OpenMC form
+				# Generate it?
+				fill = self.get_openmc_material(self.materials[m])
+				# And add it to the index
+				self.openmc_materials[m] = fill
 			
-			# The next line is a quick hack for debugging purposes
-			fill = self.get_openmc_material(self.materials[vera_cell.mats[ring]])
+			
+			
 			# What I want to do instead is, somewhere else in the code, generate the corresponding
 			# openmc material for each objects.Material instance. Then, just look it up in that dictionary.			
 			new_cell.fill = fill
@@ -233,7 +244,7 @@ if __name__ == "__main__":
 	all_pins = [pincell, ]
 	print all_pins
 	
-	print test_case.get_openmc_assembly(a)
+	#print test_case.get_openmc_assembly(a)
 	
 	
 	
