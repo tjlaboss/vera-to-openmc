@@ -20,10 +20,18 @@ class CG_Case(Case):
 		
 		self.opencg_surfaces = []
 		
+		
 		# ID Counters
 		# 0 is special for universes, and in some codes, surfs/cells/mats start at 1;
 		# so I'm starting the count at 1 here instead of 0.
 		self.opencg_surface_count = 1; self.opencg_cell_count = 1 ;self.opencg_material_count = 1; self.opencg_universe_count = 1
+		
+		# Create the essential moderator material
+		mod_id = self.opencg_material_count
+		self.opencg_material_count += 1
+		self.mod = opencg.material.Material(mod_id, "mod")
+		
+
 	
 	
 	def get_opencg_material(self, material):
@@ -104,9 +112,21 @@ class CG_Case(Case):
 			opencg_cells.append(new_cell)
 		
 		# end of "for ring" loop
-		universe = self.opencg_universe_count
+		
+		# Add one more cell containing the moderator (everything outside the outermost ring)
+		mod_cell_id = self.opencg_cell_count
+		self.opencg_cell_count += 1
+		mod_cell = opencg.universe.Cell(mod_cell_id, vera_cell.name + "-Mod")
+		mod_cell.add_surface(last_s, 1)
+		mod_cell.fill = self.mod
+		opencg_cells.append(mod_cell)
+		# Instantiate an OpenCG universe
+		u_num = self.opencg_universe_count
 		self.opencg_universe_count += 1
-		return opencg_cells, cell_surfs, universe
+		pincell_universe = opencg.universe.Universe(u_num, vera_cell.name + "-verse")
+		pincell_universe.add_cells(opencg_cells)
+		
+		return pincell_universe, cell_surfs
 	
 	
 	
@@ -140,11 +160,11 @@ if __name__ == "__main__":
 			#print c
 			continue
 	
-	cg_test_mat = test_case.get_opencg_material(test_case.materials["ss"])
-	print cg_test_mat
+	#cg_test_mat = test_case.get_opencg_material(test_case.materials["ss"])
+	#print cg_test_mat
 	
-	pincell_cells = test_case.get_opencg_pincell(c)[0]
-	print pincell_cells		
+	pincell_verse = test_case.get_opencg_pincell(c)[0]
+	print pincell_verse		
 		
 
 

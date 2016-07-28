@@ -55,14 +55,7 @@ class Case(object):
 		self.states = []
 		# and more to come... 
 		
-		# Initialize an important material
-		'''The outside of each cell is automatically filled with the special material "mod", which refers to
-		the moderator (or coolant). The composition of "mod" is calculated by the codes using the local T/H
-		conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.'''
-		# TODO: Figure out how to implement this
-		# For now, just make it pure H20 at 1 g/cc so that this program runs
-		mod = objects.Material(key_name = "mod", density = 1.0, mat_names=["h-1", "o-16"], mat_fracs=[2.0/18, 16.0/18])
-		self.materials["mod"] = mod
+		
 		
 		# Then populate everything:
 		self.errors = 0; self.warnings = 0
