@@ -24,7 +24,7 @@ class Assembly(object):
 	
 	Inputs:
 		name: 			String containing the unique Assembly name
-		cells:			List of Cell objects in this assembly
+		cells:			Dictionary of Cell objects in this assembly {cell.label:cell}
 		params:			Dictionary of all the other parameters provided
 						in the Assembly block
 		cellmaps: 		Dictionary of CellMap objects

@@ -181,7 +181,7 @@ class MC_Case(Case):
 				asname = "Assembly " + vera_asmbly.name + "-verse" + str(u_num)
 		
 		openmc_asmbly = openmc.RectLattice(u_num, asname)
-		print openmc_asmbly
+		#print openmc_asmbly
 		
 		# Get what properties are available from vera_asmbly.params, such as:
 		# axial_elevations, axial_labels, grid_elev, grid_map,
@@ -244,7 +244,7 @@ if __name__ == "__main__":
 	all_pins = [pincell, ]
 	print all_pins
 	
-	#print test_case.get_openmc_assembly(a)
+	print test_case.get_openmc_assembly(a)
 	
 	
 	

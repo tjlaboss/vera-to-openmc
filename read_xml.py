@@ -56,6 +56,9 @@ class Case(object):
 		# and more to come... 
 		
 		
+		# Placeholder for an essential material
+		self.materials['mod'] = "placeholder for [mod]"
+		
 		
 		# Then populate everything:
 		self.errors = 0; self.warnings = 0
@@ -157,7 +160,7 @@ class Case(object):
 									if aname == "cells":
 										for cell in asmbly_child:
 											new_cell = self.__get_cell(cell, cname)
-											cells[new_cell.name] = new_cell
+											cells[new_cell.label] = new_cell
 									elif aname ==  "fuels":
 										# More materials are found here
 										# TODO: "Fuel" and "Material" blocks are written differently.
