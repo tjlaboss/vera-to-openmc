@@ -204,8 +204,8 @@ class MC_Case(Case):
 			#openmc_asmbly.universes = [[self.get_openmc_pincell(vera_asmbly.cells["Cell_1"])[0]] * npins] * npins
 		
 		
-		return None
-		#return openmc_asmbly
+		#return None
+		return openmc_asmbly
 	
 	
 	
@@ -244,7 +244,13 @@ if __name__ == "__main__":
 	all_pins = [pincell, ]
 	print all_pins
 	
-	print test_case.get_openmc_assembly(a)
+	'''Note: Attempting to print an assembly doesn't work. Could be due to a bug in the
+	__repr__() method? Printing here yields an AttributeError: 'NoneType' object has no attribute '_id',
+	and printing the example assembly from the OpenMC Python API docs
+	<http://openmc.readthedocs.io/en/latest/pythonapi/examples/pandas-dataframes.html>
+	causes a TypeError: 'NoneType' object has no attribute '__getitem__' '''
+	
+	test_asmbly = test_case.get_openmc_assembly(a)
 	
 	
 	
