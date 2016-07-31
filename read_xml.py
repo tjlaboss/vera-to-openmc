@@ -443,7 +443,7 @@ class Case(object):
 			if p == "cell_map":
 				# Convert to a list of integers
 				# function name is unrelated
-				map_itself = map(int, v.strip('}').strip('{').split(','))
+				map_itself = map(str, v.strip('}').strip('{').split(','))
 			elif p == "label":
 				label = str(v)
 			else:

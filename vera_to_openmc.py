@@ -212,8 +212,8 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a case with a simple VERA XML.gold
-	filename = "p7.xml.gold"
-	#filename = "2a_dep.xml.gold"
+	#filename = "p7.xml.gold"
+	filename = "2a_dep.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	
@@ -227,13 +227,17 @@ if __name__ == "__main__":
 	
 	#print test_case.describe()
 	for a in test_case.assemblies.values():
-		for g in a.spacergrids:
-			print a, '\t:\t', g
+		for cm in a.cellmaps.values():
+			continue
+			#print a, '\t:\t', g
 			print "-"*18
 		#print a.params
 		for c in a.cells.values():
 			#print c
 			continue
+	
+	print cm
+	print cm.str_map()
 	
 	#mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
 	#print mc_test_mat
@@ -243,7 +247,7 @@ if __name__ == "__main__":
 	pincell= test_case.get_openmc_pincell(c)[0]
 	#print pincell_cells
 	all_pins = [pincell, ]
-	print all_pins
+	#print all_pins
 	
 	'''Note: Attempting to print an assembly doesn't work. Could be due to a bug in the
 	__repr__() method? Printing here yields an AttributeError: 'NoneType' object has no attribute '_id',

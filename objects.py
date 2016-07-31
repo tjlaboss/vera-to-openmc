@@ -2,6 +2,7 @@
 #
 # Module containing useful objects for read_xml.py
 
+from math import sqrt
 
 class Material(object):
 	'''Basics of a material card'''
@@ -94,7 +95,25 @@ class CellMap(object):
 		self.cell_map = cell_map
 	
 	def __str__(self):
-		return self.name 
+		return self.name
+	
+	def square_map(self):
+		'''Return the cell map as a square array'''
+		n = int(sqrt(len(self.cell_map)))
+		smap = [['',]*n, ]*n
+		for row in range(n):
+			smap[row] = self.cell_map[row*n:(row+1)*n]
+		return smap
+	
+	def str_map(self):
+		'''Return a string of the square map nicely.'''
+		smap = self.square_map()
+		printable = ""
+		for row in smap:
+			for col in row:
+				printable += col + ' '
+			printable += '\n'
+		return printable
 
 
 class Cell(object):
