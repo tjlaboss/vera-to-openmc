@@ -51,7 +51,12 @@ class Assembly(object):
 		
 		There must be. Will use a dictionary for now.'''
 		
-		self.params = params		# Note: I probably want to unpack these somehow
+		self.params = params
+		# Unpack the parameters that should "appear" in every case
+		self.axial_labels = map(str, params["axial_labels"].strip('}').strip('{').split(','))
+		self.axial_elevations = map(float, params["axial_elevations"].strip('}').strip('{').split(','))
+		self.pitch = float(params["ppitch"])
+		self.npins = int(params["num_pins"])
 		
 		
 	def __str__(self):

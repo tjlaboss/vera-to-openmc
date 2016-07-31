@@ -89,7 +89,7 @@ class MC_Case(Case):
 			self.openmc_cell_count += 1
 			# Check if the outer bounding surface exists
 			surf_id = None
-			for s in self.openmc_surfaces:
+			for s in self.openmc_surfaces.values():
 				if (s.type == "z-cylinder"):
 					if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
 						# Then the cylinder is the same
@@ -100,10 +100,9 @@ class MC_Case(Case):
 				surf_id = self.openmc_surface_count
 				self.openmc_surface_count += 1
 				s = openmc.ZCylinder(surf_id, "transmission", 0, 0, r)
-				cell_surfs[surf_id] = s
-				# Thought: Currently, this method returns a list of the new surfaces.
-				# Would it be better just to add them directly to the registry from within?
-				#self.openmc_surfaces[str(surf_id)] = s
+				#cell_surfs[surf_id] = s
+				# Add the new surfaces to the registry
+				self.openmc_surfaces[str(surf_id)] = s
 				
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
@@ -151,11 +150,11 @@ class MC_Case(Case):
 		pincell_universe = openmc.universe.Universe(u_num, vera_cell.name + "-verse")
 		pincell_universe.add_cells(openmc_cells)
 		
-		return pincell_universe, cell_surfs 
+		return pincell_universe
 	
 	
 	
-	def get_openmc_assembly(self, vera_asmbly):
+	def get_openmc_assemblies(self, vera_asmbly):
 		'''Creates the  assembly geometry and lattices of pin cells
 		required to define an assembly in OpenMC.
 		
@@ -163,57 +162,63 @@ class MC_Case(Case):
 			vera_asmbly:		instance of objects.Assembly
 		
 		Outputs:
-			openmc_asmbly:		instance of openmc.Assembly; blah blah
+			openmc_asmblies:	list of instance of openmc.RectLattice
 		'''
 		
+		
 		ps = vera_asmbly.params
-		u_num = self.openmc_universe_count
-		self.openmc_universe_count += 1
-		
-		try:
-			asname = ps["title"]
-		except KeyError:
-			# Then no title was specified; generate one
-			try:
-				asname = "Assembly " + ps["label"] + "-verse" + str(u_num)
-			except KeyError:
-				# Least descriptive, but should work in all cases
-				asname = "Assembly " + vera_asmbly.name + "-verse" + str(u_num)
-		
-		openmc_asmbly = openmc.RectLattice(u_num, asname)
-		#print openmc_asmbly
-		
-		# Get what properties are available from vera_asmbly.params, such as:
+		pitch = vera_asmbly.pitch
+		npins = vera_asmbly.npins
+		# Look for optional parameters available from vera_asmbly.params
+		# Possible params include:
 		# axial_elevations, axial_labels, grid_elev, grid_map,
 		# lower_nozzle_comp, lower_nozzle_height, lower_nozzle_mass,
 		# upper_nozzle_comp, upper_nozzle_height, upper_nozzle_mass,
 		# ppitch, title, num_pins, label
-
+		openmc_asmblies = []
 		
-		try:
-			pitch = float(ps["ppitch"])		# pin pitch in cm
-			npins = int(ps["num_pins"])		# (npins)x(npins) array
-		except KeyError as e:
-			print "Error: no", e, "specified; cannot generate lattice."
-			#import sys; sys.exit()
-		else:
+		# Instantiate all the pin cells (openmc.Universes) that appear in the Assembly
+		cell_verses = {}
+		for vera_cell in vera_asmbly.cells.values():
+			c = self.get_openmc_pincell(vera_cell)
+			cell_verses[vera_cell.label] = c
+		
+		
+		for latname in vera_asmbly.axial_labels:
+		
+			u_num = self.openmc_universe_count
+			self.openmc_universe_count += 1
+			
+			openmc_asmbly = openmc.RectLattice(u_num, latname)
+			
+			
 			openmc_asmbly.pitch = (pitch, pitch)
 			openmc_asmbly.lower_left = [-pitch * float(npins) / 2.0] * 2
-			
-			#TEST: delete next line
-			#openmc_asmbly.universes = [[self.get_openmc_pincell(vera_asmbly.cells["Cell_1"])[0]] * npins] * npins
+			# And populate with universes from cell_verses
+			asmap = vera_asmbly.cellmaps[latname].square_map()
+			lattice = [[None,]*npins]*npins
+			for i in range(npins):
+				new_row = [None,]*npins
+				for j in range(npins):
+					c = asmap[i][j]
+					new_row[j] = cell_verses[c]
+				lattice[i] = new_row
+				
+			openmc_asmbly.universes = lattice
+			openmc_asmblies.append(openmc_asmbly)
 		
 		
-		#return None
-		return openmc_asmbly
+		return openmc_asmblies
+	
+	
 	
 	
 	
 
 if __name__ == "__main__":
 	# Instantiate a case with a simple VERA XML.gold
-	#filename = "p7.xml.gold"
-	filename = "2a_dep.xml.gold"
+	filename = "p7.xml.gold"
+	#filename = "2a_dep.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	
@@ -236,7 +241,7 @@ if __name__ == "__main__":
 			#print c
 			continue
 	
-	print cm
+	#print cm.square_map()
 	print cm.str_map()
 	
 	#mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
@@ -244,7 +249,7 @@ if __name__ == "__main__":
 	
 	#print test_case.mod
 	
-	pincell= test_case.get_openmc_pincell(c)[0]
+	pincell= test_case.get_openmc_pincell(c)
 	#print pincell_cells
 	all_pins = [pincell, ]
 	#print all_pins
@@ -255,8 +260,9 @@ if __name__ == "__main__":
 	<http://openmc.readthedocs.io/en/latest/pythonapi/examples/pandas-dataframes.html>
 	causes a TypeError: 'NoneType' object has no attribute '__getitem__' '''
 	
-	test_asmbly = test_case.get_openmc_assembly(a)
-	
+	#test_asmbly = test_case.get_openmc_assemblies(a)[0]
+	for ass in test_case.get_openmc_assemblies(a):
+		print ass.id, ass.name
 	
 	
 	

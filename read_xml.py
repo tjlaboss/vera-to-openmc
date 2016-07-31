@@ -188,7 +188,7 @@ class Case(object):
 									elif aname == "cellmaps":
 										for cmap in asmbly_child:
 											new_map = self.__get_map(cmap)
-											maps[new_map.name] = new_map
+											maps[new_map.label] = new_map
 									elif aname ==  "spacergrids":
 										for grid in asmbly_child:
 											new_grid = self.__get_grid(grid)
