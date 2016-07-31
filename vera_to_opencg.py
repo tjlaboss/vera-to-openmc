@@ -26,10 +26,12 @@ class CG_Case(Case):
 		# so I'm starting the count at 1 here instead of 0.
 		self.opencg_surface_count = 1; self.opencg_cell_count = 1 ;self.opencg_material_count = 1; self.opencg_universe_count = 1
 		
+		
 		# Create the essential moderator material
 		mod_id = self.opencg_material_count
 		self.opencg_material_count += 1
 		self.mod = opencg.material.Material(mod_id, "mod")
+		self.opencg_materials = {"mod":self.mod,}
 		
 
 	
@@ -104,10 +106,17 @@ class CG_Case(Case):
 				last_s = s
 			
 			
-			# The next line is a quick hack for debugging purposes
-			fill = self.get_opencg_material(self.materials[vera_cell.mats[ring]])
-			# What I want to do instead is, somewhere else in the code, generate the corresponding
-			# opencg material for each objects.Material instance. Then, just look it up in that dictionary.			
+			# Fill the cell in with a material
+			m = vera_cell.mats[ring]
+			try:
+				fill = self.opencg_materials[m]
+			except KeyError:
+				# Then the material doesn't exist yet in OpenCG form
+				# Generate it?
+				fill = self.get_opencg_material(self.materials[m])
+				# And add it to the index
+				self.opencg_materials[m] = fill
+			
 			new_cell.fill = fill
 			opencg_cells.append(new_cell)
 		
