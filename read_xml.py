@@ -122,7 +122,7 @@ class Case(object):
 											# If the material does exist, what should happen?
 											print "Error: a material of the name", new_material.key_name, "already exists."
 											self.errors += 1
-											newname = new_material.key_name + '!'
+											newname = newname + '!'
 																	
 							elif core_child.tag == "ParameterList":
 								print "Unknown parameter list: " + cname + ". Ignoring."
@@ -184,7 +184,7 @@ class Case(object):
 													# If the material does exist, what should happen?
 													print "Error: a material of the name", new_material.key_name, "already exists."
 													self.errors += 1
-													newname = new_material.key_name + '!'
+													newname = newname + '!'
 									elif aname == "cellmaps":
 										for cmap in asmbly_child:
 											new_map = self.__get_map(cmap)
@@ -211,6 +211,9 @@ class Case(object):
 						
 						
 					elif name == "STATES":
+						# For different states: read all of them and create
+						# a description of each. Generate a geometry for each
+						# of them, or ask the user which one he wants?
 						do_states_stuff = True
 					elif name == "CONTROLS":
 						do_control_stuff = True

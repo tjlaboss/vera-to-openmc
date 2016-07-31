@@ -212,8 +212,8 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a case with a simple VERA XML.gold
-	#filename = "p7.xml.gold"
-	filename = "2a_dep.xml.gold"
+	filename = "p7.xml.gold"
+	#filename = "2a_dep.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	
@@ -229,6 +229,7 @@ if __name__ == "__main__":
 	for a in test_case.assemblies.values():
 		for g in a.spacergrids:
 			print a, '\t:\t', g
+			print "-"*18
 		#print a.params
 		for c in a.cells.values():
 			#print c
