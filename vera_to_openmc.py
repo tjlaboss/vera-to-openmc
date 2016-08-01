@@ -207,7 +207,6 @@ class MC_Case(Case):
 			openmc_asmbly.universes = lattice
 			openmc_asmblies.append(openmc_asmbly)
 		
-		
 		return openmc_asmblies
 	
 	
@@ -217,8 +216,8 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a case with a simple VERA XML.gold
-	filename = "p7.xml.gold"
-	#filename = "2a_dep.xml.gold"
+	#filename = "p7.xml.gold"
+	filename = "2a_dep.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	

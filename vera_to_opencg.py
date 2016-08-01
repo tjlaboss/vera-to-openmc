@@ -18,7 +18,7 @@ class CG_Case(Case):
 	def __init__(self, source_file):
 		super(CG_Case, self).__init__(source_file)
 		
-		self.opencg_surfaces = []
+		self.opencg_surfaces = {}
 		
 		
 		# ID Counters
@@ -75,7 +75,7 @@ class CG_Case(Case):
 			self.opencg_cell_count += 1
 			# Check if this surface exists
 			surf_id = 0
-			for s in self.opencg_surfaces:
+			for s in self.opencg_surfaces.values():
 				if (s.type == "z-cylinder"):
 					if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
 						# Then the cylinder is the same
@@ -87,10 +87,7 @@ class CG_Case(Case):
 				self.opencg_surface_count += 1
 				s = opencg.ZCylinder(surf_id, '', "interface", 0, 0, r)
 				cell_surfs[surf_id] = s
-				
-				# Thought: Currently, this method returns a list of the new surfaces.
-				# Would it be better just to add them directly to the registry from within?
-				#self.opencg_surfaces[str(surf_id)] = s
+				self.opencg_surfaces[str(surf_id)] = s
 				
 			
 			# Otherwise, the surface s already exists
@@ -135,10 +132,51 @@ class CG_Case(Case):
 		pincell_universe = opencg.universe.Universe(u_num, vera_cell.name + "-verse")
 		pincell_universe.add_cells(opencg_cells)
 		
-		return pincell_universe, cell_surfs
+		return pincell_universe
 	
 	
-	
+	def get_opencg_assemblies(self, vera_asmbly):
+		'''Creates the assembly geometry (WIP) and lattices of pin cells (done)
+		required to define a rectangular lattice in OpenCG.
+		
+		Inputs:
+			vera_asmbly:		instance of objects.Assembly
+		
+		Outputs:
+			opencg_asmblies:	list of instance of opencg.Lattice
+		'''
+		
+		ps = vera_asmbly.params
+		pitch = vera_asmbly.pitch
+		npins = vera_asmbly.npins
+		opencg_asmblies = []
+		
+		# Instantiate all the pin cells (opencg.Universe) that appear in the Assembly
+		cell_verses = {}
+		for vera_cell in vera_asmbly.cells.values():
+			c = self.get_opencg_pincell(vera_cell)
+			cell_verses[vera_cell.label] = c
+		
+		for latname in vera_asmbly.axial_labels:
+			u_num = self.opencg_universe_count
+			self.opencg_universe_count += 1	
+			opencg_asmbly = opencg.Lattice(u_num, latname, "rectangular")
+			opencg_asmbly.pitch = (pitch, pitch)
+			opencg_asmbly.lower_left = [-pitch * float(npins) / 2.0] * 2
+			# And populate with universes from cell_verses
+			asmap = vera_asmbly.cellmaps[latname].square_map()
+			lattice = [[None,]*npins]*npins
+			for i in range(npins):
+				new_row = [None,]*npins
+				for j in range(npins):
+					c = asmap[i][j]
+					new_row[j] = cell_verses[c]
+				lattice[i] = new_row
+			
+			opencg_asmbly.universes = lattice
+			opencg_asmblies.append(opencg_asmbly)
+		
+		return opencg_asmblies
 	
 	
 	
@@ -173,8 +211,11 @@ if __name__ == "__main__":
 	#cg_test_mat = test_case.get_opencg_material(test_case.materials["ss"])
 	#print cg_test_mat
 	
-	pincell_verse = test_case.get_opencg_pincell(c)[0]
-	print pincell_verse		
+	#pincell_verse = test_case.get_opencg_pincell(c)[0]
+	#print pincell_verse
+	
+	asmblys = test_case.get_opencg_assemblies(a)
+	#print len(test_case.get_opencg_assemblies(a))		
 		
 
 
