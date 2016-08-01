@@ -73,7 +73,6 @@ class MC_Case(Case):
 									geometry and composition of this pin cell's universe
 				.universe_id:	integer; unique identifier of the Universe
 				.name:			string; more descriptive name of the universe (pin cell)			
-			
 			'''
 		
 		openmc_cells = []
@@ -116,13 +115,21 @@ class MC_Case(Case):
 			# Fill the cell in with a material
 			m = vera_cell.mats[ring]
 			try:
-				fill = self.openmc_materials[m]
+				# First, check if this is a local, duplicate material
+				fill = self.openmc_materials[vera_cell.asname + m]
+				# This normally will not exist, so:
 			except KeyError:
-				# Then the material doesn't exist yet in OpenMC form
-				# Generate it?
-				fill = self.get_openmc_material(self.materials[m])
-				# And add it to the index
-				self.openmc_materials[m] = fill
+				try:
+					# Look it up as normal
+					fill = self.openmc_materials[m]
+				except KeyError:
+					# Then the material really doesn't exist yet in OpenMC form
+					# Generate it and add it to the index 
+					fill = self.get_openmc_material(self.materials[m])
+					self.openmc_materials[m] = fill
+			
+				
+				
 			
 			
 			
@@ -213,8 +220,8 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a test case with a simple VERA XML.gold
-	#filename = "p7.xml.gold"
-	filename = "2a_dep.xml.gold"
+	filename = "p7.xml.gold"
+	#filename = "2a_dep.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	

@@ -17,6 +17,9 @@ class Material(object):
 		description = self.key_name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.mat_names)) + ' isotopes)'
 		return description
 	
+	def __eq__(self, other):
+		return self.__dict__ == other.__dict__
+	
 
 class Assembly(object):
 	'''VERA decks often contain descriptions of fuel assemblies.
@@ -124,20 +127,22 @@ class CellMap(object):
 class Cell(object):
 	'''
 	Inputs: 
-		name: 		String containing the unique Cell name
+		name: 		String containing the full Cell name
 		num_rings:	Number of concentric rings of different materials
 		radii:		List of length {num_rings} containing the lengths of the respective rings
 		mats:		List of length {num_rings} referencing Material objects of the respective rings
-		label:		string
+		label:		string containing the unique identifier of the cell
+		asname:		string containing the name of the VERA assembly the cell is in (optional)
 	'''
 	
 	
-	def __init__(self, name, num_rings, radii, mats, label):
+	def __init__(self, name, num_rings, radii, mats, label, asname = ""):
 		self.name = name
 		self.num_rings = num_rings
 		self.radii = radii
 		self.mats = mats
 		self.label = label
+		self.asname = asname
 	
 	def __str__(self):
 		return self.name

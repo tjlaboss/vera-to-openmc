@@ -116,16 +116,19 @@ class Case(object):
 									exists = True
 									while exists: 
 										try:
-											self.materials[newname]
+											old_material = self.materials[newname]
 										except KeyError:
 											exists = False
 											self.materials[newname] = new_material
 										else:
-											exists = True
-											# If the material does exist, what should happen?
-											print("Error: a material of the name", new_material.key_name, "already exists.")
-											self.errors += 1
-											newname = newname + '!'
+											# If the material does exist, check if it is any different
+											if new_material != old_material:
+												# In the core block, it is an error
+													print("Error: a material of the name", new_material.key_name, "already exists.")
+													self.errors += 1
+											# Else; it's the same, and do nothing
+											exists = False # exit the loop
+											
 																	
 							elif core_child.tag == "ParameterList":
 								print("Unknown parameter list: " + cname + ". Ignoring.")
@@ -179,16 +182,22 @@ class Case(object):
 											exists = True
 											while exists: 
 												try:
-													self.materials[newname]
+													old_material = self.materials[newname]
 												except KeyError:
 													exists = False
 													self.materials[newname] = new_material
 												else:
-													exists = True
-													# If the material does exist, what should happen?
-													print("Error: a material of the name", new_material.key_name, "already exists.")
-													self.errors += 1
-													newname = newname + '!'
+													# If the material does exist, check if it is any different
+													if new_material != old_material:
+														# In the assembly block, different materials by the same name
+														# in different assemblies are possible
+														newname = cname + newname
+														print("Warning: different versions of material", new_material.key_name, "exist; renaming to", newname)
+														new_material.key_name = newname
+													else:
+														# Exit the loop
+														exists = False
+													
 									elif aname == "cellmaps":
 										for cmap in asmbly_child:
 											new_map = self.__get_map(cmap)
