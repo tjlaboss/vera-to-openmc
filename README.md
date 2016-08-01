@@ -13,7 +13,7 @@ Module containing useful classes for `read_xml.py`
 Under active development. Module which performs the operations necessary to generate an OpenMC input. Contains the class `MC_Case` (child of `Case`), which has the attributes and methods required to create the OpenMC objects.
 
 #### `vera_to_opencg.py`:
-Under active development. Equivalent to `vera_to_openmc.py`, but for OpenCG geometries.
+Currently shelved. Equivalent to `vera_to_openmc.py`, but for OpenCG geometries. OpenMC's Python API already has a function to convert OpenCG geometries, so this module may be unnecessary.
 
 
 #### `2a_dep.xml.gold` and `p7.xml.gold`:

@@ -259,7 +259,7 @@ if __name__ == "__main__":
 	<http://openmc.readthedocs.io/en/latest/pythonapi/examples/pandas-dataframes.html>
 	causes a TypeError: 'NoneType' object has no attribute '__getitem__' '''
 	
-	#test_asmbly = test_case.get_openmc_assemblies(a)[0]
+	test_asmbly = test_case.get_openmc_assemblies(a)[0]
 	for ass in test_case.get_openmc_assemblies(a):
 		print ass.id, ass.name
 	
