@@ -54,7 +54,7 @@ class MC_Case(Case):
 		
 		
 		
-		openmc_material = openmc.material.Material(mat_id, material.key_name)
+		openmc_material = openmc.Material(mat_id, material.key_name)
 		openmc_material.set_density("g/cc", material.density)
 		for i in range(len(material.mat_names)):
 			nuclide = material.mat_names[i]
@@ -69,7 +69,7 @@ class MC_Case(Case):
 		
 		Outputs:
 			pincell_universe:	instance of openmc.Universe, containing:
-				.cells:				list of instances of openmc.universe.Cell, describing the
+				.cells:				list of instances of openmc.Cell, describing the
 									geometry and composition of this pin cell's universe
 				.universe_id:	integer; unique identifier of the Universe
 				.name:			string; more descriptive name of the universe (pin cell)			
@@ -104,7 +104,7 @@ class MC_Case(Case):
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
 			last_s = s
-			new_cell = openmc.universe.Cell(cell_id, name)
+			new_cell = openmc.Cell(cell_id, name)
 			if ring == 0:
 				# Inner ring
 				new_cell.region = -s
@@ -136,7 +136,7 @@ class MC_Case(Case):
 		# Then add the moderator outside the pincell
 		mod_cell_id = self.openmc_cell_count
 		self.openmc_cell_count += 1
-		mod_cell = openmc.universe.Cell(mod_cell_id, vera_cell.name + "-Mod")
+		mod_cell = openmc.Cell(mod_cell_id, vera_cell.name + "-Mod")
 		mod_cell.fill = self.mod
 		mod_cell.region = +last_s
 		openmc_cells.append(mod_cell)
@@ -144,7 +144,7 @@ class MC_Case(Case):
 		# Create a new universe in which the pin cell exists 
 		u_num = self.openmc_universe_count
 		self.openmc_universe_count += 1
-		pincell_universe = openmc.universe.Universe(u_num, vera_cell.name + "-verse")
+		pincell_universe = openmc.Universe(u_num, vera_cell.name + "-verse")
 		pincell_universe.add_cells(openmc_cells)
 		
 		return pincell_universe
