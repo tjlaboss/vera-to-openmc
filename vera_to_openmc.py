@@ -4,12 +4,11 @@
 # the required files for an OpenMC input.
 
 from read_xml import Case
-from openmc.opencg_compatible import get_openmc_material
 
 try:
 	import openmc
 except ImportError:
-	print "Error: Cannot import openmc. You will not be able to generate OpenMC objects."
+	raise SystemExit("Error: Cannot import openmc. You will not be able to generate OpenMC objects.")
 
 
 
@@ -75,11 +74,9 @@ class MC_Case(Case):
 				.universe_id:	integer; unique identifier of the Universe
 				.name:			string; more descriptive name of the universe (pin cell)			
 			
-			cell_surfs:			dictionary of the new surfaces that openmc_cell is bounded by
-								{surf_id : openmc.surface.Surface} '''
+			'''
 		
 		openmc_cells = []
-		cell_surfs = {}
 		
 		# First, define the OpenMC surfaces (Z cylinders)
 		for ring in range(vera_cell.num_rings):
@@ -215,17 +212,17 @@ class MC_Case(Case):
 	
 
 if __name__ == "__main__":
-	# Instantiate a case with a simple VERA XML.gold
+	# Instantiate a test case with a simple VERA XML.gold
 	#filename = "p7.xml.gold"
 	filename = "2a_dep.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	
 	
-	print "\nInspecting the children"
+	print("\nInspecting the children")
 	for child in test_case.root:
 		if child.tag == "ParameterList":
-			print child.attrib["name"]
+			print(child.attrib["name"])
 			
 	print
 	
@@ -234,14 +231,14 @@ if __name__ == "__main__":
 		for cm in a.cellmaps.values():
 			continue
 			#print a, '\t:\t', g
-			print "-"*18
+			print("-"*18)
 		#print a.params
 		for c in a.cells.values():
 			#print c
 			continue
 	
 	#print cm.square_map()
-	print cm.str_map()
+	print(cm.str_map())
 	
 	#mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
 	#print mc_test_mat
@@ -261,7 +258,7 @@ if __name__ == "__main__":
 	
 	test_asmbly = test_case.get_openmc_assemblies(a)[0]
 	for ass in test_case.get_openmc_assemblies(a):
-		print ass.id, ass.name
+		print(ass.id, ass.name)
 	
 	
 	

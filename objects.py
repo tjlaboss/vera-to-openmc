@@ -145,11 +145,11 @@ class Cell(object):
 
 # What to do if somebody tries to run the module
 if __name__ == "__main__":
-	print '''This is a module containing classes
+	print('''This is a module containing classes
  - Material(key_name, density, mat_fracs, mat_names)
  - Assembly(name, [params, cellmaps, spacergrids])
  - SpacerGrid(name, height, mass, label, material)
  - CellMap(name, label, cell_map)
  - Cell(name, num_rings, radii, mats, label)
-'''
+''')
 

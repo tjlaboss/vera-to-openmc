@@ -11,7 +11,10 @@
 
 
 import xml.etree.ElementTree as ET
+#from warnings import warn
+from functions import clean
 import objects
+
 
 '''The VERAin XML files have the following structure:
 
@@ -66,7 +69,7 @@ class Case(object):
 		
 		
 		
-		print "There were", self.warnings, "warnings and", self.errors, "errors."
+		print("There were", self.warnings, "warnings and", self.errors, "errors.")
 		
 	
 	def __read_xml(self):
@@ -80,8 +83,8 @@ class Case(object):
 				# case_id is the only parameter I expect to see at this level
 				# If there are more, they'll go here. Notify the user.
 				else:
-					print "Error: child.tag is", child.tag + "; name is",  child.attrib["name"]
-					print "The script does not know how to handle this; ignoring.\n"
+					print("Error: child.tag is", child.tag + "; name is",  child.attrib["name"])
+					print("The script does not know how to handle this; ignoring.\n")
 					self.errors += 1
 					
 			
@@ -89,7 +92,7 @@ class Case(object):
 				# Proper use of recursion could probably save me a lot of effort here.
 				name = child.attrib["name"].upper()	# for brevity
 				if name in self.ignore:
-					print "Ignoring block", name
+					print("Ignoring block", name)
 				elif name in self.usable:
 					# Then handle them appropriately
 					if name == "CORE":
@@ -120,12 +123,12 @@ class Case(object):
 										else:
 											exists = True
 											# If the material does exist, what should happen?
-											print "Error: a material of the name", new_material.key_name, "already exists."
+											print("Error: a material of the name", new_material.key_name, "already exists.")
 											self.errors += 1
 											newname = newname + '!'
 																	
 							elif core_child.tag == "ParameterList":
-								print "Unknown parameter list: " + cname + ". Ignoring."
+								print("Unknown parameter list: " + cname + ". Ignoring.")
 								self.warnings += 1
 								
 							elif core_child.tag == "Parameter":
@@ -136,13 +139,14 @@ class Case(object):
 								
 									
 							else:
-								print "Error: Entry", core_child.tag, "is neither a Parameter nor ParameterList. Ignoring."
+								print("Error: Entry", core_child.tag, "is neither a Parameter nor ParameterList. Ignoring.")
 								self.errors += 1
 								
 						
 					elif name == "ASSEMBLIES":
-						# TODO: Get cells, materials, and all that stuff from the Assemblies block
-						# TODO: Check for duplicate materials. (Probably at the end of __init__ after running this function)
+						# TODO: Finish writing fuels section
+						# TODO: Handle duplicate materials, typically fuels
+						#	 (Probably at the end of __init__ after running this function)
 						
 						for asmbly in child:
 							cname = asmbly.attrib["name"].lower()	# for brevity
@@ -182,7 +186,7 @@ class Case(object):
 												else:
 													exists = True
 													# If the material does exist, what should happen?
-													print "Error: a material of the name", new_material.key_name, "already exists."
+													print("Error: a material of the name", new_material.key_name, "already exists.")
 													self.errors += 1
 													newname = newname + '!'
 									elif aname == "cellmaps":
@@ -196,18 +200,17 @@ class Case(object):
 												
 									
 									else:
-										print "Unknown ASSEMBLIES.ParameterList", aname, "-- ignoring"
+										print("Unknown ASSEMBLIES.ParameterList", aname, "-- ignoring")
 										self.warnings += 1
 								
 								else:
-									print "Error: Entry", asmbly_child.tag, "is neither a Parameter nor ParameterList. Ignoring for now."
+									print("Error: Entry", asmbly_child.tag, "is neither a Parameter nor ParameterList. Ignoring for now.")
 									self.errors += 1
 									
 							
 							# Instantiate an Assembly object and pass it the parameters
 							new_assembly = objects.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
 							self.assemblies[cname] = new_assembly
-							print "Unsure what to do with", len(asmbly_params), "Parameters in", cname, "at this point."
 						
 						
 					elif name == "STATES":
@@ -224,16 +227,16 @@ class Case(object):
 					
 					# tmp
 					else:
-						print name
+						print(name)
 				
 				else:
-					print "Warning: Unexpected block encountered:\t", child.attrib["name"]
-					print "This may be a flaw within the XML file, or a shortcoming of this script. Ignoring for now."
+					print("Warning: Unexpected block encountered:\t", child.attrib["name"])
+					print("This may be a flaw within the XML file, or a shortcoming of this script. Ignoring for now.")
 					self.warnings += 1
 			
 			else:
-				print "Error: child.tag =", child.tag, "-- Ignoring."
-				print "Expected either Parameter or ParameterList. There is probably something wrong with the XMl."
+				print("Error: child.tag =", child.tag, "-- Ignoring.\n", \
+				"Expected either Parameter or ParameterList. There is probably something wrong with the XMl.")
 				self.errors += 1
 		
 		# note; end of the giant for loop
@@ -261,18 +264,17 @@ class Case(object):
 				mdens = float(v)
 			elif p == "mat_fracs":
 				# Convert a string to a list of floating point numbers
-				mfracs = map(float, v.strip('}').strip('{').split(','))
+				mfracs = clean(v, float)
 			elif p == "mat_names":
 				# Convert a string to a list of strings
-				miso_names = v.strip('}').strip('{').split(',')
+				miso_names = clean(v, str)
 			else:
-				print "Warning: unused property", p
+				print("Warning: unused property", p)
+				self.warnings += 1
 		
 		# Check if isotopic fractions each have an associated element
 		if len(mfracs) != len(miso_names):
-			warning = "Unequal number of isotopes and associated fractions in material", mname
-			#raise IndexError(warning)
-			print warning
+			print("Unequal number of isotopes and associated fractions in material", mname)
 			self.warnings += 1
 			
 		
@@ -359,15 +361,15 @@ class Case(object):
 				mdens = float(v)
 			elif p == "enrichments":
 				# Convert a string to a list of floating point numbers
-				mfracs = map(float, v.strip('}').strip('{').split(','))
+				mfracs = clean(v, float)
 			elif p == "fuel_names":
 				# Convert a string to a list of strings
-				miso_names = v.strip('}').strip('{').split(',')			
+				miso_names = clean(v, str)			
 			elif p == "thden":
 				# A studiously ignored property
 				continue
 			else:
-				print "Warning: unused property", p, "in", mname
+				print("Warning: unused property", p, "in", mname)
 				self.warnings += 1
 				
 		
@@ -375,7 +377,7 @@ class Case(object):
 		if len(mfracs) != len(miso_names):
 			warning = "Unequal number of isotopes and associated fractions in material", mname
 			#raise IndexError(warning)
-			print warning
+			print(warning)
 			self.errors += 1
 			
 		
@@ -413,10 +415,10 @@ class Case(object):
 				try:
 					mat = self.materials[v]
 				except KeyError as e:
-					print "**Error: material", e, "has not been defined."
+					print("**Error: material", e, "has not been defined.")
 					self.errors += 1
 			else:
-				print "Warning: unused property", p, "in", name
+				print("Warning: unused property", p, "in", name)
 				self.warnings += 1
 		
 		
@@ -441,13 +443,12 @@ class Case(object):
 			p = prop.attrib["name"]
 			v = prop.attrib["value"]
 			if p == "cell_map":
-				# Convert to a list of integers
-				# function name is unrelated
-				map_itself = map(str, v.strip('}').strip('{').split(','))
+				# Convert to a list of strings
+				map_itself = clean(v, str)
 			elif p == "label":
 				label = str(v)
 			else:
-				print "Warning: unused property", p, "in", name
+				print("Warning: unused property", p, "in", name)
 				self.warnings += 1
 		
 		
@@ -489,16 +490,16 @@ class Case(object):
 				num_rings = int(v)
 			elif p == "radii":
 				# Convert to a list of floating point nums
-				radii = map(float, v.strip('}').strip('{').split(','))
+				radii = clean(v, float)
 			elif p == "mats":
 				# Convert to a list of strings, which serve as the keys to the dictionary self.materials
-				mats = v.strip('}').strip('{').split(',')
+				mats = clean(v, str)
 				# Check if the materials are defined
 				for m in mats:
 					try:
 						self.materials[m]
 					except KeyError:
-						print "Error: material", m, "has not been defined yet. (" + asname + ')'
+						print("Error: material", m, "has not been defined yet. (" + asname + ')')
 						self.errors += 1
 			elif p == "label":
 				label = str(v)
@@ -506,16 +507,16 @@ class Case(object):
 				# ignore
 				continue
 			else:
-				print "Warning: unused property", p, "in", name
+				print("Warning: unused property", p, "in", name)
 				self.warnings += 1
 		
 		# Check if the information was parsed properly
 		# If not, warn the user and keep at it
 		if len(radii) != num_rings:
-			print "Error: there are", num_rings, "rings of", name, "but", len(radii), "radii were found!", '(' + asname + ')'
+			print("Error: there are", num_rings, "rings of", name, "but", len(radii), "radii were found!", '(' + asname + ')')
 			self.errors += 1
 		if len(mats) != num_rings:
-			print "Error: there are", num_rings, "rings of", name, "but", len(mats), "materials were provided!", '(' + asname + ')'
+			print("Error: there are", num_rings, "rings of", name, "but", len(mats), "materials were provided!", '(' + asname + ')')
 			self.errors += 1
 			
 			
