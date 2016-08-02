@@ -12,7 +12,7 @@
 
 import xml.etree.ElementTree as ET
 from warnings import warn
-from functions import clean
+from functions import clean, calc_u234_u236_enrichments
 import objects, isotopes
 
 
@@ -29,6 +29,7 @@ import objects, isotopes
 One big ParameterList of ParameterLists containing Parameters and ParameterLists (themselves containing other Parameters and ParameterLists)
 The goal here is to extract all of the information needed to construct OpenCG or OpenMC objects. Haven't figured out how to do that part yet.
 '''
+
 
 class Case(object):
 	'''Each VERA input deck represents a unique case.
@@ -325,7 +326,7 @@ class Case(object):
 				# A studiously ignored property
 				continue
 			elif p == "gad_frac":
-				gad_frac = float(v)/100.0
+				gad_frac = float(v)/100.0  # wt fractions are given as percents
 			elif p == "gad_mat":
 				gad_name = v
 			else:
@@ -346,9 +347,16 @@ class Case(object):
 		
 		# Complete the material composition (done implicitly in VERA)
 		if (miso_names[0][0].lower() == 'u') or (miso_names[0][:1] == '92'):
-			# Uranium: Need to add U-238  to composition
-			isos['u-238'] = (1 - sum(isos.values())) # no longer# wt fractions are given as percents
-			# TODO: Add U234 and U236 if not already present, according to the equation in the manual
+			# Uranium
+			# Add U-234 and U-236 to the composition, according to the formulas in the VERA manual,
+			# if the user has not specified them himself
+			u234, u236 = calc_u234_u236_enrichments(isos['u-235'])
+			if 'u-236' not in isos:
+				isos['u-236'] = u236
+			if 'u-234' not in isos:
+				isos['u-234'] = u234
+			# Add U-238 to composition
+			isos['u-238'] = ( 1 - sum(isos.values()) )
 		# With other HMs, the complete composition is already specified in the VERA deck
 		
 		# Calculate the weight of the HMs, add the weight of oxygen and gadolinia, and normalize
