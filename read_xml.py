@@ -11,7 +11,7 @@
 
 
 import xml.etree.ElementTree as ET
-#from warnings import warn
+from warnings import warn
 from functions import clean
 import objects
 
@@ -424,7 +424,8 @@ class Case(object):
 				try:
 					mat = self.materials[v]
 				except KeyError as e:
-					print("**Error: material", e, "has not been defined.")
+					#print("**Error: material", e, "has not been defined.")
+					warn(("**Error: material", e, "has not been defined.").join())
 					self.errors += 1
 			else:
 				print("Warning: unused property", p, "in", name)
@@ -503,13 +504,6 @@ class Case(object):
 			elif p == "mats":
 				# Convert to a list of strings, which serve as the keys to the dictionary self.materials
 				mats = clean(v, str)
-				# Check if the materials are defined
-				for m in mats:
-					try:
-						self.materials[m]
-					except KeyError:
-						print("Error: material", m, "has not been defined yet. (" + asname + ')')
-						self.errors += 1
 			elif p == "label":
 				label = str(v)
 			elif p == "type":

@@ -81,8 +81,6 @@ class MC_Case(Case):
 		for ring in range(vera_cell.num_rings):
 			r = vera_cell.radii[ring]
 			name = vera_cell.name + "-ring" + str(ring)
-			cell_id = self.openmc_cell_count
-			self.openmc_cell_count += 1
 			# Check if the outer bounding surface exists
 			surf_id = None
 			for s in self.openmc_surfaces.values():
@@ -103,6 +101,8 @@ class MC_Case(Case):
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
 			last_s = s
+			cell_id = self.openmc_cell_count
+			self.openmc_cell_count += 1
 			new_cell = openmc.Cell(cell_id, name)
 			if ring == 0:
 				# Inner ring
@@ -234,6 +234,7 @@ if __name__ == "__main__":
 	print
 	
 	#print test_case.describe()
+	all_pins = []
 	for a in test_case.assemblies.values():
 		for cm in a.cellmaps.values():
 			continue
@@ -241,8 +242,10 @@ if __name__ == "__main__":
 			print("-"*18)
 		#print a.params
 		for c in a.cells.values():
-			#print c
-			continue
+			new_pin = test_case.get_openmc_pincell(c)
+			all_pins.append(new_pin)
+			if new_pin.name == "Cell_1-verse":
+				mypin = new_pin
 	
 	#print cm.square_map()
 	print(cm.str_map())
@@ -252,10 +255,6 @@ if __name__ == "__main__":
 	
 	#print test_case.mod
 	
-	pincell= test_case.get_openmc_pincell(c)
-	#print pincell_cells
-	all_pins = [pincell, ]
-	#print all_pins
 	
 	'''Note: Attempting to print an assembly doesn't work. Could be due to a bug in the
 	__repr__() method? Printing here yields an AttributeError: 'NoneType' object has no attribute '_id',
