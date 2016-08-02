@@ -279,10 +279,14 @@ class Case(object):
 		if len(mfracs) != len(miso_names):
 			warn("Unequal number of isotopes and associated fractions in material " + mname)
 			self.warnings += 1
-			
+		
+		# Turn isotope names and fractions into a dictionary
+		isos = {}
+		for i in range(len(miso_names)):
+			isos[miso_names[i]] = mfracs[i]
 		
 		# Instantiate a new material return it
-		a_material = objects.Material(mname, mdens, mfracs, miso_names)
+		a_material = objects.Material(mname, mdens, isos)
 		return a_material
 	
 	
@@ -300,8 +304,9 @@ class Case(object):
 		
 		
 		
-		# Initialize the 4 material properties
+		# Initialize the 6 material properties
 		mname = ""; mdens = 0.0; mfracs = []; miso_names = []
+		gad_name = ""; gad_frac = 0.0
 			
 		for prop in fuel:
 			p = prop.attrib["name"]
@@ -319,44 +324,69 @@ class Case(object):
 			elif p == "thden":
 				# A studiously ignored property
 				continue
+			elif p == "gad_frac":
+				gad_frac = float(v)/100.0
+			elif p == "gad_mat":
+				gad_name = v
 			else:
 				warn("Warning: unused property " + p + "in" + mname)
 				self.warnings += 1
-				
-		
-		
-		# Complete the material composition (done implicitly in VERA)
-		if (miso_names[0][0].lower() == 'u') or (miso_names[0][:1] == '92'):
-			# Uranium: Need to add U-238  to composition
-			miso_names.append('u-238')
-			mfracs.append(100 - sum(mfracs))  # wt fractions are given as percents
-		# With other HMs, the complete composition is already specified in the VERA deck
-		
-		# Calculate the weight of the HMs, add the weight of oxygen, and normalize
-		mass = 0.0
-		for i in range(len(miso_names)):
-			isoname = miso_names[i]
-			isofrac = mfracs[i]
-			isomass = isotopes.MASS[isoname]
-			mass += isofrac*isomass
-		# Add Oxygen: (HM)-O2
-		oname = 'o-16'
-		miso_names.append(oname)
-		omass = isotopes.MASS[oname]*2.0
-		ofrac = omass/(mass + omass)*100  # 
-		mfracs.append(ofrac)
-		# And normalize
-		mfracs = [iso/sum(mfracs) for iso in mfracs]
-		print("Total fraction =", sum(mfracs))
 		
 		# Check if isotopic fractions each have an associated element
 		if len(mfracs) != len(miso_names):
 			warn("Error: Unequal number of isotopes and associated fractions in material " + mname)
 			#raise IndexError(warning)
 			self.errors += 1
+		# Turn isotope names and fractions into a dictionary
+		isos = {}
+		for i in range(len(miso_names)):
+			isos[miso_names[i]] = mfracs[i]/100.0
+		
+		# Do NOT use miso_names/mfracs after this point!	
+		
+		# Complete the material composition (done implicitly in VERA)
+		if (miso_names[0][0].lower() == 'u') or (miso_names[0][:1] == '92'):
+			# Uranium: Need to add U-238  to composition
+			isos['u-238'] = (1 - sum(isos.values())) # no longer# wt fractions are given as percents
+			# TODO: Add U234 and U236 if not already present, according to the equation in the manual
+		# With other HMs, the complete composition is already specified in the VERA deck
+		
+		# Calculate the weight of the HMs, add the weight of oxygen and gadolinia, and normalize
+		mass = 0.0
+		for i in isos:
+			isomass = isotopes.MASS[i]
+			mass += isos[i]*isomass
+		# Add Oxygen: (HM)-O2
+		oname = 'o-16'
+		omass = isotopes.MASS[oname]*2.0
+		ofrac = omass/mass  # Non-normalized; use: ( omass/(mass + omass) ) for normalized oxygen
+		mass += omass
+		isos[oname] = ofrac
+		# And normalize
+		total_wt = sum(isos.values())
+		for i in isos:
+			isos[i] = isos[i] * (1.0 - gad_frac) / total_wt
+		
+		# Then, add the gadolinia if necessary
+		if gad_frac:
+			try:
+				gad_mat = self.materials[gad_name]
+			except KeyError:
+				warn("Error: gad_mat " + gad_name + "is specified, but does not seem to exist.")
+				self.errors += 1
+			else:
+				# Normalize the gadolinia and mix it into the fuel
+				for i in gad_mat.isotopes:
+					if i in isos:
+						# Then the isotope is already in the mixture; add to it
+						isos[i] += gad_frac*gad_mat.isotopes[i]
+					else:
+						# Then the material doesn't exist; make a new entry
+						isos[i] = gad_frac*gad_mat.isotopes[i]
+		
 		
 		# Instantiate a new material and add it to the dictionary
-		a_material = objects.Material(mname, mdens, mfracs, miso_names)
+		a_material = objects.Material(mname, mdens, isos)
 		return a_material
 	
 	

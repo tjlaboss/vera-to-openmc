@@ -56,9 +56,9 @@ class MC_Case(Case):
 		
 		openmc_material = openmc.Material(mat_id, material.key_name)
 		openmc_material.set_density("g/cc", material.density)
-		for i in range(len(material.mat_names)):
-			nuclide = material.mat_names[i]
-			frac = material.mat_fracs[i]
+		for i in material.isotopes:
+			nuclide = i
+			frac = material.isotopes[i]
 			# TODO: Figure out from VERAin whether wt% or atom fraction
 			openmc_material.add_nuclide(nuclide, frac, 'wo')
 		return openmc_material
@@ -220,8 +220,9 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a test case with a simple VERA XML.gold
-	filename = "p7.xml.gold"
+	#filename = "p7.xml.gold"
 	#filename = "2a_dep.xml.gold"
+	filename = "2o.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	

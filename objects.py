@@ -5,16 +5,20 @@
 from math import sqrt
 
 class Material(object):
-	'''Basics of a material card'''
-	def __init__(self, key_name, density, mat_fracs, mat_names):
+	'''Basics of a material card
+	Parameters:
+		key_name:	string; unique material name
+		density:	float; density in g/cm^3
+		isotopes:	dictionary of {"isotope name":isotope_fraction}
+	'''
+	def __init__(self, key_name, density, isotopes):
 		self.key_name = key_name
 		self.density = density
-		self.mat_fracs = mat_fracs
-		self.mat_names = mat_names
+		self.isotopes = isotopes
 
 	def __str__(self):
 		'''Use this to print a brief description of each material'''
-		description = self.key_name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.mat_names)) + ' isotopes)'
+		description = self.key_name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.isotopes)) + ' isotopes)'
 		return description
 	
 	def __eq__(self, other):
