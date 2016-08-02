@@ -50,7 +50,7 @@ class Case(object):
 		# Blocks to use and ignore
 		# TODO: Verify that these lists are 100% correct.
 		self.usable = ("CORE", "INSERTS", "STATES", "CONTROLS", "DETECTORS", "ASSEMBLIES") # Relevant to OpenMC
-		self.ignore = ("SHIFT", "MPACT", "INSILICO", "COBRATF")			# Blocks specific to other codes 
+		self.ignore = ("SHIFT", "MPACT", "INSILICO", "COBRATF", "EDITS")			# Blocks specific to other codes 
 		
 		# Initialize some parameters with empty lists
 		self.materials = {}
@@ -131,7 +131,7 @@ class Case(object):
 											
 																	
 							elif core_child.tag == "ParameterList":
-								print("Unknown parameter list: " + cname + ". Ignoring.")
+								warn("Unknown parameter list: " + cname + ". Ignoring.")
 								self.warnings += 1
 								
 							elif core_child.tag == "Parameter":
@@ -192,7 +192,7 @@ class Case(object):
 														# In the assembly block, different materials by the same name
 														# in different assemblies are possible
 														newname = cname + newname
-														print("Warning: different versions of material", new_material.key_name, "exist; renaming to", newname)
+														warn("Warning: different versions of material " + new_material.key_name + " exist; renaming to " + newname)
 														new_material.key_name = newname
 													else:
 														# Exit the loop
@@ -209,7 +209,7 @@ class Case(object):
 												
 									
 									else:
-										print("Unknown ASSEMBLIES.ParameterList", aname, "-- ignoring")
+										warn("Unknown ASSEMBLIES.ParameterList" + aname + "-- ignoring")
 										self.warnings += 1
 								
 								else:
@@ -239,8 +239,9 @@ class Case(object):
 						print(name)
 				
 				else:
-					print("Warning: Unexpected block encountered:\t", child.attrib["name"])
-					print("This may be a flaw within the XML file, or a shortcoming of this script. Ignoring for now.")
+					w = ("Unexpected block encountered:\t" + child.attrib["name"] + \
+						"\nThis may be a flaw within the XML file, or a shortcoming of this script. Ignoring for now.")
+					warn(w)
 					self.warnings += 1
 			
 			else:
@@ -278,12 +279,12 @@ class Case(object):
 				# Convert a string to a list of strings
 				miso_names = clean(v, str)
 			else:
-				print("Warning: unused property", p)
+				warn("Warning: unused property " + p)
 				self.warnings += 1
 		
 		# Check if isotopic fractions each have an associated element
 		if len(mfracs) != len(miso_names):
-			print("Unequal number of isotopes and associated fractions in material", mname)
+			warn("Unequal number of isotopes and associated fractions in material " + mname)
 			self.warnings += 1
 			
 		
@@ -378,15 +379,14 @@ class Case(object):
 				# A studiously ignored property
 				continue
 			else:
-				print("Warning: unused property", p, "in", mname)
+				warn("Warning: unused property " + p + "in" + mname)
 				self.warnings += 1
 				
 		
 		# Check if isotopic fractions each have an associated element
 		if len(mfracs) != len(miso_names):
-			warning = "Unequal number of isotopes and associated fractions in material", mname
+			warn("Error: Unequal number of isotopes and associated fractions in material " + mname)
 			#raise IndexError(warning)
-			print(warning)
 			self.errors += 1
 			
 		
@@ -428,7 +428,7 @@ class Case(object):
 					warn(("**Error: material", e, "has not been defined.").join())
 					self.errors += 1
 			else:
-				print("Warning: unused property", p, "in", name)
+				warn("Warning: unused property " + p + "in" + name)
 				self.warnings += 1
 		
 		
@@ -458,7 +458,7 @@ class Case(object):
 			elif p == "label":
 				label = str(v)
 			else:
-				print("Warning: unused property", p, "in", name)
+				warn("Warning: unused property " + p + "in" + name)
 				self.warnings += 1
 		
 		
@@ -510,7 +510,7 @@ class Case(object):
 				# ignore
 				continue
 			else:
-				print("Warning: unused property", p, "in", name)
+				warn("Warning: unused property " + p + " in " + name)
 				self.warnings += 1
 		
 		# Check if the information was parsed properly

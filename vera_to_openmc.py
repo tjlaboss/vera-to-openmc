@@ -238,7 +238,9 @@ if __name__ == "__main__":
 	for a in test_case.assemblies.values():
 		for cm in a.cellmaps.values():
 			continue
-			#print a, '\t:\t', g
+			# comment out 'continue' to look at the cell maps
+			print(a, ':\t', cm)
+			print(cm.str_map())
 			print("-"*18)
 		#print a.params
 		for c in a.cells.values():
@@ -248,7 +250,6 @@ if __name__ == "__main__":
 				mypin = new_pin
 	
 	#print cm.square_map()
-	print(cm.str_map())
 	
 	#mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
 	#print mc_test_mat
