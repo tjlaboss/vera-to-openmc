@@ -212,17 +212,49 @@ class Core(object):
 		self.detector_map = detector_map
 	
 	
-	
-	
 	def __str__(self):
 		c = str(max(self.vessel_radii))
 		h = str(self.height)
 		return "Core: r=" + c + "cm, z=" + h + "cm"
 	
 	
-	# FIXME:
-	# Does not currently print assembly map so that it conforms to core shape
-	def core_maps(self, which = ""):
+	def __asmbly_square_map(self, space = ' '):
+		'''Returns array of the assembly map
+		
+		Optional input:
+			space:	string (len=1) to represent a spot outside the core.
+					Default is whitespace.'''
+		# Create a new blank map for the assembly layout
+		n = self.size
+		amap = [['',]*n, ]*n
+		j = 0
+		for row in range(n):
+			new_row = ['']*n
+			for col in range(n):
+				a = self.shape.square_map()[row][col]
+				if a == 0:
+					new_row[col] = space[0]
+				else:
+					new_row[col] = self.asmbly.cell_map[j] #+ ' '
+					j += 1
+				#print("a=", a)
+			amap[row] = new_row
+			
+			#smap[row] = self.cell_map[row*n:(row+1)*n]
+		return amap
+		
+		
+	def __asmbly_str_map(self, space):
+		'''Returns a nice printable string of the core assembly map'''
+		printable = ""
+		for row in self.__asmbly_square_map(space):
+			for col in row:
+				printable += str(col) + ' '
+			printable += '\n'
+		return printable
+	
+	
+	def square_maps(self, which = "", space = ' '):
 		'''Return arrays of the core shape map and the assembly map
 		The user must specify "s"/"shape", or "a"/"ass"/"asmbly"/"assembly";
 		else, the method will return both.'''
@@ -230,13 +262,13 @@ class Core(object):
 		if which in ("s", "shape"):
 			return self.shape.square_map()
 		elif which in ("a", "ass", "asmbly", "assembly"):
-			return self.asmbly.square_map()
+			return self.__asmbly_square_map(space)
 		elif not which:
-			return (self.shape.square_map(), self.asmbly.square_map())
+			return (self.shape.square_map(), self.__asmbly_square_map(space))
 		else:
 			return which + " is not a valid option."
 	
-	def str_maps(self, which = ""):
+	def str_maps(self, which = "", space = ' '):
 		'''Return nice little maps for printing of the core shape and assembly locations)
 		The user must specify "s"/"shape", or "a"/"ass"/"asmbly"/"assembly";
 		else, the method will return both.'''
@@ -244,9 +276,9 @@ class Core(object):
 		if which in ("s", "shape"):
 			return self.shape.str_map()
 		elif which in ("a", "ass", "asmbly", "assembly"):
-			return self.asmbly.str_map()
+			return self.__asmbly_str_map(space)
 		elif not which:
-			return (self.shape.str_map(), self.asmbly.str_map())
+			return (self.shape.str_map(), self.__asmbly_str_map(space))
 		else:
 			return which + " is not a valid option."
 

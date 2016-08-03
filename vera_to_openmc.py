@@ -266,9 +266,10 @@ if __name__ == "__main__":
 	
 	test_asmblys = test_case.get_openmc_assemblies(a)[0]
 	#print(test_asmbly)
-
-	print(test_case.core.str_maps()[0])
-	print(test_case.core.str_maps()[1])
+	
+	print()
+	for cmap in test_case.core.str_maps(space = "~"):
+		print(cmap)
 	
 	
 	
