@@ -103,7 +103,8 @@ class Case(object):
 						The geometric objects inside the core are defined in separate input blocks; the [CORE] block
 						simply describes how all of these objects are placed together.'''
 						# The CORE block will contain the deck's global materials
-						# and some other stuff
+						# and some geometric parameters
+						core_params = {}
 						for core_child in child:
 							cname = core_child.attrib["name"].lower()	# for brevity
 							if core_child.tag == "ParameterList" and cname == "materials":
@@ -136,15 +137,90 @@ class Case(object):
 								self.warnings += 1
 								
 							elif core_child.tag == "Parameter":
-								# TODO: This is where the program gets boundary conditions and various other core properties.
-								# Things to watch for: apitch, assm_map, bc_bot, bc_rad, bc_top, core_size, height,
-								# 	rated_flow, rated_power, and shape
-								continue
+								core_params[cname] = core_child.attrib["value"]
 								
-									
 							else:
 								print("Error: Entry", core_child.tag, "is neither a Parameter nor ParameterList. Ignoring.")
 								self.errors += 1
+						
+						
+						# TODO: This is where the program gets boundary conditions and various other core properties.
+						# Things to watch for: apitch, assm_map, bc_bot, bc_rad, bc_top, core_size, height,
+						# 	rated_flow, rated_power, and shape
+						
+						# Initialize variables to be passed to the Core instance
+						pitch = 0.0; 	asmbly_map = []; shape = [];
+						core_size = 0; 	core_height = 0.0;  
+						bcs = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"}
+						baffle = {}; lower = {}; upper = {}; lower_refl = None; upper_refl = None
+						radii = []; mats = [] 
+						# Unpack these variables from core_params
+						# Delete them from the dict, and pass the remaining params on to objects.Core
+						for p in core_params:
+							v = core_params[p]
+							if p == "apitch":
+								pitch = float(v)
+							elif p == "assm_map":
+								asmbly = clean(v, str)
+							elif p == "shape":
+								shape = clean(v, int)
+							elif p == "core_size":
+								core_size = int(v)
+							elif p == "height":
+								core_height = float(v)
+							elif p[:3] == "bc_":
+								bcs[p[3:]] = v
+								if len(bcs) < 3:
+									# don't delete
+									continue
+							elif p[:7] == "baffle_":
+								b = p[7:] 
+								if b == "mat":
+									baffle[b] = v
+								else:
+									baffle[b] = float(v)
+								if len(baffle) < 3:
+									continue
+							elif p[:6] == "lower_":
+								b = p[6:] 
+								if b == "mat":
+									lower[b] = v
+								else:
+									lower[b] = float(v)
+								if len(lower) == 3:
+									lower_refl = objects.Reflector(lower["mat"], lower["thick"],
+												 lower["vfrac"], "lower")
+								else:
+									continue
+							elif p[:6] == "upper_":
+								b = p[6:] 
+								if b == "mat":
+									upper[b] = v
+								else:
+									upper[b] = float(v)
+								if len(upper) == 3:
+									upper_refl = objects.Reflector(upper["mat"], upper["thick"],
+												 upper["vfrac"], "upper")
+								else:
+									continue
+							elif p == "vessel_radii":
+								radii = clean(v, float)
+							elif p == "vessel_mats":
+								mats = clean(v, str)
+							else:
+								# Don't delete it from the misc params
+								continue
+							#del core_params[p]
+						
+						
+						# Check that each pressure vessel radius has a corresponding material
+						if len(radii) != len(mats):
+							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
+							self.errors += 1
+						self.core = objects.Core(pitch, core_size, core_height, shape, asmbly, core_params,
+												 bcs, lower_refl, upper_refl, radii, mats, baffle)
+						# TODO: Account for controls, detectors, etc.
+						
 								
 						
 					elif name == "ASSEMBLIES":
@@ -446,7 +522,7 @@ class Case(object):
 			cmap: The ParameterList object describing a cell map
 		
 		Outputs:
-			a_map: Instance of the CellMap object populated with the properties from the XML.'''
+			a_map: Instance of the CoreMap object populated with the properties from the XML.'''
 		
 		# Initialize the 3 cell map properties
 		name = cmap.attrib["name"]
@@ -466,7 +542,7 @@ class Case(object):
 		
 		
 		# Instantiate a new material and add it to the dictionary
-		a_cell_map = objects.CellMap(name, label, map_itself)
+		a_cell_map = objects.CoreMap(map_itself, name, label)
 		return a_cell_map
 	
 	

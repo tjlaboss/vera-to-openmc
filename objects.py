@@ -94,14 +94,15 @@ class SpacerGrid(object):
 		
 		
 
-class CellMap(object):
+class CoreMap(object):
 	'''
 	Inputs: 
-		name: 		String containing the unique Assembly name
 		cell_map: 	List of integers describing the assembly layout
-		label:		string
+	Optional:
+		name: 		String containing the descriptive Assembly name
+		label:		string containing the unique Assembly identifier
 	'''
-	def __init__(self, name, label, cell_map):
+	def __init__(self, cell_map, name = "", label = ""):
 		self.name = name 
 		self.label = label
 		self.cell_map = cell_map
@@ -152,6 +153,96 @@ class Cell(object):
 		return self.name
 
 
+class Core(object):
+	'''Container for all the general and full-core properties
+	
+	Inputs:
+		pitch:		float; 	assembly pitch in cm
+		size:		int; 	number of assemblies across one axis of the full core
+		height:		float;	total axial distance (cm) from the bottom core plate
+					to the top core plate, excluding plate thickness
+		shape:		list of integers containing a map of the shape of the core,
+					which is converted to an instance of CoreMap (self.shape_map) 
+					A 1 marks a valid assembly location; a 0, an invalid location
+		asmbly:		list of stronggs containing a map of the fuel assemblies in the core, 
+					which is converted to an instance of CoreMap (self.asmbly_map)
+					Must conform to self.shape
+		params:		dictionary of miscellaneous core parameters for possible later use
+	
+	Optional parameters:			
+		bc:				dictionary of boundary conditions for top, bot, and rad.
+						May be either "reflecting" or "vacuum". (Default: "vacuum")
+		bot_refl:		instance of Reflector(mat, thick, vfrac) 
+		top_refl:	 	  ^
+		vessel_radii:	list of floats describing the radii of the reactor vessel layers
+		vessel_mats:	list of strings referring to Material keys for each layer of the
+						reactor vessel--must be same length as vessel_radii
+		baffle:			
+		
+	
+	'''
+	def __init__(self, pitch, size, height, shape, asmbly_map, params, #rpower, rflow,
+				 bc = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"},
+				 bot_refl = None, top_refl = None, vessel_radii = [], vessel_mats = [], 
+				 baffle = {}, control_bank = [], control_map = [], detector_map = []):
+		
+		self.pitch = pitch
+		self.size = size
+		self.height = height
+		self.shape = shape
+		self.asmbly_map = asmbly_map
+		self.params = params
+		
+		self.bc = bc
+		self.bot_refl = bot_refl
+		self.top_refl = top_refl
+		self.vessel_mats = vessel_mats
+		self.vessel_radii = vessel_radii
+		self.baffle = baffle
+		self.control_bank = control_bank
+		self.control_map = control_map
+		self.detector_map = detector_map
+	
+	def __str__(self):
+		c = str(max(self.vessel_radii))
+		h = str(self.height)
+		return "Core: r=" + c + "cm, z=" + h + "cm"
+
+
+class Reflector(object):
+	'''Inputs:
+		mat:	instance of Material
+		thick:	float;	thickness in cm
+		vfrac:	float;	volume fraction
+		[name]:	string;	default is empty string
+	'''
+	def __init__(self, mat, thick, vfrac, name = ""):
+		self.mat = mat
+		self.thick = thick
+		self.vfrac = vfrac
+		self.name = name
+	def __str__(self):
+		return self.name + " Reflector"
+
+
+class Baffle(object):
+	'''Inputs:
+		mat:	instance of Material
+		thick:	thickness of baffle (cm)
+		gap:	thickness of gap (cm) between the outside assembly
+				(including the assembly gap) and the baffle itself
+		[name]:	string;	default is empty string
+		'''
+	def __init__(self, mat, thick, gap):
+		self.mat = mat
+		self.thick = thick
+		self.vfrac = gap
+	def __str__(self):
+		return "Baffle (" + self.thick + " cm thick)"
+
+
+
+
 # What to do if somebody tries to run the module
 if __name__ == "__main__":
 	print('''This is a module containing classes
@@ -160,5 +251,10 @@ if __name__ == "__main__":
  - SpacerGrid(name, height, mass, label, material)
  - CellMap(name, label, cell_map)
  - Cell(name, num_rings, radii, mats, label)
+ - Core(pitch, size, height, rpower, rflow, asmbly_map,
+ 	[bc, bot_refl, top_refl, vessel_radii, vessel_mats,
+ 	baffle, control_bank, control_map, detector_map])
+ - Reflector(mat, thick, vfrac, [name])
+ - Baffle(mat, thick, vfrac)
 ''')
 

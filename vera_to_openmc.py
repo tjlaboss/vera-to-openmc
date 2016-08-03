@@ -220,9 +220,9 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a test case with a simple VERA XML.gold
-	#filename = "p7.xml.gold"
+	filename = "p7.xml.gold"
 	#filename = "2a_dep.xml.gold"
-	filename = "2o.xml.gold"
+	#filename = "2o.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	
@@ -264,10 +264,10 @@ if __name__ == "__main__":
 	<http://openmc.readthedocs.io/en/latest/pythonapi/examples/pandas-dataframes.html>
 	causes a TypeError: 'NoneType' object has no attribute '__getitem__' '''
 	
-	test_asmbly = test_case.get_openmc_assemblies(a)[0]
-	for ass in test_case.get_openmc_assemblies(a):
-		print(ass.id, ass.name)
-	
+	test_asmblys = test_case.get_openmc_assemblies(a)[0]
+	#print(test_asmbly)
+
+	print(test_case.core)
 	
 	
 	
