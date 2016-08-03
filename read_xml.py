@@ -49,7 +49,6 @@ class Case(object):
 		self.case_id = "Unnamed VERA Case"
 		
 		# Blocks to use and ignore
-		# TODO: Verify that these lists are 100% correct.
 		self.usable = ("CORE", "INSERTS", "STATES", "CONTROLS", "DETECTORS", "ASSEMBLIES") # Relevant to OpenMC
 		self.ignore = ("SHIFT", "MPACT", "INSILICO", "COBRATF", "EDITS")			# Blocks specific to other codes 
 		
@@ -228,9 +227,7 @@ class Case(object):
 							cname = asmbly.attrib["name"].lower()	# for brevity
 							# dictionary of all independent parameters for this assembly
 							asmbly_params = {}
-							grids = {}
-							maps = {}
-							cells = {}
+							grids = {}; maps = {}; cells = {}
 									
 							for asmbly_child in asmbly:
 								aname = asmbly_child.attrib["name"].lower()
@@ -303,10 +300,8 @@ class Case(object):
 						do_detector_stuff = True
 					elif name == "INSERTS":
 						do_insert_stuff = True
-					
-					# tmp
 					else:
-						print(name)
+						warn("Unexpected ParameterList " + name + " encountered; ignoring.")
 				
 				else:
 					w = ("Unexpected block encountered:\t" + child.attrib["name"] + \
@@ -443,7 +438,7 @@ class Case(object):
 		# Add Oxygen: (HM)-O2
 		oname = 'o-16'
 		omass = isotopes.MASS[oname]*2.0
-		ofrac = omass/mass  # Non-normalized; use: ( omass/(mass + omass) ) for normalized oxygen
+		ofrac = omass/mass  # Non-normalized; use: ( omass/(mass + omass) ) to pre-normalize oxygen
 		mass += omass
 		isos[oname] = ofrac
 		# And normalize
@@ -497,19 +492,10 @@ class Case(object):
 			elif p == "label":
 				label = str(v)
 			elif p == "material":
-				# Check if the material has been defined yet. If not, throw an error
-				# This is probably not the desired behavior. Because this way "spacergrid"
-				# must necessarily be evaluated after all material/fuel blocks in this case. 
-				try:
-					mat = self.materials[v]
-				except KeyError as e:
-					#print("**Error: material", e, "has not been defined.")
-					warn(("**Error: material", e, "has not been defined.").join())
-					self.errors += 1
+				mat = str(v)
 			else:
 				warn("Warning: unused property " + p + "in" + name)
 				self.warnings += 1
-		
 		
 		# Instantiate a new material and add it to the dictionary
 		a_grid = objects.SpacerGrid(name, height, mass, label, mat)

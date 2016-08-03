@@ -44,22 +44,9 @@ class Assembly(object):
 		self.cells = cells
 		self.cellmaps = cellmaps
 		self.spacergrids = spacergrids
-	
-		''' At this point, I'm thinking there has to be a better way to do this than to
-		go through and grab ever parameter. Is there some way I can automate this so that
-		
-			<Parameter name="lower_nozzle_comp" type="string" value="ss"/>	# for example
-			<Parameter name="lower_nozzle_mass" type="double" value="6250.0"/>
-		
-		gets translated to
-		
-			self.lower_nozzle_comp = str("ss")
-			self.lower_nozzle_mass = float("6250.0") ??
-		
-		There must be. Will use a dictionary for now.'''
 		
 		self.params = params
-		# Unpack the parameters that should "appear" in every case
+		# Unpack the parameters that should appear in every case
 		self.axial_labels = map(str, params["axial_labels"].strip('}').strip('{').split(','))
 		self.axial_elevations = map(float, params["axial_elevations"].strip('}').strip('{').split(','))
 		self.pitch = float(params["ppitch"])
@@ -79,7 +66,7 @@ class SpacerGrid(object):
 		height:		float
 		mass:		float
 		label:		string
-		material:	instance of class Material
+		material:	string; key referring to an instance of class Material
 		'''
 	
 	def __init__(self, name, height, mass, label, material):
@@ -177,10 +164,14 @@ class Core(object):
 		vessel_radii:	list of floats describing the radii of the reactor vessel layers
 		vessel_mats:	list of strings referring to Material keys for each layer of the
 						reactor vessel--must be same length as vessel_radii
-		baffle:			
-		
-	
+		baffle:			dictionary of baffle properties: {"mat":Material key (string), 
+						"gap": gap between oustside assembly and baffle in cm (float),
+						"thick": thickness of the baffle material in cm (float) }
+		control_bank,
+		control_map,	Not coded yet, but they will likely be lists of strings in the
+		detector_map:	style of asmbly_map
 	'''
+
 	def __init__(self, pitch, size, height, shape, asmbly, params, #rpower, rflow,
 				 bc = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"},
 				 bot_refl = None, top_refl = None, vessel_radii = [], vessel_mats = [], 
@@ -235,12 +226,9 @@ class Core(object):
 				if a == 0:
 					new_row[col] = space[0]
 				else:
-					new_row[col] = self.asmbly.cell_map[j] #+ ' '
+					new_row[col] = self.asmbly.cell_map[j]
 					j += 1
-				#print("a=", a)
 			amap[row] = new_row
-			
-			#smap[row] = self.cell_map[row*n:(row+1)*n]
 		return amap
 		
 		
@@ -288,7 +276,8 @@ class Reflector(object):
 		mat:	instance of Material
 		thick:	float;	thickness in cm
 		vfrac:	float;	volume fraction
-		[name]:	string;	default is empty string
+	Optional input:
+		name:	string;	default is empty string
 	'''
 	def __init__(self, mat, thick, vfrac, name = ""):
 		self.mat = mat
@@ -305,7 +294,6 @@ class Baffle(object):
 		thick:	thickness of baffle (cm)
 		gap:	thickness of gap (cm) between the outside assembly
 				(including the assembly gap) and the baffle itself
-		[name]:	string;	default is empty string
 		'''
 	def __init__(self, mat, thick, gap):
 		self.mat = mat
