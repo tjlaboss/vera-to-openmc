@@ -124,7 +124,7 @@ class CoreMap(object):
 		printable = ""
 		for row in smap:
 			for col in row:
-				printable += col + ' '
+				printable += str(col) + ' '
 			printable += '\n'
 		return printable
 
@@ -162,11 +162,11 @@ class Core(object):
 		height:		float;	total axial distance (cm) from the bottom core plate
 					to the top core plate, excluding plate thickness
 		shape:		list of integers containing a map of the shape of the core,
-					which is converted to an instance of CoreMap (self.shape_map) 
+					which is converted to an instance of CoreMap. (Alternatively,
+					an instance of CoreMap may be directly specified.)
 					A 1 marks a valid assembly location; a 0, an invalid location
-		asmbly:		list of stronggs containing a map of the fuel assemblies in the core, 
-					which is converted to an instance of CoreMap (self.asmbly_map)
-					Must conform to self.shape
+		asmbly:		list of strings containing a map of the fuel assemblies in the core, 
+					which may be specified or converted as above. **Must conform to self.shape**
 		params:		dictionary of miscellaneous core parameters for possible later use
 	
 	Optional parameters:			
@@ -181,7 +181,7 @@ class Core(object):
 		
 	
 	'''
-	def __init__(self, pitch, size, height, shape, asmbly_map, params, #rpower, rflow,
+	def __init__(self, pitch, size, height, shape, asmbly, params, #rpower, rflow,
 				 bc = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"},
 				 bot_refl = None, top_refl = None, vessel_radii = [], vessel_mats = [], 
 				 baffle = {}, control_bank = [], control_map = [], detector_map = []):
@@ -189,9 +189,17 @@ class Core(object):
 		self.pitch = pitch
 		self.size = size
 		self.height = height
-		self.shape = shape
-		self.asmbly_map = asmbly_map
+		self.asmbly = asmbly
 		self.params = params
+		
+		if not isinstance(shape, CoreMap):
+			self.shape = CoreMap(shape, "Core shape map")
+		else:
+			self.shape = shape
+		if not isinstance(asmbly, CoreMap):
+			self.asmbly = CoreMap(asmbly, "Fuel assembly map")
+		else:
+			self.asmbly = asmbly
 		
 		self.bc = bc
 		self.bot_refl = bot_refl
@@ -203,10 +211,44 @@ class Core(object):
 		self.control_map = control_map
 		self.detector_map = detector_map
 	
+	
+	
+	
 	def __str__(self):
 		c = str(max(self.vessel_radii))
 		h = str(self.height)
 		return "Core: r=" + c + "cm, z=" + h + "cm"
+	
+	
+	# FIXME:
+	# Does not currently print assembly map so that it conforms to core shape
+	def core_maps(self, which = ""):
+		'''Return arrays of the core shape map and the assembly map
+		The user must specify "s"/"shape", or "a"/"ass"/"asmbly"/"assembly";
+		else, the method will return both.'''
+		which = which.lower()
+		if which in ("s", "shape"):
+			return self.shape.square_map()
+		elif which in ("a", "ass", "asmbly", "assembly"):
+			return self.asmbly.square_map()
+		elif not which:
+			return (self.shape.square_map(), self.asmbly.square_map())
+		else:
+			return which + " is not a valid option."
+	
+	def str_maps(self, which = ""):
+		'''Return nice little maps for printing of the core shape and assembly locations)
+		The user must specify "s"/"shape", or "a"/"ass"/"asmbly"/"assembly";
+		else, the method will return both.'''
+		which = which.lower()
+		if which in ("s", "shape"):
+			return self.shape.str_map()
+		elif which in ("a", "ass", "asmbly", "assembly"):
+			return self.asmbly.str_map()
+		elif not which:
+			return (self.shape.str_map(), self.asmbly.str_map())
+		else:
+			return which + " is not a valid option."
 
 
 class Reflector(object):
@@ -251,7 +293,7 @@ if __name__ == "__main__":
  - SpacerGrid(name, height, mass, label, material)
  - CellMap(name, label, cell_map)
  - Cell(name, num_rings, radii, mats, label)
- - Core(pitch, size, height, rpower, rflow, asmbly_map,
+ - Core(pitch, size, height, rpower, rflow, asmbly,
  	[bc, bot_refl, top_refl, vessel_radii, vessel_mats,
  	baffle, control_bank, control_map, detector_map])
  - Reflector(mat, thick, vfrac, [name])
