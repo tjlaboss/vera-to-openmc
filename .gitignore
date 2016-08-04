@@ -5,3 +5,7 @@
 /vera_to_openmc.pyc
 /test_assembly.py
 /lattice.py
+/geometry.xml
+/materials.xml
+/plots.xml
+/settings.xml
