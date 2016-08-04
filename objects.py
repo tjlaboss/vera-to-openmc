@@ -139,7 +139,8 @@ class Cell(object):
 		self.asname = asname
 	
 	def __str__(self):
-		return self.name
+		rep = self.name + " (radius = " + str(max(self.radii)) + ')'
+		return rep
 
 
 class Core(object):

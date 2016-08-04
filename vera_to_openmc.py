@@ -145,7 +145,7 @@ class MC_Case(Case):
 		self.openmc_cell_count += 1
 		mod_cell = openmc.Cell(mod_cell_id, vera_cell.name + "-Mod")
 		mod_cell.fill = self.mod
-		mod_cell.region = +last_s
+		mod_cell.region = +s
 		openmc_cells.append(mod_cell)
 		
 		# Create a new universe in which the pin cell exists 
@@ -267,7 +267,7 @@ if __name__ == "__main__":
 	test_asmblys = test_case.get_openmc_assemblies(a)[0]
 	#print(test_asmbly)
 	
-	print()
+	print('\n', a.name, test_asmblys.name, '\n')
 	for cmap in test_case.core.str_maps(space = "~"):
 		print(cmap)
 	
