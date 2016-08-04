@@ -3,6 +3,7 @@
 # Module containing useful objects for read_xml.py
 
 from math import sqrt
+from functions import clean
 
 class Material(object):
 	'''Basics of a material card
@@ -47,8 +48,9 @@ class Assembly(object):
 		
 		self.params = params
 		# Unpack the parameters that should appear in every case
-		self.axial_labels = map(str, params["axial_labels"].strip('}').strip('{').split(','))
-		self.axial_elevations = map(float, params["axial_elevations"].strip('}').strip('{').split(','))
+		self.label = params["label"].lower()
+		self.axial_labels = clean(params["axial_labels"], str)
+		self.axial_elevations = clean(params["axial_elevations"], float)
 		self.pitch = float(params["ppitch"])
 		self.npins = int(params["num_pins"])
 		

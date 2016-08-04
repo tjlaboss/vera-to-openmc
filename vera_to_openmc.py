@@ -100,16 +100,20 @@ class MC_Case(Case):
 				
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
-			last_s = s
 			cell_id = self.openmc_cell_count
 			self.openmc_cell_count += 1
 			new_cell = openmc.Cell(cell_id, name)
 			if ring == 0:
 				# Inner ring
 				new_cell.region = -s
+				last_s = s
 			else:
 				# Then this OpenMC cell is outside the previous (last_s), inside the current
 				new_cell.region = -s & +last_s 
+				last_s = s
+			
+			
+			
 			
 			
 			# Fill the cell in with a material
@@ -129,10 +133,6 @@ class MC_Case(Case):
 					self.openmc_materials[m] = fill
 			
 				
-				
-			
-			
-			
 			# What I want to do instead is, somewhere else in the code, generate the corresponding
 			# openmc material for each objects.Material instance. Then, just look it up in that dictionary.			
 			new_cell.fill = fill

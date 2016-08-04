@@ -286,7 +286,7 @@ class Case(object):
 							
 							# Instantiate an Assembly object and pass it the parameters
 							new_assembly = objects.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
-							self.assemblies[cname] = new_assembly
+							self.assemblies[new_assembly.label] = new_assembly
 						
 						
 					elif name == "STATES":
