@@ -47,21 +47,47 @@ class MC_Case(Case):
 	def get_openmc_material(self, material):
 		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
 		create and return an instance of openmc.Material.
+		
+		All of the material fractions sum to either +1.0 or -1.0. If positive fractions are used, they
+		refer to weight fractions. If negative fractions are used, they refer to atomic	fractions.
 		'''
 		
 		mat_id = self.openmc_material_count
 		self.openmc_material_count += 1
-		
-		
 		
 		openmc_material = openmc.Material(mat_id, material.key_name)
 		openmc_material.set_density("g/cc", material.density)
 		for i in material.isotopes:
 			nuclide = i
 			frac = material.isotopes[i]
-			# TODO: Figure out from VERAin whether wt% or atom fraction
-			openmc_material.add_nuclide(nuclide, frac, 'wo')
+			if frac < 0:
+				openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
+			else:
+				openmc_material.add_nuclide(nuclide, frac, 'wo')
 		return openmc_material
+	
+	
+	def try_openmc_material(self, m):
+		'''Check if a material exists; if it doesn't, add it to the index
+		
+		Input:
+			m:		string; key of a VERA material in self.materials
+		Output:
+			mat:	instance of openmc.Material
+		'''
+		try:
+			# Look it up as normal
+			mat = self.openmc_materials[m]
+		except KeyError:
+			# Then the material really doesn't exist yet in OpenMC form
+			# Generate it and add it to the index 
+			mat = self.get_openmc_material(self.materials[m])
+			self.openmc_materials[m] = mat
+		
+		return mat
+	
+	
+	
 	
 	def get_openmc_pincell(self, vera_cell):
 		'''Inputs:
@@ -221,16 +247,15 @@ class MC_Case(Case):
 		'''
 		
 		ps = vera_core.params
-		
 		core_cells = []
 		
-		# Create the top and bottom planes of the core
+		# Create the top and bottom planes of the core and core plate
+		plate_bot = openmc.ZPlane(z0 = -vera_core.lower_refl.thick, boundary_type = vera_core.bc["bot"])
 		core_bot = openmc.ZPlane(z0 = 0.0)
 		core_top = openmc.ZPlane(z0 = vera_core.height)
-		# TODO: Create the core plate and reflector planes too
-		# vera_core.bc["top"]; vera_core.bc["bot]
+		plate_top = openmc.ZPlane(z0 = vera_core.height + vera_core.upper_refl.thick, boundary_type = vera_core.bc["top"])
 		
-		
+		# Create the concentric cylinders of the vessel
 		for ring in range(len(vera_core.vessel_radii) - 1):
 			r = vera_core.vessel_radii[ring]
 			m = vera_core.vessel_mats[ring]
@@ -263,6 +288,10 @@ class MC_Case(Case):
 		new_cell.region = -s    & +core_bot & -core_top
 		core_cells.append(new_cell)
 		
+		# TODO: Define the regions between the plates
+		# 
+		
+		
 		u_num = self.openmc_universe_count
 		self.openmc_universe_count += 1
 		openmc_core = openmc.Universe(u_num, "Reactor Vessel")
@@ -272,24 +301,6 @@ class MC_Case(Case):
 	
 	
 	
-	def try_openmc_material(self, m):
-		'''Check if a material exists; if it doesn't, add it to the index
-		
-		Input:
-			m:		string; key of a VERA material in self.materials
-		Output:
-			mat:	instance of openmc.Material
-		'''
-		try:
-			# Look it up as normal
-			mat = self.openmc_materials[m]
-		except KeyError:
-			# Then the material really doesn't exist yet in OpenMC form
-			# Generate it and add it to the index 
-			mat = self.get_openmc_material(self.materials[m])
-			self.openmc_materials[m] = mat
-		
-		return mat
 			
 	
 	

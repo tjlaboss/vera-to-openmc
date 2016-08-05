@@ -60,7 +60,8 @@ class Case(object):
 		
 		
 		# Placeholder for an essential material
-		self.materials['mod'] = "placeholder for [mod]"
+		mod_density = 1.0; mod_isotopes = {"h-1":-2.0/3, "o-16":-1.0/3}
+		self.materials['mod'] = objects.Material("mod", mod_density, mod_isotopes)
 		
 		
 		# Then populate everything:

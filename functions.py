@@ -2,7 +2,6 @@
 #
 # Module containing useful functions for read_xml.py and its modules
 
-
 def clean(vera_list, type):
 	'''Lists in VERA decks are formatted as such: 
 	
@@ -38,4 +37,66 @@ def calc_u234_u236_enrichments(w235):
 
 
 
+def convert_at_to_wt(mat):
+	'''Convert atomic fraction to weight fraction for a material's isotopes
+	
+	Input:
+		mat:	instance of objects.Material where mat.isotopes is < 0 (atomic frac)
+	
+	Output:
+		mat:	same instance, but mat.isotopes is now in wt fraction
+	'''
+
+	import isotopes as topes
+	total_at = sum(mat.isotopes.values())
+	total_wt = 0.0
+	iso_wts = {}
+
+	if total_at >= 0:
+		# already in weight fraction
+		return mat
+	else:
+		for iso in mat.isotopes:
+			total_wt += mat.isotopes[iso] * topes.MASS[iso]
+		for iso in mat.isotopes:
+			iso_wts[iso] = abs( mat.isotopes[iso] * topes.MASS[iso] / total_wt )
+	
+	mat.isotopes = iso_wts
+	return mat
+
+
+
+
+def mixture(materials, vfracs):
+	'''Create a new material as a mixture of other materials
+	
+	Inputs:
+		materials:		list/tuple of instances of objects.Material 
+		vfracs:			list/tuple of the volume fractions of each Material
+	
+	Outputs:
+		mixture:		instance of objects.Material that resulted
+	'''
+	
+	mix_isotopes = {}
+	
+	for i in range(len(materials)):
+		mat = materials[i]
+		convert_at_to_wt(mat)
+		wtf = vfracs[i]*mat.density 	# weight fraction of entire material
+		for iso in mat.isotopes:
+			new_wt = wtf*mat.isotopes[iso]
+			if iso in mix_isotopes:
+				mix_isotopes[iso] += new_wt
+			else:
+				mix_isotopes[iso] = new_wt
+				
+	
+	mixture = None
+	
+	return None
+	
+
+	
+	
 

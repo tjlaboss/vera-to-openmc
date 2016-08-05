@@ -3,7 +3,7 @@
 # Module containing useful objects for read_xml.py
 
 from math import sqrt
-from functions import clean
+from functions import clean, convert_at_to_wt
 
 class Material(object):
 	'''Basics of a material card
@@ -24,7 +24,46 @@ class Material(object):
 	
 	def __eq__(self, other):
 		return self.__dict__ == other.__dict__
+
+
+class Mixture(Material):
+	'''Two mixed Material instances. 
+	Functionally exactly the same as Material, but initialized differently.'''
+	def __init__(self, key_name, materials, vfracs):
+		
+		
+		self.key_name = key_name
+		mix_isos = {}
+		density = 0.0
 	
+		for i in range(len(materials)):
+			density += materials[i].density * (vfracs[i] / sum(vfracs))
+		for i in range(len(materials)):
+			mat = materials[i]
+			convert_at_to_wt(mat)
+			wtf = vfracs[i]*mat.density 	# weight fraction of entire material
+			for iso in mat.isotopes:
+				new_wt = wtf*mat.isotopes[iso] / density
+				if iso in mix_isos:
+					mix_isos[iso] += new_wt
+				else:
+					mix_isos[iso] = new_wt
+			
+					
+		self.isotopes = mix_isos
+		self.density = density
+
+def test_mixture():
+	'''Delete this when confident that Mixture is working properly'''
+	mod_density = 1.0; mod_isotopes = {"h-1":-2.0/3, "o-16":-1.0/3}
+	mod = Material("mod", mod_density, mod_isotopes)
+	
+	air = Material("thorium oxide", 10, {"o-16":0.75, "th-232":0.25})
+	
+	mix = Mixture("thorated water", (mod, air), (0.5, 0.5) )
+	print(sum(mix.isotopes.values()), mix.isotopes, mix.density)
+
+
 
 class Assembly(object):
 	'''VERA decks often contain descriptions of fuel assemblies.
@@ -319,6 +358,7 @@ class Baffle(object):
 
 
 
+
 # What to do if somebody tries to run the module
 if __name__ == "__main__":
 	print('''This is a module containing classes
@@ -333,4 +373,8 @@ if __name__ == "__main__":
  - Reflector(mat, thick, vfrac, [name])
  - Baffle(mat, thick, vfrac)
 ''')
+	
+	
+	
+	
 
