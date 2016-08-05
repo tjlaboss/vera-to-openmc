@@ -195,7 +195,15 @@ class Core(object):
 		else:
 			self.asmbly = asmbly
 		
-		self.bc = bc
+		self.bc = {}
+		# Correct for OpenMC syntax
+		for key in bc:
+			if bc[key].lower() == "reflecting":
+				self.bc[key] = "reflective"
+			else:
+				self.bc[key.lower()] = bc[key].lower()
+		
+		
 		self.bot_refl = bot_refl
 		self.top_refl = top_refl
 		self.vessel_mats = vessel_mats
@@ -207,9 +215,12 @@ class Core(object):
 	
 	
 	def __str__(self):
-		c = str(max(self.vessel_radii))
-		h = str(self.height)
-		return "Core: r=" + c + "cm, z=" + h + "cm"
+		if self.vessel_radii and self.height:
+			c = str(max(self.vessel_radii))
+			h = str(self.height)
+			return "Core: r=" + c + "cm, z=" + h + "cm"
+		else:
+			return "Core"
 	
 	
 	def __asmbly_square_map(self, space = ' '):
