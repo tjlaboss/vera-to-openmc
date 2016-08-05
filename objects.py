@@ -3,7 +3,8 @@
 # Module containing useful objects for read_xml.py
 
 from math import sqrt
-from functions import clean, convert_at_to_wt
+from functions import clean
+import isotopes
 
 class Material(object):
 	'''Basics of a material card
@@ -24,14 +25,49 @@ class Material(object):
 	
 	def __eq__(self, other):
 		return self.__dict__ == other.__dict__
+	
+	
+	def convert_at_to_wt(self):
+		'''Convert atomic fraction to weight fraction for this material's isotopes'''
+		total_at = sum(self.isotopes.values())
+		total_wt = 0.0
+		iso_wts = {}
+	
+		if total_at >= 0:
+			# already in weight fraction
+			return
+		else:
+			for iso in self.isotopes:
+				total_wt += self.isotopes[iso] * isotopes.MASS[iso]
+			for iso in self.isotopes:
+				iso_wts[iso] = abs( self.isotopes[iso] * isotopes.MASS[iso] / total_wt )
+		
+			self.isotopes = iso_wts
+	
+
+	def convert_wt_to_at(self):
+		'''Convert weight fraction to atomic fraction for this material's isotopes'''
+		total_at = 0.0
+		total_wt = sum(self.isotopes.values())
+		iso_ats = {}
+	
+		if total_wt <= 0:
+			# already in atomic fraction
+			return 
+		else:
+			for iso in self.isotopes:
+				total_at += self.isotopes[iso] / isotopes.MASS[iso]
+			for iso in self.isotopes:
+				iso_ats[iso] = -abs( self.isotopes[iso] / isotopes.MASS[iso] / total_at )
+		
+			self.isotopes = iso_ats
+
 
 
 class Mixture(Material):
 	'''Two mixed Material instances. 
 	Functionally exactly the same as Material, but initialized differently.'''
 	def __init__(self, key_name, materials, vfracs):
-		
-		
 		self.key_name = key_name
 		mix_isos = {}
 		density = 0.0
@@ -40,7 +76,7 @@ class Mixture(Material):
 			density += materials[i].density * (vfracs[i] / sum(vfracs))
 		for i in range(len(materials)):
 			mat = materials[i]
-			convert_at_to_wt(mat)
+			mat.convert_at_to_wt()
 			wtf = vfracs[i]*mat.density 	# weight fraction of entire material
 			for iso in mat.isotopes:
 				new_wt = wtf*mat.isotopes[iso] / density
@@ -48,21 +84,9 @@ class Mixture(Material):
 					mix_isos[iso] += new_wt
 				else:
 					mix_isos[iso] = new_wt
-			
 					
 		self.isotopes = mix_isos
 		self.density = density
-
-def test_mixture():
-	'''Delete this when confident that Mixture is working properly'''
-	mod_density = 1.0; mod_isotopes = {"h-1":-2.0/3, "o-16":-1.0/3}
-	mod = Material("mod", mod_density, mod_isotopes)
-	
-	air = Material("thorium oxide", 10, {"o-16":0.75, "th-232":0.25})
-	
-	mix = Mixture("thorated water", (mod, air), (0.5, 0.5) )
-	print(sum(mix.isotopes.values()), mix.isotopes, mix.density)
-
 
 
 class Assembly(object):
