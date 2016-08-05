@@ -112,10 +112,6 @@ class MC_Case(Case):
 				new_cell.region = -s & +last_s 
 				last_s = s
 			
-			
-			
-			
-			
 			# Fill the cell in with a material
 			m = vera_cell.mats[ring]
 			try:
@@ -123,14 +119,7 @@ class MC_Case(Case):
 				fill = self.openmc_materials[vera_cell.asname + m]
 				# This normally will not exist, so:
 			except KeyError:
-				try:
-					# Look it up as normal
-					fill = self.openmc_materials[m]
-				except KeyError:
-					# Then the material really doesn't exist yet in OpenMC form
-					# Generate it and add it to the index 
-					fill = self.get_openmc_material(self.materials[m])
-					self.openmc_materials[m] = fill
+				fill = self.try_openmc_material(m)
 			
 				
 			# What I want to do instead is, somewhere else in the code, generate the corresponding
@@ -214,6 +203,94 @@ class MC_Case(Case):
 		return openmc_asmblies
 	
 	
+	def get_openmc_reactor_vessel(self, vera_core):
+		'''Creates the pressure vessel representation in OpenMC
+		
+		Inputs:
+			vera_core:		instance of objects.Core
+		
+		Outputs:
+			openmc_core:	instance of openmc.Universe containing all the cells
+							describing the reactor pressure vessel EXCEPT inside_cell
+			inside_cell:	instance of openmc.Cell containing the innermost ring
+							of the vessel, TO BE FILLED with assemblies
+			inside_fill:	string; key of the openmc.Material to fill all spaces
+							within inside_cell, outside of the assemblies
+			vessel_surf:	instance of openmc.ZCylinder describing the outermost
+							surface of the reactor vessel
+		'''
+		
+		ps = vera_core.params
+		
+		core_cells = []
+		
+		# Create the top and bottom planes of the core
+		core_bot = openmc.ZPlane(z0 = 0.0)
+		core_top = openmc.ZPlane(z0 = vera_core.height)
+		# TODO: Create the core plate and reflector planes too
+		# vera_core.bc["top"]; vera_core.bc["bot]
+		
+		
+		for ring in range(len(vera_core.vessel_radii) - 1):
+			r = vera_core.vessel_radii[ring]
+			m = vera_core.vessel_mats[ring]
+			
+			s = openmc.ZCylinder(R = r)
+			
+			cell_id = self.openmc_cell_count
+			self.openmc_cell_count += 1
+			cell_name = "Vessel-" + str(ring)
+			new_cell = openmc.Cell(cell_id, cell_name)
+			
+			if ring == 0:
+				# For the center ring,
+				new_cell.region = -s    & +core_bot & -core_top
+				inside_cell = new_cell
+				inside_fill = m
+				last_s = s
+				vessel_surf = s
+			else:
+				new_cell.region = -s & +last_s	& +core_bot & -core_top
+				new_cell.fill = self.try_openmc_material(m)
+				last_s = s
+				core_cells.append(new_cell)
+		
+		# And finally, the outermost ring
+		cell_id = self.openmc_cell_count
+		self.openmc_cell_count += 1
+		s = openmc.ZCylinder(R = max(vera_core.vessel_radii), boundary_type = vera_core.bc["rad"])
+		new_cell = openmc.Cell(cell_id, "Vessel-Outer")
+		new_cell.region = -s    & +core_bot & -core_top
+		core_cells.append(new_cell)
+		
+		u_num = self.openmc_universe_count
+		self.openmc_universe_count += 1
+		openmc_core = openmc.Universe(u_num, "Reactor Vessel")
+		openmc_core.add_cells(core_cells)
+		
+		return openmc_core, inside_cell, inside_fill, vessel_surf
+	
+	
+	
+	def try_openmc_material(self, m):
+		'''Check if a material exists; if it doesn't, add it to the index
+		
+		Input:
+			m:		string; key of a VERA material in self.materials
+		Output:
+			mat:	instance of openmc.Material
+		'''
+		try:
+			# Look it up as normal
+			mat = self.openmc_materials[m]
+		except KeyError:
+			# Then the material really doesn't exist yet in OpenMC form
+			# Generate it and add it to the index 
+			mat = self.get_openmc_material(self.materials[m])
+			self.openmc_materials[m] = mat
+		
+		return mat
+			
 	
 	
 	
@@ -267,10 +344,12 @@ if __name__ == "__main__":
 	test_asmblys = test_case.get_openmc_assemblies(a)[0]
 	#print(test_asmbly)
 	
-	print('\n', a.name, test_asmblys.name, '\n')
-	for cmap in test_case.core.str_maps(space = "~"):
-		print(cmap)
+	#print('\n', a.name, test_asmblys.name, '\n')
+	#for cmap in test_case.core.str_maps(space = "~"):
+	#	print(cmap)
 	
+	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel(test_case.core)
+	print(core)
 	
 	
 	
