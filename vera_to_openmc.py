@@ -247,8 +247,8 @@ class MC_Case(Case):
 							of the vessel, TO BE FILLED with assemblies
 			inside_fill:	string; key of the openmc.Material to fill all spaces
 							within inside_cell, outside of the assemblies
-			vessel_surf:	instance of openmc.ZCylinder describing the outermost
-							surface of the reactor vessel
+			outer_surfs:	instances of openmc.Surface (specifically, ZCylinder and ZPlane)
+							describing the bounding	surfaces of the reactor vessel
 		'''
 		
 		ps = vera_core.params
@@ -304,12 +304,12 @@ class MC_Case(Case):
 		bot_plate_cell.fill = bot_plate_mat
 		core_cells.append(bot_plate_cell)
 		
-		
+		outer_surfs = (vessel_surf, plate_bot, plate_top) 
 		
 		openmc_core = openmc.Universe(self.__counter(UNIVERSE), "Reactor Vessel")
 		openmc_core.add_cells(core_cells)
 		
-		return openmc_core, inside_cell, inside_fill, vessel_surf
+		return openmc_core, inside_cell, inside_fill, outer_surfs
 	
 	
 	
