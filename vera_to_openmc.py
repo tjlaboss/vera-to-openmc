@@ -10,6 +10,8 @@ try:
 except ImportError:
 	raise SystemExit("Error: Cannot import openmc. You will not be able to generate OpenMC objects.")
 
+# Global constants for counters
+SURFACE, CELL, MATERIAL, UNIVERSE = range(-1,-5,-1)
 
 
 class MC_Case(Case):
@@ -24,7 +26,7 @@ class MC_Case(Case):
 		# ID Counters
 		# 0 is special for universes, and in some codes, surfs/cells/mats start at 1;
 		# so I'm starting the count at 1 here instead of 0.
-		self.openmc_surface_count = 1; self.openmc_cell_count = 1 ;self.openmc_material_count = 1; self.openmc_universe_count = 1
+		self.openmc_surface_count = 0; self.openmc_cell_count = 0 ;self.openmc_material_count = 0; self.openmc_universe_count = 0
 		
 		self.openmc_materials = {}
 		
@@ -35,14 +37,36 @@ class MC_Case(Case):
 		conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.
 		FIXME: The material uses a simple form of water as a placeholder and does NOT represent the actual
 		composition of the moderator!'''
-		mod_id = self.openmc_material_count
-		self.openmc_material_count += 1
-		self.mod = openmc.Material(mod_id, "mod")
+		self.__counter(MATERIAL)
+		self.mod = openmc.Material(self.__counter(MATERIAL), "mod")
 		self.mod.set_density("g/cc", 1.0)
 		self.mod.add_nuclide("h-1", 2.0/3, 'ao')
 		self.mod.add_nuclide("o-16", 1.0/3, 'ao')
 		self.openmc_materials["mod"] = self.mod
 		
+	
+	def __counter(self, count):
+		'''Get the next cell/surface/material/universe number, and update the counter.
+		Input:
+			count:		CELL, SURFACE, MATERIAL, or UNIVERSE
+		Output:
+			integer representing the next cell/surface/material/universe ID'''
+		if count == SURFACE:
+			self.openmc_surface_count += 1
+			return self.openmc_surface_count
+		elif count == CELL:
+			self.openmc_cell_count += 1
+			return self.openmc_cell_count
+		elif count == MATERIAL:
+			self.openmc_material_count += 1
+			return self.openmc_material_count
+		elif count == UNIVERSE:
+			self.openmc_universe_count += 1
+			return self.openmc_universe_count
+		else:
+			raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
+		
+	
 		
 	def get_openmc_material(self, material):
 		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
@@ -51,11 +75,7 @@ class MC_Case(Case):
 		All of the material fractions sum to either +1.0 or -1.0. If positive fractions are used, they
 		refer to weight fractions. If negative fractions are used, they refer to atomic	fractions.
 		'''
-		
-		mat_id = self.openmc_material_count
-		self.openmc_material_count += 1
-		
-		openmc_material = openmc.Material(mat_id, material.key_name)
+		openmc_material = openmc.Material(self.__counter(MATERIAL), material.key_name)
 		openmc_material.set_density("g/cc", material.density)
 		for i in material.isotopes:
 			nuclide = i
@@ -117,18 +137,14 @@ class MC_Case(Case):
 						break # from the "for s in" loop
 			if not surf_id:
 				# Generate new surface and get its surf_id
-				surf_id = self.openmc_surface_count
-				self.openmc_surface_count += 1
-				s = openmc.ZCylinder(surf_id, "transmission", 0, 0, r)
+				s = openmc.ZCylinder(self.__counter(SURFACE), "transmission", 0, 0, r)
 				#cell_surfs[surf_id] = s
 				# Add the new surfaces to the registry
 				self.openmc_surfaces[str(surf_id)] = s
 				
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
-			cell_id = self.openmc_cell_count
-			self.openmc_cell_count += 1
-			new_cell = openmc.Cell(cell_id, name)
+			new_cell = openmc.Cell(self.__counter(CELL), name)
 			if ring == 0:
 				# Inner ring
 				new_cell.region = -s
@@ -156,17 +172,13 @@ class MC_Case(Case):
 		# end of "for ring" loop
 		
 		# Then add the moderator outside the pincell
-		mod_cell_id = self.openmc_cell_count
-		self.openmc_cell_count += 1
-		mod_cell = openmc.Cell(mod_cell_id, vera_cell.name + "-Mod")
+		mod_cell = openmc.Cell(self.__counter(MATERIAL), vera_cell.name + "-Mod")
 		mod_cell.fill = self.mod
 		mod_cell.region = +s
 		openmc_cells.append(mod_cell)
 		
 		# Create a new universe in which the pin cell exists 
-		u_num = self.openmc_universe_count
-		self.openmc_universe_count += 1
-		pincell_universe = openmc.Universe(u_num, vera_cell.name + "-verse")
+		pincell_universe = openmc.Universe(self.__counter(UNIVERSE), vera_cell.name + "-verse")
 		pincell_universe.add_cells(openmc_cells)
 		
 		return pincell_universe
@@ -204,13 +216,7 @@ class MC_Case(Case):
 		
 		
 		for latname in vera_asmbly.axial_labels:
-		
-			u_num = self.openmc_universe_count
-			self.openmc_universe_count += 1
-			
-			openmc_asmbly = openmc.RectLattice(u_num, latname)
-			
-			
+			openmc_asmbly = openmc.RectLattice(self.__counter(UNIVERSE), latname)
 			openmc_asmbly.pitch = (pitch, pitch)
 			openmc_asmbly.lower_left = [-pitch * float(npins) / 2.0] * 2
 			# And populate with universes from cell_verses
@@ -250,10 +256,10 @@ class MC_Case(Case):
 		core_cells = []
 		
 		# Create the top and bottom planes of the core and core plate
-		plate_bot = openmc.ZPlane(z0 = -vera_core.lower_refl.thick, boundary_type = vera_core.bc["bot"])
+		plate_bot = openmc.ZPlane(z0 = -vera_core.bot_refl.thick, boundary_type = vera_core.bc["bot"])
 		core_bot = openmc.ZPlane(z0 = 0.0)
 		core_top = openmc.ZPlane(z0 = vera_core.height)
-		plate_top = openmc.ZPlane(z0 = vera_core.height + vera_core.upper_refl.thick, boundary_type = vera_core.bc["top"])
+		plate_top = openmc.ZPlane(z0 = vera_core.height + vera_core.top_refl.thick, boundary_type = vera_core.bc["top"])
 		
 		# Create the concentric cylinders of the vessel
 		for ring in range(len(vera_core.vessel_radii) - 1):
@@ -262,10 +268,8 @@ class MC_Case(Case):
 			
 			s = openmc.ZCylinder(R = r)
 			
-			cell_id = self.openmc_cell_count
-			self.openmc_cell_count += 1
 			cell_name = "Vessel-" + str(ring)
-			new_cell = openmc.Cell(cell_id, cell_name)
+			new_cell = openmc.Cell(self.__counter(CELL), cell_name)
 			
 			if ring == 0:
 				# For the center ring,
@@ -274,27 +278,24 @@ class MC_Case(Case):
 				inside_fill = m
 				last_s = s
 				vessel_surf = s
+				# Add the core plates
+				top_plate_cell = openmc.Cell() 
 			else:
-				new_cell.region = -s & +last_s	& +core_bot & -core_top
+				new_cell.region = -s & +last_s	& +plate_bot & -plate_top
 				new_cell.fill = self.try_openmc_material(m)
 				last_s = s
 				core_cells.append(new_cell)
 		
 		# And finally, the outermost ring
-		cell_id = self.openmc_cell_count
-		self.openmc_cell_count += 1
-		s = openmc.ZCylinder(R = max(vera_core.vessel_radii), boundary_type = vera_core.bc["rad"])
-		new_cell = openmc.Cell(cell_id, "Vessel-Outer")
-		new_cell.region = -s    & +core_bot & -core_top
+		s = openmc.ZCylinder(self.__counter(SURFACE), R = max(vera_core.vessel_radii), boundary_type = vera_core.bc["rad"])
+		new_cell = openmc.Cell(self.__counter(CELL), "Vessel-Outer")
+		new_cell.region = -s    & +plate_bot & -plate_top
 		core_cells.append(new_cell)
 		
 		# TODO: Define the regions between the plates
 		# 
 		
-		
-		u_num = self.openmc_universe_count
-		self.openmc_universe_count += 1
-		openmc_core = openmc.Universe(u_num, "Reactor Vessel")
+		openmc_core = openmc.Universe(self.__counter(UNIVERSE), "Reactor Vessel")
 		openmc_core.add_cells(core_cells)
 		
 		return openmc_core, inside_cell, inside_fill, vessel_surf
@@ -361,8 +362,6 @@ if __name__ == "__main__":
 	
 	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel(test_case.core)
 	print(core)
-	
-	
 	
 
 
