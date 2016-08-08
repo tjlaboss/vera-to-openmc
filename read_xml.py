@@ -149,7 +149,7 @@ class Case(object):
 						# 	rated_flow, rated_power, and shape
 						
 						# Initialize variables to be passed to the Core instance
-						pitch = 0.0; 	asmbly_map = []; shape = [];
+						pitch = 0.0; 	asmbly = []; shape = [];
 						core_size = 0; 	core_height = 0.0;  
 						bcs = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"}
 						baffle = {}; lower = {}; upper = {}; lower_refl = None; upper_refl = None
@@ -188,8 +188,10 @@ class Case(object):
 								else:
 									lower[b] = float(v)
 								if len(lower) == 3:
-									lower_refl = objects.Reflector(lower["mat"], lower["thick"],
-												 lower["vfrac"], "lower")
+									lower_mat = objects.Mixture(key_name = "lowerplate", 
+												materials = (self.materials[lower["mat"]], self.materials["mod"]),
+												vfracs = (lower["vfrac"], 1.0 - lower["vfrac"]) )
+									lower_refl = objects.Reflector(lower_mat, lower["thick"], "lower")
 								else:
 									continue
 							elif p[:6] == "upper_":
@@ -199,8 +201,10 @@ class Case(object):
 								else:
 									upper[b] = float(v)
 								if len(upper) == 3:
-									upper_refl = objects.Reflector(upper["mat"], upper["thick"],
-												 upper["vfrac"], "upper")
+									upper_mat = objects.Mixture(key_name = "upperplate", 
+												materials = (self.materials[upper["mat"]], self.materials["mod"]),
+												vfracs = (upper["vfrac"], 1.0 - upper["vfrac"]) )
+									upper_refl = objects.Reflector(upper_mat, upper["thick"], "upper")
 								else:
 									continue
 							elif p == "vessel_radii":

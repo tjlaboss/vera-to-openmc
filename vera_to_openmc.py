@@ -4,6 +4,7 @@
 # the required files for an OpenMC input.
 
 from read_xml import Case
+import objects
 
 try:
 	import openmc
@@ -21,14 +22,12 @@ class MC_Case(Case):
 	def __init__(self, source_file):
 		super(MC_Case, self).__init__(source_file)
 		
-		self.openmc_surfaces = {}
+		self.openmc_surfaces = {}; self.openmc_materials = {}
 		
 		# ID Counters
 		# 0 is special for universes, and in some codes, surfs/cells/mats start at 1;
 		# so I'm starting the count at 1 here instead of 0.
 		self.openmc_surface_count = 0; self.openmc_cell_count = 0 ;self.openmc_material_count = 0; self.openmc_universe_count = 0
-		
-		self.openmc_materials = {}
 		
 		
 		# Create the essential moderator material
@@ -256,19 +255,21 @@ class MC_Case(Case):
 		core_cells = []
 		
 		# Create the top and bottom planes of the core and core plate
-		plate_bot = openmc.ZPlane(z0 = -vera_core.bot_refl.thick, boundary_type = vera_core.bc["bot"])
-		core_bot = openmc.ZPlane(z0 = 0.0)
-		core_top = openmc.ZPlane(z0 = vera_core.height)
-		plate_top = openmc.ZPlane(z0 = vera_core.height + vera_core.top_refl.thick, boundary_type = vera_core.bc["top"])
+		plate_bot = openmc.ZPlane(self.__counter(SURFACE),
+							z0 = -vera_core.bot_refl.thick, boundary_type = vera_core.bc["bot"])
+		core_bot = openmc.ZPlane(self.__counter(SURFACE), z0 = 0.0)
+		core_top = openmc.ZPlane(self.__counter(SURFACE), z0 = vera_core.height)
+		plate_top = openmc.ZPlane(self.__counter(SURFACE),
+							z0 = vera_core.height + vera_core.top_refl.thick, boundary_type = vera_core.bc["top"])
 		
 		# Create the concentric cylinders of the vessel
 		for ring in range(len(vera_core.vessel_radii) - 1):
 			r = vera_core.vessel_radii[ring]
 			m = vera_core.vessel_mats[ring]
 			
-			s = openmc.ZCylinder(R = r)
+			s = openmc.ZCylinder(self.__counter(SURFACE), R = r)
 			
-			cell_name = "Vessel-" + str(ring)
+			cell_name = "Vessel_" + str(ring)
 			new_cell = openmc.Cell(self.__counter(CELL), cell_name)
 			
 			if ring == 0:
@@ -278,8 +279,6 @@ class MC_Case(Case):
 				inside_fill = m
 				last_s = s
 				vessel_surf = s
-				# Add the core plates
-				top_plate_cell = openmc.Cell() 
 			else:
 				new_cell.region = -s & +last_s	& +plate_bot & -plate_top
 				new_cell.fill = self.try_openmc_material(m)
@@ -292,8 +291,20 @@ class MC_Case(Case):
 		new_cell.region = -s    & +plate_bot & -plate_top
 		core_cells.append(new_cell)
 		
-		# TODO: Define the regions between the plates
-		# 
+		# Add the core plates
+		top_plate_mat = self.get_openmc_material(vera_core.bot_refl.mat)
+		top_plate_cell = openmc.Cell(self.__counter(CELL), "Top core plate")
+		top_plate_cell.region = -vessel_surf & + core_top & -plate_top
+		top_plate_cell.fill = top_plate_mat
+		core_cells.append(top_plate_cell)
+		
+		bot_plate_mat = self.get_openmc_material(vera_core.bot_refl.mat)
+		bot_plate_cell = openmc.Cell(self.__counter(CELL), "Bot core plate")
+		bot_plate_cell.region = -vessel_surf & + core_bot & -plate_bot
+		bot_plate_cell.fill = bot_plate_mat
+		core_cells.append(bot_plate_cell)
+		
+		
 		
 		openmc_core = openmc.Universe(self.__counter(UNIVERSE), "Reactor Vessel")
 		openmc_core.add_cells(core_cells)

@@ -350,16 +350,14 @@ class Core(object):
 
 class Reflector(object):
 	'''Inputs:
-		mat:	instance of Material
+		mat:	instance of Material or Mixture
 		thick:	float;	thickness in cm
-		vfrac:	float;	volume fraction
 	Optional input:
 		name:	string;	default is empty string
 	'''
 	def __init__(self, mat, thick, vfrac, name = ""):
 		self.mat = mat
 		self.thick = thick
-		self.vfrac = vfrac
 		self.name = name
 	def __str__(self):
 		return self.name + " Reflector"
