@@ -7,6 +7,7 @@
 import sys; sys.path.append('..')
 import openmc
 import vera_to_openmc
+from functions import fill_lattice
 
 
 def convert_to_openmc(file):
@@ -26,26 +27,18 @@ def convert_to_openmc(file):
 	mod_verse = get_mod_universe(case, fill_mat)
 	# Refer to the core maps and grab the proper assemblies.
 	asmap = case.core.square_maps("assembly", space='')
-	lattice = [[None,]*n]*n
-	print(asmap)
 	# TODO:
 	# Right now, I'm inserting placeholder strings.
 	# What I actually want to do is insert universes containing the
 	# entire assemblies. 
-	for i in range(n):
-		new_row = [None,]*n
-		for j in range(n):
-			a = asmap[i][j]
-			if a:
-				#new_row[j] = case.get_openmc_assemblies(case.assemblies[a])
-				new_row[j] = case.assemblies[a].name
-			else:
-				new_row[j] = "mod"
-				#new_row[j] = mod_verse
-		lattice[i] = new_row
-	#inner_core.universes = lattice
 	
-	print(lattice)
+	# Quick lambda function to pass to fill_lattice()
+	f = lambda a: case.assemblies[a].name if a else "mod"
+	#f = lambda a: case.get_openmc_assemblies(case.assemblies[a]) if a else mod_verse
+	
+	print(fill_lattice(asmap, f, n))
+	#inner_core.universes = fill_lattice(asmap, f, n)
+	
 	
 	'''
 	To do that, we'll need to refer to the core maps and grab the proper assemblies.

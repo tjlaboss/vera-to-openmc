@@ -4,6 +4,7 @@
 # the required files for an OpenMC input.
 
 from read_xml import Case
+from functions import fill_lattice
 import objects
 
 try:
@@ -220,15 +221,8 @@ class MC_Case(Case):
 			openmc_asmbly.lower_left = [-pitch * float(npins) / 2.0] * 2
 			# And populate with universes from cell_verses
 			asmap = vera_asmbly.cellmaps[latname].square_map()
-			lattice = [[None,]*npins]*npins
-			for i in range(npins):
-				new_row = [None,]*npins
-				for j in range(npins):
-					c = asmap[i][j]
-					new_row[j] = cell_verses[c]
-				lattice[i] = new_row
 				
-			openmc_asmbly.universes = lattice
+			openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
 			openmc_asmblies.append(openmc_asmbly)
 		
 		return openmc_asmblies
@@ -358,11 +352,13 @@ if __name__ == "__main__":
 	#print test_case.mod
 	
 	
-	'''Note: Attempting to print an assembly doesn't work. Could be due to a bug in the
+	'''Note: Attempting to print an assembly in Python 2.7 doesn't work. Could be due to a bug in the
 	__repr__() method? Printing here yields an AttributeError: 'NoneType' object has no attribute '_id',
 	and printing the example assembly from the OpenMC Python API docs
 	<http://openmc.readthedocs.io/en/latest/pythonapi/examples/pandas-dataframes.html>
-	causes a TypeError: 'NoneType' object has no attribute '__getitem__' '''
+	causes a TypeError: 'NoneType' object has no attribute '__getitem__'
+
+	Works in Python 3.5.'''
 	
 	test_asmblys = test_case.get_openmc_assemblies(a)[0]
 	#print(test_asmbly)
