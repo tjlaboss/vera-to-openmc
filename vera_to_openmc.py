@@ -372,7 +372,8 @@ if __name__ == "__main__":
 	#	print(cmap)
 	
 	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel(test_case.core)
-	print(core)
+	print(test_case.core.square_maps("a", ''))
+	#print(core)
 	
 
 

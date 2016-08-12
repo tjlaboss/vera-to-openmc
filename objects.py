@@ -290,8 +290,10 @@ class Core(object):
 		'''Returns array of the assembly map
 		
 		Optional input:
-			space:	string (len=1) to represent a spot outside the core.
+			space:	string (len=0 or 1) to represent a spot outside the core.
 					Default is whitespace.'''
+		if space:
+			space = space[0]
 		# Create a new blank map for the assembly layout
 		n = self.size
 		amap = [['',]*n, ]*n
@@ -301,7 +303,7 @@ class Core(object):
 			for col in range(n):
 				a = self.shape.square_map()[row][col]
 				if a == 0:
-					new_row[col] = space[0]
+					new_row[col] = space
 				else:
 					new_row[col] = self.asmbly.cell_map[j]
 					j += 1

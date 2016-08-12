@@ -16,7 +16,37 @@ def convert_to_openmc(file):
 	rpv, core_cell, fill_mat, outer_vessel_surfs = case.get_openmc_reactor_vessel(case.core)
 	
 	
+	
 	# First order of business: fill the core with assemblies
+	inner_core = openmc.RectLattice(name="Inside of Core")
+	ap = case.core.pitch; n = case.core.size
+	inner_core.pitch = (ap, ap)
+	inner_core.lower_left = [-ap * float(n) / 2.0] * 2
+	# Make an assembly-sized universe of moderator
+	mod_verse = get_mod_universe(case, fill_mat)
+	# Refer to the core maps and grab the proper assemblies.
+	asmap = case.core.square_maps("assembly", space='')
+	lattice = [[None,]*n]*n
+	print(asmap)
+	# TODO:
+	# Right now, I'm inserting placeholder strings.
+	# What I actually want to do is insert universes containing the
+	# entire assemblies. 
+	for i in range(n):
+		new_row = [None,]*n
+		for j in range(n):
+			a = asmap[i][j]
+			if a:
+				#new_row[j] = case.get_openmc_assemblies(case.assemblies[a])
+				new_row[j] = case.assemblies[a].name
+			else:
+				new_row[j] = "mod"
+				#new_row[j] = mod_verse
+		lattice[i] = new_row
+	#inner_core.universes = lattice
+	
+	print(lattice)
+	
 	'''
 	To do that, we'll need to refer to the core maps and grab the proper assemblies.
 	
@@ -112,6 +142,22 @@ def convert_to_openmc(file):
 	#print(case.openmc_cells)
 	print(fillcell)
 	 '''
+
+def get_mod_universe(case, fill):
+	''''Create a blank (moderator) assembly'''
+	hpitch = case.core.pitch * float(case.core.size) / 2.0
+	min_x = openmc.XPlane(x0=-hpitch)
+	max_x = openmc.XPlane(x0=+hpitch)
+	min_y = openmc.YPlane(y0=-hpitch)
+	max_y = openmc.YPlane(y0=+hpitch)
+	
+	mod_cell_universe = openmc.Universe(name='mod assembly universe')
+	mod_cell = openmc.Cell(name='mod')
+	mod_cell.fill = case.openmc_materials[fill]
+	mod_cell.region = +min_x & -max_x & +min_y & -min_y
+	mod_cell_universe.add_cell(mod_cell)
+	
+	return mod_cell_universe
 
 if __name__ == "__main__":
 	file = "../p7.xml.gold"
