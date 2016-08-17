@@ -186,6 +186,7 @@ class MC_Case(Case):
 	
 	
 	def get_openmc_assemblies(self, vera_asmbly):
+	#TODO: Rename to get_openmc_lattices(vera_asmbly)
 		'''Creates the  assembly geometry and lattices of pin cells
 		required to define an assembly in OpenMC.
 		
@@ -226,6 +227,71 @@ class MC_Case(Case):
 			openmc_asmblies.append(openmc_asmbly)
 		
 		return openmc_asmblies
+	
+	
+	def get_openmc_spacergrids(self, vera_grids, grid_labels, grid_elevations):
+		'''Placeholder function for now.
+		
+		Inputs:
+			vera_grids:			dictionary of instances of SpacerGrid
+			grid_labels:		list of strings (keys in vera_grids)
+			grid_elevations:	list of floats (of len(grid_labels));
+								heights (cm) of the grid midpoints
+		Outputs:
+			None
+		'''
+		
+		for i in range(len(grid_elevations)):
+			z = grid_elevations[i]
+			grid = vera_grids[grid_labels[i]]
+			
+			# Then do something to model the grid...
+		
+		return None
+	
+	'''	Worth noting about the nozzles:
+	
+			== Analysis of the BEAVRS Benchmark Using MPACT ==
+		A major difference between the model and the benchmark specification is the treatment of 
+		the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled 
+		with a considerable amount of stainless steel. The authors discerned that 
+		the benchmark is specifying up to 10 times the amount of steel that is in the nozzle and
+		core plate region. Instead of using this amount of steel, a Westinghouse optimized fuel
+		assembly (OFA) design found in Technical Report ML033530020 is used for the upper and
+		lower reflector regions.
+										--CASL-U-2015-0183-000	'''
+	
+	
+	def get_openmc_assembly(self, vera_asmbly):
+		'''Creates an OpenMC fuel assembly, complete with lattices
+		of fuel pins and spacer grids, that should be equivalent to what
+		is constructed by VERA.
+		
+		Inputs:
+			vera_asmbly:		instance of objects.Assembly
+		
+		Outputs:
+			openmc_asmbly:		instance of openmc.Universe containing
+								the lattices, spacers, and such
+		'''
+		
+		ps = vera_asmbly.params
+		pitch = vera_asmbly.pitch
+		npins = vera_asmbly.npins
+		
+		# Start by getting the lattices and layers
+		lattices = self.get_openmc_assemblies(vera_asmbly)
+		#lattices = self.get_openmc_lattices(vera_asmbly)
+		nlats = len(lattices)
+		
+		for layer in range(nlats):
+			z = vera_asmbly.axial_elevations[layer]
+			label = vera_asmbly.axial_labels[layer]
+			lat = lattices[layer]
+		
+		
+		
+		return None
 	
 	
 	def get_openmc_reactor_vessel(self, vera_core):

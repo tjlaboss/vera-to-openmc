@@ -63,13 +63,13 @@ def set_assembly_boundaries(pitch, n):
 
 
 	
-def plot_assembly(pitch, npins):
+def plot_assembly(pitch, npins, width=1250, height=1250):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
 	plot.origin = [0, 0, 0]
 	plot.width = [npins*pitch - .01, npins*pitch - .01]
-	plot.pixels = [1250, 1250]
+	plot.pixels = [width, height]
 	plot.color = 'mat'
 	# Instantiate a Plots collection and export to "plots.xml"
 	plot_file = openmc.Plots([plot])
@@ -120,8 +120,9 @@ def test_core(case_file = "../2o.xml.gold"):
 
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell()
-	#case, fillcell, pitch, n, bounds = test_assembly("../p7.xml.gold")
-	case, fillcell, pitch, n, bounds = test_core()
+	case, fillcell, pitch, n, bounds = test_assembly("../p7.xml.gold")
+	#case, fillcell, pitch, n, bounds = test_assembly()
+	#case, fillcell, pitch, n, bounds = test_core()
 	
 	materials = openmc.Materials(case.openmc_materials.values())
 	materials.default_xs = '71c'
