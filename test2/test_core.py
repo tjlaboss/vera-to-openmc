@@ -155,3 +155,6 @@ def get_mod_universe(case, fill):
 if __name__ == "__main__":
 	file = "../p7.xml.gold"
 	convert_to_openmc(file)
+	
+	
+	

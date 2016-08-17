@@ -111,7 +111,7 @@ class Case(object):
 								for mat in core_child:
 									# Create a material object for each listed material
 									new_material = self.__get_material(mat)
-									newname = new_material.key_name
+									newname = new_material.name
 									# Check if a material with this name already exists
 									# If it does, keep adding exclamation marks to it until it doesn't,
 									# giving a warning each time
@@ -126,7 +126,7 @@ class Case(object):
 											# If the material does exist, check if it is any different
 											if new_material != old_material:
 												# In the core block, it is an error
-													print("Error: a material of the name", new_material.key_name, "already exists.")
+													print("Error: a material of the name", new_material.name, "already exists.")
 													self.errors += 1
 											# Else; it's the same, and do nothing
 											exists = False # exit the loop
@@ -248,7 +248,7 @@ class Case(object):
 										for fuel in asmbly_child:
 											# Create a material object for each listed material
 											new_material = self.__get_fuel(fuel)
-											newname = new_material.key_name
+											newname = new_material.name
 											# Check if a material with this name already exists
 											# If it does, rename it.
 											exists = True
@@ -264,8 +264,8 @@ class Case(object):
 														# In the assembly block, different materials by the same name
 														# in different assemblies are possible
 														newname = cname + newname
-														warn("Warning: different versions of material " + new_material.key_name + " exist; renaming to " + newname)
-														new_material.key_name = newname
+														warn("Warning: different versions of material " + new_material.name + " exist; renaming to " + newname)
+														new_material.name = newname
 													else:
 														# Exit the loop
 														exists = False

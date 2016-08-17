@@ -75,7 +75,7 @@ class MC_Case(Case):
 		All of the material fractions sum to either +1.0 or -1.0. If positive fractions are used, they
 		refer to weight fractions. If negative fractions are used, they refer to atomic	fractions.
 		'''
-		openmc_material = openmc.Material(self.__counter(MATERIAL), material.key_name)
+		openmc_material = openmc.Material(self.__counter(MATERIAL), material.name)
 		openmc_material.set_density("g/cc", material.density)
 		for i in material.isotopes:
 			nuclide = i
@@ -287,12 +287,14 @@ class MC_Case(Case):
 		
 		# Add the core plates
 		top_plate_mat = self.get_openmc_material(vera_core.bot_refl.mat)
+		self.openmc_materials[top_plate_mat.name] = top_plate_mat
 		top_plate_cell = openmc.Cell(self.__counter(CELL), "Top core plate")
 		top_plate_cell.region = -vessel_surf & + core_top & -plate_top
 		top_plate_cell.fill = top_plate_mat
 		core_cells.append(top_plate_cell)
 		
 		bot_plate_mat = self.get_openmc_material(vera_core.bot_refl.mat)
+		self.openmc_materials[bot_plate_mat.name] = bot_plate_mat
 		bot_plate_cell = openmc.Cell(self.__counter(CELL), "Bot core plate")
 		bot_plate_cell.region = -vessel_surf & + core_bot & -plate_bot
 		bot_plate_cell.fill = bot_plate_mat

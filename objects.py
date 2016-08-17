@@ -14,13 +14,13 @@ class Material(object):
 		isotopes:	dictionary of {"isotope name":isotope_fraction}
 	'''
 	def __init__(self, key_name, density, isotopes):
-		self.key_name = key_name
+		self.name = key_name
 		self.density = density
 		self.isotopes = isotopes
 
 	def __str__(self):
 		'''Use this to print a brief description of each material'''
-		description = self.key_name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.isotopes)) + ' isotopes)'
+		description = self.name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.isotopes)) + ' isotopes)'
 		return description
 	
 	def __eq__(self, other):
@@ -68,7 +68,7 @@ class Mixture(Material):
 	'''Two mixed Material instances. 
 	Functionally exactly the same as Material, but initialized differently.'''
 	def __init__(self, key_name, materials, vfracs):
-		self.key_name = key_name
+		self.name = key_name
 		mix_isos = {}
 		density = 0.0
 	
