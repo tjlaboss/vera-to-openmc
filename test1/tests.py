@@ -30,7 +30,7 @@ def test_pincell(case_file = "../1c.xml.gold", aname="assy"):
 	plot_file = openmc.Plots([plot])
 	plot_file.export_to_xml()'''
 	
-	bounds = set_assembly_boundaries(assembly.pitch, 1)
+	bounds = set_cubic_boundaries(assembly.pitch, 1, ("reflective",)*6)
 
 	return pincell_case, openmc_cell1, assembly.pitch, 1, bounds
 
@@ -46,21 +46,31 @@ def test_assembly(case_file = "../p7.xml.gold", aname='2'):
 	some_asmbly = openmc_as2_layers[0]	# 2 is the one with fuel
 	
 	plot_assembly(as2.pitch, as2.npins)
-	bounds = set_assembly_boundaries(as2.npins, as2.pitch)
+	bounds = set_cubic_boundaries(as2.npins, as2.pitch)
 	
 	return ascase, some_asmbly, as2.pitch, as2.npins, bounds
 
 
-def set_assembly_boundaries(pitch, n):
-	# Create boundary planes to surround the geometry
-	min_x = openmc.XPlane(x0=-n*pitch/2.0, boundary_type='reflective')
-	max_x = openmc.XPlane(x0=+n*pitch/2.0, boundary_type='reflective')
-	min_y = openmc.YPlane(y0=-n*pitch/2.0, boundary_type='reflective')
-	max_y = openmc.YPlane(y0=+n*pitch/2.0, boundary_type='reflective')
-	min_z = openmc.ZPlane(z0=-n*pitch/2.0, boundary_type='reflective')
-	max_z = openmc.ZPlane(z0=+n*pitch/2.0, boundary_type='reflective')
-	return min_x, max_x, min_y, max_y, min_z, max_z
 
+def set_cubic_boundaries(pitch, n, bounds=('reflective',)*6):
+	'''Inputs:
+		pitch:		float; pitch between fuel pins 
+		n:			int; number of fuel pins in an assembly (usually 1 or 17)
+		bounds:		tuple/list of strings with len=6, containing the respective
+					boundary types for min/max x, y, and z (default: all reflective)
+	
+	Outputs:
+		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
+	'''
+	
+	min_x = openmc.XPlane(x0=-n*pitch/2.0, boundary_type=bounds[0])
+	max_x = openmc.XPlane(x0=+n*pitch/2.0, boundary_type=bounds[1])
+	min_y = openmc.YPlane(y0=-n*pitch/2.0, boundary_type=bounds[2])
+	max_y = openmc.YPlane(y0=+n*pitch/2.0, boundary_type=bounds[3])
+	min_z = openmc.ZPlane(z0=-n*pitch/2.0, boundary_type=bounds[4])
+	max_z = openmc.ZPlane(z0=+n*pitch/2.0, boundary_type=bounds[5])
+	
+	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
 	
 def plot_assembly(pitch, npins, width=1250, height=1250):
@@ -91,13 +101,7 @@ def test_core(case_file = "../2o.xml.gold"):
 		plot_assembly(pitch, n)
 		fillcore = core_case.get_openmc_assemblies(asmbly)[0]
 		bounds = (c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["top"], c.bc["top"])
-		min_x = openmc.XPlane(x0=-n*pitch/2.0, boundary_type=bounds[0])
-		max_x = openmc.XPlane(x0=+n*pitch/2.0, boundary_type=bounds[1])
-		min_y = openmc.YPlane(y0=-n*pitch/2.0, boundary_type=bounds[2])
-		max_y = openmc.YPlane(y0=+n*pitch/2.0, boundary_type=bounds[3])
-		min_z = openmc.ZPlane(z0=-n*pitch/2.0, boundary_type=bounds[4])
-		max_z = openmc.ZPlane(z0=+n*pitch/2.0, boundary_type=bounds[5])
-		boundaries = (min_x, max_x, min_y, max_y, min_z, max_z)
+		boundaries = set_cubic_boundaries(pitch, n, bounds)
 		
 		
 	elif c.radii:

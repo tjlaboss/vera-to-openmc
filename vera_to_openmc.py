@@ -172,6 +172,7 @@ class MC_Case(Case):
 		# end of "for ring" loop
 		
 		# Then add the moderator outside the pincell
+		#FIXME: Check this for Cell2 in 2a_dep
 		mod_cell = openmc.Cell(self.__counter(MATERIAL), vera_cell.name + "-Mod")
 		mod_cell.fill = self.mod
 		mod_cell.region = +s
