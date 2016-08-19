@@ -7,13 +7,13 @@ import openmc
 import vera_to_openmc
 
 
-def test_pincell(case_file = "../2a_dep.xml.gold"):
+def test_pincell(case_file = "../1c.xml.gold", aname="assy"):
 	'''Create and run a simple pincell'''
 	pincell_case = vera_to_openmc.MC_Case(case_file)
 	
 	
-	assembly = pincell_case.assemblies["assy"]
-	veracell1 = assembly.cells['1']
+	assembly = pincell_case.assemblies[aname]
+	veracell1 = assembly.cells['PIN1']
 	openmc_cell1 = pincell_case.get_openmc_pincell(veracell1)
 	
 	
@@ -35,15 +35,15 @@ def test_pincell(case_file = "../2a_dep.xml.gold"):
 	return pincell_case, openmc_cell1, assembly.pitch, 1, bounds
 
 
-def test_assembly(case_file = "../p7.xml.gold"):
+def test_assembly(case_file = "../p7.xml.gold", aname='2'):
 	'''Create and run a more complicated assembly'''
 	
 	ascase = vera_to_openmc.MC_Case(case_file)
-	as2 = ascase.assemblies['2']
+	as2 = ascase.assemblies[aname]
 	#print(ascase.assemblies.keys())
 	
 	openmc_as2_layers = ascase.get_openmc_assemblies(as2) 
-	some_asmbly = openmc_as2_layers[2]	# 2 is the one with fuel
+	some_asmbly = openmc_as2_layers[0]	# 2 is the one with fuel
 	
 	plot_assembly(as2.pitch, as2.npins)
 	bounds = set_assembly_boundaries(as2.npins, as2.pitch)
@@ -54,8 +54,8 @@ def test_assembly(case_file = "../p7.xml.gold"):
 def set_assembly_boundaries(pitch, n):
 	# Create boundary planes to surround the geometry
 	min_x = openmc.XPlane(x0=-n*pitch/2.0, boundary_type='reflective')
-	max_x = openmc.XPlane(x0=+n*pitch/2.0, boundary_type='vacuum')
-	min_y = openmc.YPlane(y0=-n*pitch/2.0, boundary_type='vacuum')
+	max_x = openmc.XPlane(x0=+n*pitch/2.0, boundary_type='reflective')
+	min_y = openmc.YPlane(y0=-n*pitch/2.0, boundary_type='reflective')
 	max_y = openmc.YPlane(y0=+n*pitch/2.0, boundary_type='reflective')
 	min_z = openmc.ZPlane(z0=-n*pitch/2.0, boundary_type='reflective')
 	max_z = openmc.ZPlane(z0=+n*pitch/2.0, boundary_type='reflective')
@@ -119,9 +119,9 @@ def test_core(case_file = "../2o.xml.gold"):
 
 
 if __name__ == "__main__":
-	#case, fillcell, pitch, n, bounds = test_pincell()
-	case, fillcell, pitch, n, bounds = test_assembly("../p7.xml.gold")
-	#case, fillcell, pitch, n, bounds = test_assembly()
+	#case, fillcell, pitch, n, bounds = test_pincell("../1c.xml.gold", "assy1")
+	#case, fillcell, pitch, n, bounds = test_assembly("../p7.xml.gold")
+	case, fillcell, pitch, n, bounds = test_assembly("../2a_dep.xml.gold", "assy")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
 	materials = openmc.Materials(case.openmc_materials.values())
@@ -169,7 +169,8 @@ if __name__ == "__main__":
 	settings_file.trigger_active = True
 	settings_file.trigger_max_batches = max_batches
 	# Create an initial unifo rm spatial source distribution over fissionable zones
-	bounds = [-pitch-1, -pitch-1, -10, pitch-1, pitch-1, 10.]
+	pitch = 10
+	bounds = [-pitch/2.0, -pitch/2.0, -pitch/2.0, pitch/2.0, pitch/2.0, pitch/2.0]
 	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
