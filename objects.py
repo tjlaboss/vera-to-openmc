@@ -140,6 +140,7 @@ class SpacerGrid(object):
 		self.mass = mass		
 		self.label = label		
 		self.material = material
+		self.thickness = 0	# to be set later
 		
 	def __str__(self):
 		return self.name

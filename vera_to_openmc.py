@@ -5,6 +5,7 @@
 
 from read_xml import Case
 from functions import fill_lattice
+from math import sqrt
 import objects
 
 try:
@@ -230,7 +231,7 @@ class MC_Case(Case):
 		return openmc_asmblies
 	
 	
-	def get_openmc_spacergrids(self, vera_grids, grid_labels, grid_elevations):
+	def get_openmc_spacergrids(self, vera_grids, grid_labels, grid_elevations, npins, pitch):
 		'''Placeholder function for now.
 		
 		Inputs:
@@ -238,6 +239,7 @@ class MC_Case(Case):
 			grid_labels:		list of strings (keys in vera_grids)
 			grid_elevations:	list of floats (of len(grid_labels));
 								heights (cm) of the grid midpoints
+			npins:				integer; (npins)x(npins) fuel bundle 
 		Outputs:
 			None
 		'''
@@ -245,6 +247,11 @@ class MC_Case(Case):
 		for i in range(len(grid_elevations)):
 			z = grid_elevations[i]
 			grid = vera_grids[grid_labels[i]]
+			
+			# Thickness of one edge of the spacer
+			# The actual spacer wall between two cells will be twice this thickness
+			t = grid.mass/grid.density/grid.height / (4.0*npins**2 + 1)
+			#t = 0.5*(pitch + sqrt(pitch**2 - 4*grid.mass/grid.density/grid.height))
 			
 			# Then do something to model the grid...
 		

@@ -168,6 +168,7 @@ class Case(object):
 								core_size = int(v)
 							elif p == "height":
 								core_height = float(v)
+							#FIXME: See if this is working or not
 							elif p[:3] == "bc_":
 								bcs[p[3:]] = v
 								if len(bcs) < 3:
@@ -298,6 +299,8 @@ class Case(object):
 						# For different states: read all of them and create
 						# a description of each. Generate a geometry for each
 						# of them, or ask the user which one he wants?
+						
+						#FIXME: This is where the moderator density/boron/temperature come in!
 						do_states_stuff = True
 					elif name == "CONTROLS":
 						do_control_stuff = True

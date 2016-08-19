@@ -172,9 +172,9 @@ if __name__ == "__main__":
 	settings_file.output = {'tallies': False}
 	settings_file.trigger_active = True
 	settings_file.trigger_max_batches = max_batches
-	# Create an initial unifo rm spatial source distribution over fissionable zones
+	# Create an initial uniform spatial source distribution over fissionable zones
 	pitch = 10
-	bounds = [-pitch/2.0, -pitch/2.0, -pitch/2.0, pitch/2.0, pitch/2.0, pitch/2.0]
+	bounds = (-pitch/2.0,)*3 + (pitch/2.0,)*3
 	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
