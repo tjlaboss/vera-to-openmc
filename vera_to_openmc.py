@@ -444,6 +444,8 @@ class MC_Case(Case):
 		for j in range(1,n):
 			# For each column (moving horizontally):
 			for i in range(1,n):
+				x = width - (i - 0.5)*pitch
+				y = width - (j - 0.5)*pitch
 				
 				this = cmap[i][j]
 				if this:
@@ -454,8 +456,36 @@ class MC_Case(Case):
 					
 					if north and west:
 						# Top left
-						#TODO
-						continue
+						# Positions of surfaces
+						
+						
+						# Check if necessary surfs exist; if not, create them
+						x1 = x + d1;	y1 = y + d1
+						x2 = x + d2;	y2 = y + d2
+						left1, left2, top1, top2 = None, None, None, None
+						req_surfs = left1, left2, top1, top2
+						
+						
+						for surf in self.openmc_surfaces:
+							if surf.type == 'x-plane':
+								if surf.x0 == x1:
+									left1 = surf
+								elif surf.x0 == x2:
+									left2 = surf
+							elif surf.type == 'y-plane':
+								if surf.y0 == y1:
+									top1 = surf
+								elif surf.y0 == y2:
+									top2 = y2
+						
+						if not left1:
+							left1 = openmc.XPlane(self.__counter(SURFACE), x0 = x1)
+						if not left2:
+							left2 = openmc.XPlane(self.__counter(SURFACE), x0 = x2)
+						if not top1:
+							top1 = openmc.YPlane(self.__counter(SURFACE), y0 = y1)
+						if not top2:
+							top2 = openmc.YPlane(self.__counter(SURFACE), y0 = y1)
 						
 				else:
 					# Do anything if not an assembly position?
