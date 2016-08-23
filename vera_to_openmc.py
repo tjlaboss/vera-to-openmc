@@ -5,7 +5,7 @@
 
 from read_xml import Case
 from functions import fill_lattice
-from math import sqrt
+from math import sqrt, copysign
 import objects
 
 try:
@@ -66,6 +66,54 @@ class MC_Case(Case):
 			return self.openmc_universe_count
 		else:
 			raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
+	
+	
+	def __get_xyz_planes(self, x0s = (), y0s = (), z0s = ()):
+		'''
+		Inputs:
+			x0s:		list or tuple of x0's to check for; default is empty tuple
+			y0s:		same for y0's
+			z0s:		same for z0's
+		Outputs:
+			xlist:		list of instances of openmc.XPlane, of length len(x0s)
+			ylist:		ditto, for openmc.YPlane, y0s
+			zlist:		ditto, for openmc.ZPlane, z0s
+		'''
+		
+		nx = len(x0s)
+		ny = len(y0s)
+		nz = len(z0s)
+		xlist = [None,]*nx
+		ylist = [None,]*ny
+		zlist = [None,]*ny
+		
+		# Check if such a surface exists, and add it to the lists if so
+		for surf in self.openmc_surfaces.values():
+			if surf.type == 'x-plane':
+				for i in range(nx):
+					if surf.x0 == x0s[i]:
+						xlist[i] = surf
+			elif surf.type == 'y-plane':
+				for i in range(ny):
+					if surf.y0 == y0s[i]:
+						ylist[i] = surf
+			elif surf.type == 'z-plane':
+				for i in range(nz):
+					if surf.z0 == z0s[i]:
+						zlist[i] = surf
+		
+		# If the surface doesn't exist, create it anew
+		for i in range(nx):
+			if not xlist[i]:
+				xlist[i] = openmc.XPlane(self.__counter(SURFACE), x0 = x0s[i])
+		for i in range(ny):
+			if not ylist[i]:
+				ylist[i] = openmc.YPlane(self.__counter(SURFACE), y0 = y0s[i])
+		for i in range(nz):
+			if not zlist[i]:
+				zlist[i] = openmc.ZPlane(self.__counter(SURFACE), z0 = z0s[i])
+		
+		return xlist, ylist, zlist
 		
 	
 		
@@ -454,38 +502,24 @@ class MC_Case(Case):
 					east  = cmap[i-1][j]
 					west  = cmap[i+1][j]
 					
-					if north and west:
-						# Top left
+					# Northwest (Top left corner)
+					if (not north) and (not west) and (south) and (east):
 						# Positions of surfaces
-						
+						x1 = x + copysign(d1, x);	y1 = y + copysign(d1, y)
+						x2 = x + copysign(d2, x);	y2 = y + copysign(d2, y)
 						
 						# Check if necessary surfs exist; if not, create them
-						x1 = x + d1;	y1 = y + d1
-						x2 = x + d2;	y2 = y + d2
-						left1, left2, top1, top2 = None, None, None, None
-						req_surfs = left1, left2, top1, top2
+						((left1, left2), (top1, top2)) = self.__get_xyz_planes((x1, x2), (y1,y2))[0:2]
+						
+						region = +left2 & -left1 & +top1 & -top2
+						
+						# Instantiate the OpenMC Cell 
+						new_cell = openmc.Cell(self.__counter(CELL), name="baffle-nw")
+						new_cell.region = region
+						new_cell.fill = self.try_openmc_material(baf.mat)
+						print(new_cell)
 						
 						
-						for surf in self.openmc_surfaces:
-							if surf.type == 'x-plane':
-								if surf.x0 == x1:
-									left1 = surf
-								elif surf.x0 == x2:
-									left2 = surf
-							elif surf.type == 'y-plane':
-								if surf.y0 == y1:
-									top1 = surf
-								elif surf.y0 == y2:
-									top2 = y2
-						
-						if not left1:
-							left1 = openmc.XPlane(self.__counter(SURFACE), x0 = x1)
-						if not left2:
-							left2 = openmc.XPlane(self.__counter(SURFACE), x0 = x2)
-						if not top1:
-							top1 = openmc.YPlane(self.__counter(SURFACE), y0 = y1)
-						if not top2:
-							top2 = openmc.YPlane(self.__counter(SURFACE), y0 = y1)
 						
 				else:
 					# Do anything if not an assembly position?
@@ -556,7 +590,8 @@ if __name__ == "__main__":
 	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel(test_case.core)
 	#print(test_case.core.square_maps("a", ''))
 	print(test_case.core.str_maps("shape"))
-	print(test_case.get_openmc_baffle(test_case.core))
+	b = test_case.get_openmc_baffle(test_case.core)
+	#print(b)
 	#print(core)
 	
 
