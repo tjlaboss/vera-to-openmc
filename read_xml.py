@@ -182,6 +182,9 @@ class Case(object):
 									baffle[b] = float(v)
 								if len(baffle) < 3:
 									continue
+								elif len(baffle) == 3:
+									# Redefine the variable from a dictionary to an object
+									baffle = objects.Baffle(baffle["mat"], baffle["thick"], baffle["gap"])
 							elif p[:6] == "lower_":
 								b = p[6:] 
 								if b == "mat":

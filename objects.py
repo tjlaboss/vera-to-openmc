@@ -231,9 +231,7 @@ class Core(object):
 		vessel_radii:	list of floats describing the radii of the reactor vessel layers
 		vessel_mats:	list of strings referring to Material keys for each layer of the
 						reactor vessel--must be same length as vessel_radii
-		baffle:			dictionary of baffle properties: {"mat":Material key (string), 
-						"gap": gap between oustside assembly and baffle in cm (float),
-						"thick": thickness of the baffle material in cm (float) }
+		baffle:			instance of class Baffle
 		control_bank,
 		control_map,	Not coded yet, but they will likely be lists of strings in the
 		detector_map:	style of asmbly_map
@@ -376,7 +374,7 @@ class Baffle(object):
 	def __init__(self, mat, thick, gap):
 		self.mat = mat
 		self.thick = thick
-		self.vfrac = gap
+		self.gap = gap
 	def __str__(self):
 		return "Baffle (" + self.thick + " cm thick)"
 
