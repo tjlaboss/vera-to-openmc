@@ -492,39 +492,98 @@ class MC_Case(Case):
 		for j in range(1,n):
 			# For each column (moving horizontally):
 			for i in range(1,n):
-				x = width - (i - 0.5)*pitch
-				y = width - (j - 0.5)*pitch
+				
 				
 				this = cmap[i][j]
 				if this:
+					# Positions of surfaces
+					x = width - (i - 0.5)*pitch;	y = width - (j - 0.5)*pitch
+					x1 = x + copysign(d1, x);		y1 = y + copysign(d1, y)
+					x2 = x + copysign(d2, x);		y2 = y + copysign(d2, y)
+					x3 = x2 - copysign(x, pitch);	y3 = y2 - copysign(y, pitch)	
+					
 					north = cmap[i][j-1]
 					south = cmap[i][j+1]
 					east  = cmap[i-1][j]
 					west  = cmap[i+1][j]
 					
-					# Northwest (Top left corner)
-					if (not north) and (not west) and (south) and (east):
-						# Positions of surfaces
-						x1 = x + copysign(d1, x);	y1 = y + copysign(d1, y)
-						x2 = x + copysign(d2, x);	y2 = y + copysign(d2, y)
+					
+					if (north and south and east and west):
+						# Surrounded; don't make the surfaces
+						continue
+					else:
+						# At least 1 baffle plate to add
 						
 						# Check if necessary surfs exist; if not, create them
-						((left1, left2), (top1, top2)) = self.__get_xyz_planes((x1, x2), (y1,y2))[0:2]
+						((left1, left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes((x1, x2, x3), (y1,y2,y3))[0:2]
 						
-						region = +left2 & -left1 & +top1 & -top2
+						'''Naming convention:
 						
-						# Instantiate the OpenMC Cell 
-						new_cell = openmc.Cell(self.__counter(CELL), name="baffle-nw")
-						new_cell.region = region
-						new_cell.fill = self.try_openmc_material(baf.mat)
-						print(new_cell)
+						"left" and "top" refer to the positions in the NE quadrant, so that
+							- left1 is far to the left (inner edge of plate)
+							- left2 is the farthest to the left (outer edge of plate)
+							- right2 is left2 + the pitch (would be leftmost edge of next plate)
+						
+						For the other quadrants, the plane names have been kept, but their positions
+						are *mirrored*; so in the SW quadrant, "top" actually means "bottom", as shown:
+						
+								 NW: straight		|	NE: mirrored horiz
+								------------------------------------------------
+								 SW: mirrored vert	|	SE: mirrored horiz+vert						'''
+						
+						# Northwest (Top left corner)
+						if (not north) and (not west) and (south) and (east):
+							#region = +left2 & -left1 & +top1 & -top2
+							new_top_cell = openmc.Cell(self.__counter(CELL), name="baffle-nw-top")
+							new_top_cell.region = +left2 & -right2 & +top1 & -top2
+							baffle_cells.append(new_top_cell)
+							
+							new_side_cell = openmc.Cell(self.__counter(CELL), name="baffle-nw-left")
+							new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+							baffle_cells.append(new_side_cell)
+						# Northeast (Top right corner)
+						elif (not north) and (not east) and (south) and (west):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-top")
+							new_top_cell.region = +right2 & -left2 & +top1 & -top2
+							baffle_cells.append(new_top_cell)
+
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-right")
+							new_side_cell.region = +bot2 & -top1 & +left1 & -left2
+							baffle_cells.append(new_side_cell)
+						# Southwest (Bottom left corner)
+						elif (not south) and (not west) and (north) and (east):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-bot")
+							new_top_cell.region = +left2 & -right2 & +top2 & -top1
+							baffle_cells.append(new_top_cell)
+							
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-left")
+							new_side_cell.region = +left2 & -left1 & +top2 & -bot2
+							baffle_cells.append(new_side_cell) 
+						# Southeast (Bottom right corner)
+						elif (not south) and (not east) and (north) and (west):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-bot")
+							new_top_cell.region = +right2 & -left2 & +top2 & -top1
+							baffle_cells.append(new_top_cell)
+
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-right")
+							new_side_cell.region = +top1 & -bot2 & +left1 & -left2
+							baffle_cells.append(new_side_cell)
+							
+							
+						# TODO: Regular edges (no corners)
+						
+							
 						
 						
 						
 				else:
 					# Do anything if not an assembly position?
 					continue
-				
+
+		# Set ALL baffle cell materials in one fell swoop		
+		for cell in baffle_cells:
+			cell.fill = self.try_openmc_material(baf.mat)
+			print(cell)
 		
 		return baffle_cells
 			
@@ -591,7 +650,7 @@ if __name__ == "__main__":
 	#print(test_case.core.square_maps("a", ''))
 	print(test_case.core.str_maps("shape"))
 	b = test_case.get_openmc_baffle(test_case.core)
-	#print(b)
+	print(len(b))
 	#print(core)
 	
 
