@@ -382,7 +382,87 @@ class MC_Case(Case):
 		return openmc_core, inside_cell, inside_fill, outer_surfs
 	
 	
-	
+	def get_openmc_baffle(self, vera_core):
+		'''Generate the surfaces and cells required to model the baffle plates.
+		
+		**ASSUMPTION: All shape maps will have at most 2 edges
+		(no single protruding assemblies will be present). This may not be valid;
+		a few more lines of code in the if blocks can remedy this.
+		
+		Inputs:
+			vera_core:		instance of objects.Core
+		Outputs:
+			baffle_cells:	list of instances of openmc.Cell,
+							describing the baffle plates	
+		'''
+		baffle_cells = []
+		
+		baf = vera_core.baffle		# instance of objects.Baffle
+		pitch = vera_core.pitch		# assembly pitch
+		
+		# Useful distances
+		d1 = pitch/2.0 + baf.gap 	# dist from center of asmbly to inside of baffle
+		d2 = d1 + baf.thick			# dist from center of asmbly to outside of baffle 
+		width = vera_core.size * vera_core.pitch / 2.0	# dist from center of core to center of asmbly
+		
+		cmap = vera_core.square_maps("s", '')
+		n = vera_core.size - 1
+		
+		'''
+		# Corner cases
+				if (i == 0) and (j == 0):
+					#TODO: top left corner
+					continue
+				elif (i == 0) and (j == n):
+					#TODO: bottom left corner
+					continue
+				elif (i == n) and (j == 0):
+					#TODO: bottom right corner
+					continue
+				elif (i == n) and (j == n):
+					#TODO: bottom left corner
+					continue
+				
+				# Edge cases
+				elif i == 0:
+					#TODO: Left edge
+					continue
+				elif j == 0:
+					#TODO: Top edge
+					continue
+				elif i == n:
+					#TODO: Right edge
+					continue
+				elif j == n:
+					#TODO: Bottom edge
+					continue
+		'''
+		
+		# Regular: assemblies on all sides
+		
+		# For each row (moving vertically):
+		for j in range(1,n):
+			# For each column (moving horizontally):
+			for i in range(1,n):
+				
+				this = cmap[i][j]
+				if this:
+					north = cmap[i][j-1]
+					south = cmap[i][j+1]
+					east  = cmap[i-1][j]
+					west  = cmap[i+1][j]
+					
+					if north and west:
+						# Top left
+						#TODO
+						continue
+						
+				else:
+					# Do anything if not an assembly position?
+					continue
+				
+		
+		return baffle_cells
 			
 	
 	
@@ -444,7 +524,9 @@ if __name__ == "__main__":
 	#	print(cmap)
 	
 	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel(test_case.core)
-	print(test_case.core.square_maps("a", ''))
+	#print(test_case.core.square_maps("a", ''))
+	print(test_case.core.str_maps("shape"))
+	print(test_case.get_openmc_baffle(test_case.core))
 	#print(core)
 	
 
