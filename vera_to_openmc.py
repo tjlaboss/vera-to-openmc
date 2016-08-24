@@ -154,6 +154,7 @@ class MC_Case(Case):
 					openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
+			self.openmc_materials[material] = openmc_material
 		
 		return openmc_material
 	
@@ -554,6 +555,13 @@ class MC_Case(Case):
 		Cells work as expected.		'''
 		
 		
+		# Useful lambda functions
+		# These will be used for both x and y
+		x1 = lambda x: x + copysign(d1, x);				# To inner edge of this baffle
+		x2 = lambda x: x + copysign(d2, x);				# To outer edge of this baffle
+		x3 = lambda x: x2(x) - copysign(pitch, x);		# To outer edge of next baffle
+		
+		
 		# Regular: assemblies on all sides
 		
 		# For each row (moving vertically):
@@ -566,9 +574,6 @@ class MC_Case(Case):
 				if this:
 					# Positions of surfaces
 					x = (i - 0.5)*pitch - width;	y = width - (j - 0.5)*pitch
-					x1 = x + copysign(d1, x);		y1 = y + copysign(d1, y)
-					x2 = x + copysign(d2, x);		y2 = y + copysign(d2, y)
-					x3 = x2 - copysign(pitch, x);	y3 = y2 - copysign(pitch, y)	
 					
 					north = cmap[j-1][i]
 					south = cmap[j+1][i]
@@ -583,7 +588,8 @@ class MC_Case(Case):
 						# At least 1 baffle plate to add
 						
 						# Check if necessary surfs exist; if not, create them
-						((left1, left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes((x1, x2, x3), (y1,y2,y3))[0:2]
+						((left1, left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( \
+												( x1(x), x2(x), x3(x)), (x1(y), x2(y), x3(y)) )[0:2]
 						
 						'''Naming convention:
 						
@@ -674,11 +680,87 @@ class MC_Case(Case):
 				else:
 					# Do anything if not an assembly position?
 					continue
-
+		
+		
+		# EDGE CASES
+		for i in range(1, n-1):
+			
+			# Top row
+			if cmap[0][i]: 	# Assembly is present
+				
+				y = width - 0.5*pitch
+				x = (i - 0.5)*pitch - width
+				
+				((left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x2(x), x3(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				# Add a top row
+				new_top_cell = openmc.Cell(self.__counter(CELL), "top edge")
+				new_top_cell.region = +left2 & -right2 & +top1 & -top2
+				baffle_cells.append(new_top_cell)
+				
+				west = cmap[0][i-1]
+				east = cmap[0][i+1]
+				south = cmap[1][i]
+				
+				# Left edge
+				if (not west): 
+					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
+					new_side_cell = openmc.Cell(self.__counter(CELL), "top edge (left)")
+					new_side_cell.region = +left1 & -left2 & +top1 & -top2
+					baffle_cells.append(new_side_cell)
+				# Right edge
+				if (not east): 
+					right1 = self.__get_xyz_planes( (x1(x) + pitch,), (), () )[0][0]
+					new_side_cell = openmc.Cell(self.__counter(CELL), "top edge (right)")
+					new_side_cell.region = +right2 & -right1 & +top1 & -top2
+					baffle_cells.append(new_side_cell)
+			
+				
+			# Bottom row
+			if cmap[n][i]:	 	# Assembly is present
+				y = -(width - 0.5*pitch)
+				x =  (i - 0.5)*pitch - width
+				
+				((left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x2(x), x3(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				
+				# Add a bottom row
+				new_top_cell = openmc.Cell(self.__counter(CELL), "bottom edge")
+				new_top_cell.region = +left2 & -right2 & +top2 & -top1
+				baffle_cells.append(new_top_cell)
+				
+				west = cmap[n][i-1]
+				east = cmap[n][i+1]
+				north= cmap[n-1][i]
+				
+				# Left edge
+				if (not west): 
+					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
+					new_side_cell = openmc.Cell(self.__counter(CELL), "bottom edge (left)")
+					new_side_cell.region = +left1 & -left2 & +top2 & -top1
+					baffle_cells.append(new_side_cell)
+				# Right edge
+				if (not east): 
+					right1 = self.__get_xyz_planes( (x1(x) + pitch,), (), () )[0][0]
+					new_side_cell = openmc.Cell(self.__counter(CELL), "bottom edge (right)")
+					new_side_cell.region = +right2 & -right1 & +top2 & -top1
+					baffle_cells.append(new_side_cell)
+			
+				
+			# Left column
+			if cmap[i][0]:	 		# Assembly is present
+				continue
+			
+			# Right column
+			if cmap[i][n]:	 	# Assembly is present
+				continue
+				
+				
+				
+		
+		
 		# Set ALL baffle cell materials in one fell swoop		
 		for cell in baffle_cells:
 			cell.fill = self.get_openmc_material(baf.mat)
-			#print(cell)
+			print(cell)
 		
 		return baffle_cells
 			
