@@ -281,7 +281,7 @@ class Case(object):
 									elif aname ==  "spacergrids":
 										for grid in asmbly_child:
 											new_grid = self.__get_grid(grid)
-											grids[new_grid.name] = new_grid
+											grids[new_grid.label] = new_grid
 												
 									
 									else:

@@ -2,7 +2,7 @@
 #
 # Module containing useful functions for read_xml.py and its modules
 
-def clean(vera_list, type):
+def clean(vera_list, type = str):
 	'''Lists in VERA decks are formatted as such: 
 	
 		type="Array(string)" value="{U31,he,zirc4}"

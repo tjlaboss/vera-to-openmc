@@ -4,7 +4,7 @@
 # the required files for an OpenMC input.
 
 from read_xml import Case
-from functions import fill_lattice
+from functions import fill_lattice, clean
 from math import sqrt, copysign
 import objects
 
@@ -27,8 +27,6 @@ class MC_Case(Case):
 		self.openmc_surfaces = {}; self.openmc_materials = {}
 		
 		# ID Counters
-		# 0 is special for universes, and in some codes, surfs/cells/mats start at 1;
-		# so I'm starting the count at 1 here instead of 0.
 		self.openmc_surface_count = 0; self.openmc_cell_count = 0 ;self.openmc_material_count = 0; self.openmc_universe_count = 0
 		
 		
@@ -36,8 +34,10 @@ class MC_Case(Case):
 		'''The outside of each cell is automatically filled with the special material "mod", which refers to
 		the moderator (or coolant). The composition of "mod" is calculated by the codes using the local T/H
 		conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.
+		
 		FIXME: The material uses a simple form of water as a placeholder and does NOT represent the actual
-		composition of the moderator!'''
+		composition of the moderator!
+		The expected composition of "mod" appears in the STATE block of the VERA deck.'''
 		self.__counter(MATERIAL)
 		self.mod = openmc.Material(self.__counter(MATERIAL), "mod")
 		self.mod.set_density("g/cc", 1.0)
@@ -290,7 +290,8 @@ class MC_Case(Case):
 		
 		Inputs:
 			vera_grids:			dictionary of instances of SpacerGrid
-			grid_labels:		list of strings (keys in vera_grids)
+			grid_labels:		list of strings (which appear in vera_grids.keys)
+								referring to the next spacer grid that exists.s
 			grid_elevations:	list of floats (of len(grid_labels));
 								heights (cm) of the grid midpoints
 			npins:				integer; (npins)x(npins) fuel bundle 
@@ -304,8 +305,35 @@ class MC_Case(Case):
 			
 			# Thickness of one edge of the spacer
 			# The actual spacer wall between two cells will be twice this thickness
-			t = grid.mass/grid.density/grid.height / (4.0*npins**2 + 1)
-			#t = 0.5*(pitch + sqrt(pitch**2 - 4*grid.mass/grid.density/grid.height))
+			'''Math: How we calculate the thickness 't' of the spacer around 1 cell.
+			
+			Volume = mass / density;		Combined Area = Volume / height
+			Therefore, [ A = m/rho/h ],		and the area around a single pincell:
+												a = m/rho/h / npins^2
+			
+			The area of the spacer material around one cell can also be found:
+				a = p^2 - (p - 2*t)^2,		where 't' is the thickness and 'p' is the pitch
+			->  a = p^2 - [p^2 - 4*t*p + 4*t^2]
+			->  a = 4*t*p - 4*t^2
+				
+			Equate the two expressions for a:
+				m/rho/h / npins^2 = 4*t*p - 4*t^2
+			Then solve for 't' using the quadratic equation:
+			
+			              [             (          m/rho/h   ) ]
+				t = 0.5 * [ p  +/- sqrt ( p^2 -   ---------- ) ]
+				          [             (          npins^2   ) ]
+			
+			It turns out that the negative solution to the root is correct
+			(positive produces thicknesses of greater than the pitch, which is
+			physically impossible). As a check, the thickness should be approximately
+			equal to one fourth [one wall] of one pin's spacer's area, divided by the pitch.
+			To verify this, uncomment the print statement in the next block of code.'''
+			
+			A = grid.mass / self.materials[grid.material].density / grid.height
+			t = 0.5*(pitch - sqrt(pitch**2 - A/npins**2))
+			est = A/(4.0*pitch*npins**2)
+			#print("t="+str(t) + " cm;\tshould be close to " + str(est))
 			
 			# Then do something to model the grid...
 		
@@ -634,7 +662,7 @@ class MC_Case(Case):
 		# Set ALL baffle cell materials in one fell swoop		
 		for cell in baffle_cells:
 			cell.fill = self.try_openmc_material(baf.mat)
-			print(cell)
+			#print(cell)
 		
 		return baffle_cells
 			
@@ -704,6 +732,5 @@ if __name__ == "__main__":
 	print(len(b))
 	#print(core)
 	
-	print(test_case.openmc_surfaces)
-
+	test_case.get_openmc_spacergrids(a.spacergrids, clean(a.params["grid_map"]), clean(a.params["grid_elev"]), 17, a.pitch)
 
