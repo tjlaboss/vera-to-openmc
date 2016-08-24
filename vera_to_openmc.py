@@ -644,8 +644,6 @@ class MC_Case(Case):
 							baffle_cells.append(new_side_cell)
 							
 							
-						# TODO: Regular edges (no corners)
-						
 						# North (top only)
 						elif (not north) and (east) and (south) and (west):
 							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-n-top")
@@ -690,28 +688,27 @@ class MC_Case(Case):
 				
 				y = width - 0.5*pitch
 				x = (i - 0.5)*pitch - width
-				
 				((left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x2(x), x3(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
 				# Add a top row
 				new_top_cell = openmc.Cell(self.__counter(CELL), "top edge")
 				new_top_cell.region = +left2 & -right2 & +top1 & -top2
 				baffle_cells.append(new_top_cell)
 				
-				west = cmap[0][i-1]
-				east = cmap[0][i+1]
-				south = cmap[1][i]
+				west  = cmap[0][i-1]
+				east  = cmap[0][i+1]
+				south = cmap[0+1][i]
 				
-				# Left edge
+				# Left edge (vertical)
 				if (not west): 
 					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
 					new_side_cell = openmc.Cell(self.__counter(CELL), "top edge (left)")
-					new_side_cell.region = +left1 & -left2 & +top1 & -top2
+					new_side_cell.region = +left2 & -left1 & +bot2 & -top1
 					baffle_cells.append(new_side_cell)
-				# Right edge
+				# Right edge (vertical)
 				if (not east): 
-					right1 = self.__get_xyz_planes( (x1(x) + pitch,), (), () )[0][0]
+					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
 					new_side_cell = openmc.Cell(self.__counter(CELL), "top edge (right)")
-					new_side_cell.region = +right2 & -right1 & +top1 & -top2
+					new_side_cell.region = +left1 & -left2 & +bot2 & -top1
 					baffle_cells.append(new_side_cell)
 			
 				
@@ -719,9 +716,7 @@ class MC_Case(Case):
 			if cmap[n][i]:	 	# Assembly is present
 				y = -(width - 0.5*pitch)
 				x =  (i - 0.5)*pitch - width
-				
 				((left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x2(x), x3(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
-				
 				# Add a bottom row
 				new_top_cell = openmc.Cell(self.__counter(CELL), "bottom edge")
 				new_top_cell.region = +left2 & -right2 & +top2 & -top1
@@ -731,30 +726,85 @@ class MC_Case(Case):
 				east = cmap[n][i+1]
 				north= cmap[n-1][i]
 				
-				# Left edge
+				# Left edge (vertical)
 				if (not west): 
 					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
 					new_side_cell = openmc.Cell(self.__counter(CELL), "bottom edge (left)")
-					new_side_cell.region = +left1 & -left2 & +top2 & -top1
+					new_side_cell.region = +left2 & -left1 & +top1 & -bot2
 					baffle_cells.append(new_side_cell)
-				# Right edge
+				# Right edge (vertical)
 				if (not east): 
-					right1 = self.__get_xyz_planes( (x1(x) + pitch,), (), () )[0][0]
+					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
+					#(right1, bot1) = self.__get_xyz_planes( (x1(x) - pitch,), (x1(y) - pitch,), () )[0:2]
 					new_side_cell = openmc.Cell(self.__counter(CELL), "bottom edge (right)")
-					new_side_cell.region = +right2 & -right1 & +top2 & -top1
+					new_side_cell.region = +left1 & -left2 & +top1 & -bot2
 					baffle_cells.append(new_side_cell)
+			
 			
 				
 			# Left column
 			if cmap[i][0]:	 		# Assembly is present
-				continue
+				x = -(width - 0.5*pitch)
+				y =  width - (i - 0.5)*pitch 
+				((left1, left2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x1(x), x2(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				# Add a left column
+				new_side_cell = openmc.Cell(self.__counter(CELL), "left edge")
+				new_side_cell.region = +left2 & -left1 & +bot2 & -top2 
+				baffle_cells.append(new_side_cell)
+				
+				east  = cmap[i][0+1]
+				north = cmap[i-1][0]
+				south = cmap[i+1][0]
+				
+				# Top edge (horizontal)
+				if (not north):
+					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
+					new_top_cell = openmc.Cell(self.__counter(CELL), "left edge (top)")
+					new_top_cell.region = +left1 & -right2 & +top1 & -top2 
+					baffle_cells.append(new_top_cell)
+				# Bottom edge (horizontal)
+				if (not south):
+					#doublecheckthisone
+					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
+					new_top_cell = openmc.Cell(self.__counter(CELL), "left edge (bot)")
+					new_top_cell.region = +left1 & -right2 & +top2 & -top1
+					baffle_cells.append(new_top_cell)
+
+				
 			
 			# Right column
 			if cmap[i][n]:	 	# Assembly is present
-				continue
+				x = width - 0.5*pitch
+				y = width - (i - 0.5)*pitch
+				((left1, left2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x1(x), x2(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				# Add a right column
+				new_side_cell = openmc.Cell(self.__counter(CELL), "right edge")
+				new_side_cell.region = +left1 & -left2 & +bot2 & -top2 
+				baffle_cells.append(new_side_cell)
+				
+				west  = cmap[i][n-1]
+				north = cmap[i-1][n]
+				south = cmap[i+1][n]
 				
 				
+				# Top edge (horizontal)
+				if (not north):
+					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
+					new_top_cell = openmc.Cell(self.__counter(CELL), "right edge (top)")
+					new_top_cell.region = +right2 & -left1 & +top1 & -top2 
+					baffle_cells.append(new_top_cell)
+				# Bottom edge (horizontal)
+				if (not south):
+					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
+					new_top_cell = openmc.Cell(self.__counter(CELL), "right edge (bot)")
+					new_top_cell.region = +right2 & -left1 & +top2 & -top1
+					baffle_cells.append(new_top_cell)
 				
+				#TODO: EDGE CASES HAVE BEEN VERIFIED UP TO WORK AS EXPECTED UP TO HERE
+		
+		
+				# TODO: Add corner cases
+		
 		
 		
 		# Set ALL baffle cell materials in one fell swoop		
