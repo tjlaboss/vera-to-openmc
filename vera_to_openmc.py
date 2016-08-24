@@ -486,6 +486,24 @@ class MC_Case(Case):
 					continue
 		'''
 		
+		'''A note about the baffle Cells:
+		
+		Currently, I'm creating an individual cell for each little segment of the baffle plates.
+		        __________
+		       |__________|
+		       | |             Like this, so that the segment shown
+		       | |             here would be composed of 3 Cells.
+		 ______|_|
+		|________|
+		
+		It might be more efficient just to generate the regions of each of the cells,
+		concatenate each i^th region onto a "master region" using union operators,
+		and assign the master region to a single baffle Cell at the end of the loop.
+
+		I plan to see if it makes sense to do this once I've verified that the independent
+		Cells work as expected.		'''
+		
+		
 		# Regular: assemblies on all sides
 		
 		# For each row (moving vertically):
@@ -494,18 +512,18 @@ class MC_Case(Case):
 			for i in range(1,n):
 				
 				
-				this = cmap[i][j]
+				this = cmap[j][i]
 				if this:
 					# Positions of surfaces
-					x = width - (i - 0.5)*pitch;	y = width - (j - 0.5)*pitch
+					x = (i - 0.5)*pitch - width;	y = (j - 0.5)*pitch - width
 					x1 = x + copysign(d1, x);		y1 = y + copysign(d1, y)
 					x2 = x + copysign(d2, x);		y2 = y + copysign(d2, y)
-					x3 = x2 - copysign(x, pitch);	y3 = y2 - copysign(y, pitch)	
+					x3 = x2 - copysign(pitch, x);	y3 = y2 - copysign(pitch, y)	
 					
-					north = cmap[i][j-1]
-					south = cmap[i][j+1]
-					east  = cmap[i-1][j]
-					west  = cmap[i+1][j]
+					north = cmap[j-1][i]
+					south = cmap[j+1][i]
+					east  = cmap[j][i+1]
+					west  = cmap[j][i-1]
 					
 					
 					if (north and south and east and west):
@@ -572,8 +590,29 @@ class MC_Case(Case):
 							
 						# TODO: Regular edges (no corners)
 						
+						# North (top only)
+						elif (not north) and (east) and (north) and (west):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-n-top")
+							new_top_cell.region = +left2 & -right2 & +top1 & -top2
+							baffle_cells.append(new_top_cell)
 							
+						# South (bottom only)
+						elif (not south) and (east) and (south) and (west):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-s-bot")
+							new_top_cell.region = +left2 & -right2 & +top2 & -top1
+							baffle_cells.append(new_top_cell)
 						
+						# West (left only)
+						elif (not west) and (east) and (north) and (south):
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-w-left")
+							new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+							baffle_cells.append(new_side_cell)
+						
+						# East (right only)
+						elif (not east) and (south) and (north) and (west):
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-e-right")
+							new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+							baffle_cells.append(new_side_cell)
 						
 						
 				else:
