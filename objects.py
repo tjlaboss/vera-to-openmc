@@ -67,8 +67,8 @@ class Material(object):
 class Mixture(Material):
 	'''Two mixed Material instances. 
 	Functionally exactly the same as Material, but initialized differently.'''
-	def __init__(self, key_name, materials, vfracs):
-		self.name = key_name
+	def __init__(self, name, materials, vfracs):
+		self.name = name
 		mix_isos = {}
 		density = 0.0
 	
@@ -351,13 +351,13 @@ class Core(object):
 
 class Reflector(object):
 	'''Inputs:
-		mat:	instance of Material or Mixture
+		mat:	string; key of an instance of Material or Mixture
 		thick:	float;	thickness in cm
 	Optional input:
 		name:	string;	default is empty string
 	'''
-	def __init__(self, mat, thick, vfrac, name = ""):
-		self.mat = mat
+	def __init__(self, material, thick, vfrac, name = ""):
+		self.material = material
 		self.thick = thick
 		self.name = name
 	def __str__(self):

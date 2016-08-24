@@ -192,10 +192,12 @@ class Case(object):
 								else:
 									lower[b] = float(v)
 								if len(lower) == 3:
-									lower_mat = objects.Mixture(key_name = "lowerplate", 
+									name = "lowerplate"
+									lower_mat = objects.Mixture(name = name, 
 												materials = (self.materials[lower["mat"]], self.materials["mod"]),
 												vfracs = (lower["vfrac"], 1.0 - lower["vfrac"]) )
-									lower_refl = objects.Reflector(lower_mat, lower["thick"], "lower")
+									self.materials[name] = lower_mat
+									lower_refl = objects.Reflector(name, lower["thick"], "lower")
 								else:
 									continue
 							elif p[:6] == "upper_":
@@ -205,10 +207,12 @@ class Case(object):
 								else:
 									upper[b] = float(v)
 								if len(upper) == 3:
-									upper_mat = objects.Mixture(key_name = "upperplate", 
+									name = "upperplate"
+									upper_mat = objects.Mixture(name = name, 
 												materials = (self.materials[upper["mat"]], self.materials["mod"]),
 												vfracs = (upper["vfrac"], 1.0 - upper["vfrac"]) )
-									upper_refl = objects.Reflector(upper_mat, upper["thick"], "upper")
+									self.materials[name] = upper_mat
+									upper_refl = objects.Reflector(name, upper["thick"], "upper")
 								else:
 									continue
 							elif p == "vessel_radii":

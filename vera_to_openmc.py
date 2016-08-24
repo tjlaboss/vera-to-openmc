@@ -125,31 +125,47 @@ class MC_Case(Case):
 		
 	def get_openmc_material(self, material):
 		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
-		create and return an instance of openmc.Material.
+		return an instance of openmc.Material. If the OpenMC Material exists, look it
+		up in the dictionary. Otherwise, create it anew.
+		
+		Inputs:
+			material:			string; key of the material in self.materials
+		
+		Outputs:
+			openmc_material:	instance of openmc.Material
 		
 		All of the material fractions sum to either +1.0 or -1.0. If positive fractions are used, they
 		refer to weight fractions. If negative fractions are used, they refer to atomic	fractions.
 		'''
-		openmc_material = openmc.Material(self.__counter(MATERIAL), material.name)
-		openmc_material.set_density("g/cc", material.density)
-		for i in material.isotopes:
-			nuclide = i
-			frac = material.isotopes[i]
-			if frac < 0:
-				openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
-			else:
-				openmc_material.add_nuclide(nuclide, frac, 'wo')
+		
+		try:
+			# Look it up as normal
+			openmc_material = self.openmc_materials[material]
+		except KeyError:
+			# Then the material really doesn't exist yet in OpenMC form
+			# Generate it and add it to the index 
+			vera_mat = self.materials[material]
+			openmc_material = openmc.Material(self.__counter(MATERIAL), material)
+			openmc_material.set_density("g/cc", vera_mat.density)
+			for i in vera_mat.isotopes:
+				nuclide = i
+				frac = vera_mat.isotopes[i]
+				if frac < 0:
+					openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
+				else:
+					openmc_material.add_nuclide(nuclide, frac, 'wo')
+		
 		return openmc_material
 	
 	
-	def try_openmc_material(self, m):
-		'''Check if a material exists; if it doesn't, add it to the index
+	'''def try_openmc_material(self, m):
+		Check if a material exists; if it doesn't, add it to the index
 		
 		Input:
 			m:		string; key of a VERA material in self.materials
 		Output:
 			mat:	instance of openmc.Material
-		'''
+		
 		try:
 			# Look it up as normal
 			mat = self.openmc_materials[m]
@@ -159,7 +175,7 @@ class MC_Case(Case):
 			mat = self.get_openmc_material(self.materials[m])
 			self.openmc_materials[m] = mat
 		
-		return mat
+		return mat'''
 	
 	
 	
@@ -216,7 +232,7 @@ class MC_Case(Case):
 				fill = self.openmc_materials[vera_cell.asname + m]
 				# This normally will not exist, so:
 			except KeyError:
-				fill = self.try_openmc_material(m)
+				fill = self.get_openmc_material(m)
 			
 				
 			# What I want to do instead is, somewhere else in the code, generate the corresponding
@@ -431,7 +447,7 @@ class MC_Case(Case):
 				vessel_surf = s
 			else:
 				new_cell.region = -s & +last_s	& +plate_bot & -plate_top
-				new_cell.fill = self.try_openmc_material(m)
+				new_cell.fill = self.get_openmc_material(m)
 				last_s = s
 				core_cells.append(new_cell)
 		
@@ -442,14 +458,14 @@ class MC_Case(Case):
 		core_cells.append(new_cell)
 		
 		# Add the core plates
-		top_plate_mat = self.get_openmc_material(vera_core.bot_refl.mat)
+		top_plate_mat = self.get_openmc_material(vera_core.bot_refl.material)
 		self.openmc_materials[top_plate_mat.name] = top_plate_mat
 		top_plate_cell = openmc.Cell(self.__counter(CELL), "Top core plate")
 		top_plate_cell.region = -vessel_surf & + core_top & -plate_top
 		top_plate_cell.fill = top_plate_mat
 		core_cells.append(top_plate_cell)
 		
-		bot_plate_mat = self.get_openmc_material(vera_core.bot_refl.mat)
+		bot_plate_mat = self.get_openmc_material(vera_core.bot_refl.material)
 		self.openmc_materials[bot_plate_mat.name] = bot_plate_mat
 		bot_plate_cell = openmc.Cell(self.__counter(CELL), "Bot core plate")
 		bot_plate_cell.region = -vessel_surf & + core_bot & -plate_bot
@@ -661,7 +677,7 @@ class MC_Case(Case):
 
 		# Set ALL baffle cell materials in one fell swoop		
 		for cell in baffle_cells:
-			cell.fill = self.try_openmc_material(baf.mat)
+			cell.fill = self.get_openmc_material(baf.mat)
 			#print(cell)
 		
 		return baffle_cells
