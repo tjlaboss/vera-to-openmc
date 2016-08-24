@@ -105,13 +105,19 @@ class MC_Case(Case):
 		# If the surface doesn't exist, create it anew
 		for i in range(nx):
 			if not xlist[i]:
-				xlist[i] = openmc.XPlane(self.__counter(SURFACE), x0 = x0s[i])
+				xp = openmc.XPlane(self.__counter(SURFACE), x0 = x0s[i])
+				self.openmc_surfaces[xp.type + '-' + str(xp.id)] = xp
+				xlist[i] = xp 
 		for i in range(ny):
 			if not ylist[i]:
-				ylist[i] = openmc.YPlane(self.__counter(SURFACE), y0 = y0s[i])
+				yp = openmc.YPlane(self.__counter(SURFACE), y0 = y0s[i])
+				self.openmc_surfaces[yp.type + '-' + str(yp.id)] = yp
+				ylist[i] = yp
 		for i in range(nz):
 			if not zlist[i]:
-				zlist[i] = openmc.ZPlane(self.__counter(SURFACE), z0 = z0s[i])
+				zp = openmc.ZPlane(self.__counter(SURFACE), z0 = z0s[i])
+				self.openmc_surfaces[zp.type + '-' + str(zp.id)] = zp 
+				zlist[i] = zp
 		
 		return xlist, ylist, zlist
 		
@@ -515,7 +521,7 @@ class MC_Case(Case):
 				this = cmap[j][i]
 				if this:
 					# Positions of surfaces
-					x = (i - 0.5)*pitch - width;	y = (j - 0.5)*pitch - width
+					x = (i - 0.5)*pitch - width;	y = width - (j - 0.5)*pitch
 					x1 = x + copysign(d1, x);		y1 = y + copysign(d1, y)
 					x2 = x + copysign(d2, x);		y2 = y + copysign(d2, y)
 					x3 = x2 - copysign(pitch, x);	y3 = y2 - copysign(pitch, y)	
@@ -591,13 +597,13 @@ class MC_Case(Case):
 						# TODO: Regular edges (no corners)
 						
 						# North (top only)
-						elif (not north) and (east) and (north) and (west):
+						elif (not north) and (east) and (south) and (west):
 							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-n-top")
 							new_top_cell.region = +left2 & -right2 & +top1 & -top2
 							baffle_cells.append(new_top_cell)
 							
 						# South (bottom only)
-						elif (not south) and (east) and (south) and (west):
+						elif (not south) and (east) and (north) and (west):
 							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-s-bot")
 							new_top_cell.region = +left2 & -right2 & +top2 & -top1
 							baffle_cells.append(new_top_cell)
@@ -605,13 +611,19 @@ class MC_Case(Case):
 						# West (left only)
 						elif (not west) and (east) and (north) and (south):
 							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-w-left")
-							new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+							if bot2.y0 > top1.y0:
+								new_side_cell.region = +left2 & -left1 & +top1 & -bot2
+							else:
+								new_side_cell.region = +left2 & -left1 & +bot2 & -top1
 							baffle_cells.append(new_side_cell)
 						
 						# East (right only)
 						elif (not east) and (south) and (north) and (west):
 							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-e-right")
-							new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+							if bot2.y0 > top1.y0:
+								new_side_cell.region = +left2 & -left1 & +top1 & -bot2
+							else:
+								new_side_cell.region = +left2 & -left1 & +bot2 & -top1
 							baffle_cells.append(new_side_cell)
 						
 						
@@ -692,5 +704,6 @@ if __name__ == "__main__":
 	print(len(b))
 	#print(core)
 	
+	print(test_case.openmc_surfaces)
 
 
