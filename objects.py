@@ -4,12 +4,13 @@
 
 from math import sqrt
 from functions import clean
+from PWR_assembly import Nozzle
 import isotopes
 
 class Material(object):
 	'''Basics of a material card
 	Parameters:
-		key_name:	string; unique material name
+		name:		string; unique material name
 		density:	float; density in g/cm^3
 		isotopes:	dictionary of {"isotope name":isotope_fraction}
 	'''
