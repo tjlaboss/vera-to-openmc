@@ -125,8 +125,8 @@ def test_core(case_file = "../2o.xml.gold"):
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../1c.xml.gold", "assy1")
 	#case, fillcell, pitch, n, bounds = test_assembly("../p7.xml.gold")
-	#case, fillcell, pitch, n, bounds = test_assembly("../2a_dep.xml.gold", "assy")
-	case, fillcell, pitch, n, bounds = test_core()
+	case, fillcell, pitch, n, bounds = test_assembly("../2a_dep.xml.gold", "assy")
+	#case, fillcell, pitch, n, bounds = test_core()
 	
 	materials = openmc.Materials(case.openmc_materials.values())
 	materials.default_xs = '71c'

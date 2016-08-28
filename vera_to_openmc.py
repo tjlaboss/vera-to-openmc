@@ -210,9 +210,8 @@ class MC_Case(Case):
 			if not surf_id:
 				# Generate new surface and get its surf_id
 				s = openmc.ZCylinder(self.__counter(SURFACE), "transmission", 0, 0, r)
-				#cell_surfs[surf_id] = s
 				# Add the new surfaces to the registry
-				self.openmc_surfaces[str(surf_id)] = s
+				self.openmc_surfaces[s.id] = s
 				
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
@@ -764,7 +763,6 @@ class MC_Case(Case):
 					baffle_cells.append(new_top_cell)
 				# Bottom edge (horizontal)
 				if (not south):
-					#doublecheckthisone
 					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
 					new_top_cell = openmc.Cell(self.__counter(CELL), "left edge (bot)")
 					new_top_cell.region = +left1 & -right2 & +top2 & -top1
@@ -851,9 +849,6 @@ if __name__ == "__main__":
 				mypin = new_pin
 	
 	#print cm.square_map()
-	
-	#mc_test_mat = test_case.get_openmc_material(test_case.materials["pyrex"])
-	#print mc_test_mat
 	
 	#print test_case.mod
 	
