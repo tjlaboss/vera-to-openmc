@@ -6,7 +6,7 @@
 
 import openmc
 import objects
-from collections import OrderedDict
+from functions import fill_lattice
 
 
 class Mixture(openmc.Material):
@@ -54,12 +54,11 @@ class Mixture(openmc.Material):
 	
 	'''
 	
-	def __init__(self, materials, vfracs, material_id = None, name = ""):
+	def __init__(self, materials, vfracs, material_id = None, frac_type = 'wo', name = ""):
 		super(Mixture, self).__init__(material_id, name)
 		
 		mix_isos = []
 		density = 0.0
-		frac_type = 'wo'
 	
 		for i in range(len(materials)):
 			density += materials[i].density * (vfracs[i] / sum(vfracs))
@@ -131,6 +130,27 @@ class Nozzle(object):
 		return self.name
 
 
+def add_grid_to(cell, t, material):
+	'''Given a pincell to be placed in a lattice, add
+	the spacer grid to the individual cell.
+	
+	Inputs:
+		cell:		instance of openmc.Universe describing the pincell
+					and its concentric rings of instances of openmc.Cell
+		t:			float; thickness in cm of one edge of the spacer between
+					two pincells (HALF the total thickness)
+		material:	instance of openmc.Material from which the spacer is made
+	
+	Output:
+		new_cell:	instance of openmc.Universe describing the pincell
+					surrounded by the spacer
+	'''
+	assert isinstance(cell, openmc.Universe), str(cell) + "must be an openmc.Universe (not a Cell)"
+	assert isinstance(material, openmc.Material), str(material) + "is not an instance of openmc.Material" 
+	
+	
+
+
 # Test
 if __name__ == '__main__':
 	
@@ -146,9 +166,9 @@ if __name__ == '__main__':
 	iron.add_element("Fe", 1, 'ao', expand=True)
 	
 	mix1 = Mixture([mod, iron], [0.5,0.5], 33, 'watery iron')
-		
+	assert isinstance(mix1, openmc.Material)	
 	noz1 = Nozzle(10, 6250, iron, mod, 1, 10)
-	print(noz1.material)
 
-
+	# Test a pincell
+	
 

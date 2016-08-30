@@ -216,6 +216,9 @@ class MC_Case(Case):
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
 			new_cell = openmc.Cell(self.__counter(CELL), name)
+			#FIXME: Remove next line, here for debugging purposes only
+			new_cell.asname = vera_cell.asname
+			
 			if ring == 0:
 				# Inner ring
 				new_cell.region = -s
@@ -236,7 +239,14 @@ class MC_Case(Case):
 			
 				
 			# What I want to do instead is, somewhere else in the code, generate the corresponding
-			# openmc material for each objects.Material instance. Then, just look it up in that dictionary.			
+			# openmc material for each objects.Material instance. Then, just look it up in that dictionary.
+			
+			
+		
+			##TMP--debug this weird case
+			if name == "Cell_1-ring2":
+				debug = True
+						
 			new_cell.fill = fill
 			openmc_cells.append(new_cell)
 		
@@ -244,7 +254,12 @@ class MC_Case(Case):
 		
 		# Then add the moderator outside the pincell
 		#FIXME: Check this for Cell2 in 2a_dep
+			
+
+		
 		mod_cell = openmc.Cell(self.__counter(MATERIAL), vera_cell.name + "-Mod")
+		#FIXME: Remove next line, here for debugging purposes only
+		mod_cell.asname = vera_cell.asname
 		mod_cell.fill = self.mod
 		mod_cell.region = +s
 		openmc_cells.append(mod_cell)
@@ -801,7 +816,7 @@ class MC_Case(Case):
 				#TODO: EDGE CASES HAVE BEEN VERIFIED UP TO WORK AS EXPECTED UP TO HERE
 		
 		
-				# TODO: Add corner cases
+				# TODO: Add 4 corner cases
 		
 		
 		
@@ -876,4 +891,13 @@ if __name__ == "__main__":
 	#print(core)
 	
 	test_case.get_openmc_spacergrids(a.spacergrids, clean(a.params["grid_map"]), clean(a.params["grid_elev"]), 17, a.pitch)
-
+	
+	last_cell = list(mypin.cells)
+	last_cell = list(mypin.cells.values())[-1]
+	print(last_cell, last_cell.asname)
+	print()
+	print(last_cell.region.surface())
+	
+	
+	
+	

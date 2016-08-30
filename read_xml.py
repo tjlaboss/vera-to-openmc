@@ -603,7 +603,7 @@ class Case(object):
 			self.errors += 1
 			
 			
-		a_cell = objects.Cell(name, num_rings, radii, mats, label)
+		a_cell = objects.Cell(name, num_rings, radii, mats, label, asname)
 		return a_cell
 	
 		
