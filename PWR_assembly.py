@@ -7,6 +7,8 @@
 import openmc
 import objects
 from functions import fill_lattice
+from copy import copy
+from opencg.surface import ZCylinder
 
 
 class Mixture(openmc.Material):
@@ -130,13 +132,14 @@ class Nozzle(object):
 		return self.name
 
 
-def add_grid_to(cell, t, material):
+def add_grid_to(pincell, pitch, t, material):
 	'''Given a pincell to be placed in a lattice, add
 	the spacer grid to the individual cell.
 	
 	Inputs:
-		cell:		instance of openmc.Universe describing the pincell
+		pincell:	instance of openmc.Universe describing the pincell
 					and its concentric rings of instances of openmc.Cell
+		pitch:		float; pin pitch in cm
 		t:			float; thickness in cm of one edge of the spacer between
 					two pincells (HALF the total thickness)
 		material:	instance of openmc.Material from which the spacer is made
@@ -145,10 +148,34 @@ def add_grid_to(cell, t, material):
 		new_cell:	instance of openmc.Universe describing the pincell
 					surrounded by the spacer
 	'''
-	assert isinstance(cell, openmc.Universe), str(cell) + "must be an openmc.Universe (not a Cell)"
+	assert isinstance(pincell, openmc.Universe), str(pincell) + "must be an openmc.Universe (not a Cell)"
 	assert isinstance(material, openmc.Material), str(material) + "is not an instance of openmc.Material" 
+	#assert isinstance(cell.region, openmc.surface.Halfspace), "Cell " + cell.name + " is not a single Halfspace." 
 	
+	# Create necessary planes
+	p = pitch / 2.0
+	top_out = openmc.YPlane(y0 =  p)
+	top_in  = openmc.YPlane(y0 =  p - t)
+	bot_in  = openmc.YPlane(y0 = -p + t)
+	bot_out = openmc.YPlane(y0 = -p)
+	left_out  = openmc.XPlane(x0 = -p)		# He feels left out
+	left_in   = openmc.XPlane(x0 = -p + t)
+	right_in  = openmc.XPlane(x0 =  p + t)
+	right_out = openmc.XPlane(x0 =  p)
 	
+	# Make a cell encompassing the 4 sides of the spacer
+	spacer = openmc.Cell(name = pincell.name + " spacer")
+	spacer.region = (+left_out	& +top_in 	& -top_out	&	-right_out) | \
+					(+right_in	& -right_out& +bot_in	& 	-top_in)	| \
+					(+left_out	& -left_in	& +bot_in	&	-top_in)	| \
+					(+bot_out 	& -bot_in	& +left_out	&	-right_out )
+	spacer.fill = material
+	
+	new_cell = openmc.Universe(name = pincell.name + " gridded")
+	new_cell.add_cells(pincell.cells.values())
+	new_cell.add_cell(spacer)
+	
+	return new_cell
 
 
 # Test
@@ -170,5 +197,16 @@ if __name__ == '__main__':
 	noz1 = Nozzle(10, 6250, iron, mod, 1, 10)
 
 	# Test a pincell
-	
+	cyl0 = openmc.ZCylinder(10, R = 0.300) 
+	cyl1 = openmc.ZCylinder(11, R = 0.333)
+	cyl2 = openmc.ZCylinder(12, R = 0.350)
+	ring0 = openmc.Cell(100, fill = iron, region = -cyl0)
+	ring1 = openmc.Cell(101, fill = mod, region = (-cyl1 & +cyl0) )
+	ring2 = openmc.Cell(102, fill = mix1, region = (-cyl2 & +cyl1) )
+	outer = openmc.Cell(199, fill = mod, region = +cyl2)
+	uni = openmc.Universe(cells = (ring0, ring1, ring2, outer))
+	print(uni)
+	gridded = add_grid_to(uni, 1.0, 0.10, iron)
+	print(gridded)
+
 
