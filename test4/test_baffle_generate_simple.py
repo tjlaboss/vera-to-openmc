@@ -1,0 +1,658 @@
+
+import sys; sys.path.append('..')
+import openmc
+from math import copysign
+
+
+# Global constants for counters
+SURFACE, CELL, MATERIAL, UNIVERSE = range(-1,-5,-1)
+	
+class Baffle(object):
+	'''Inputs:
+		mat:	instance of Material
+		thick:	thickness of baffle (cm)
+		gap:	thickness of gap (cm) between the outside assembly
+				(including the assembly gap) and the baffle itself
+		'''
+	def __init__(self, mat, thick, gap):
+		self.mat = mat
+		self.thick = thick
+		self.gap = gap
+	def __str__(self):
+		return "Baffle (" + self.thick + " cm thick)"
+
+
+class Simplified_Vera_Core(object):
+	'''A core with only the bare minimum attributes to run this test example'''
+	def __init__(self, ppitch, npins):
+		self.pitch = npins*ppitch + 1.0	# Assembly pitch; includes an arbitrary 1cm gap	
+		self.size = 5
+		self.baffle = None
+		self.openmc_surfaces = {}#; self.openmc_cells = []
+		self.openmc_surface_count = 0;	self.openmc_cell_count = 0
+	
+	def shape_map(self):
+		smap = [[0, 1, 1, 1, 0],
+				[1, 1, 1, 1, 1],
+				[1, 1, 1, 1, 1],
+				[1, 1, 1, 1, 1],
+				[0, 1, 1, 1, 0]]
+		return smap
+	
+
+	
+	def __counter(self, count):
+		'''Get the next cell/surface/material/universe number, and update the counter.
+		Input:
+			count:		CELL, SURFACE, MATERIAL, or UNIVERSE
+		Output:
+			integer representing the next cell/surface/material/universe ID'''
+		if count == SURFACE:
+			self.openmc_surface_count += 1
+			return self.openmc_surface_count
+		elif count == CELL:
+			self.openmc_cell_count += 1
+			return self.openmc_cell_count
+		elif count == MATERIAL:
+			self.openmc_material_count += 1
+			return self.openmc_material_count
+		elif count == UNIVERSE:
+			self.openmc_universe_count += 1
+			return self.openmc_universe_count
+		else:
+			raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
+	
+	
+	
+	def __get_xyz_planes(self, x0s = (), y0s = (), z0s = ()):
+		'''
+		Inputs:
+			x0s:		list or tuple of x0's to check for; default is empty tuple
+			y0s:		same for y0's
+			z0s:		same for z0's
+		Outputs:
+			xlist:		list of instances of openmc.XPlane, of length len(x0s)
+			ylist:		ditto, for openmc.YPlane, y0s
+			zlist:		ditto, for openmc.ZPlane, z0s
+		'''
+		
+		nx = len(x0s)
+		ny = len(y0s)
+		nz = len(z0s)
+		xlist = [None,]*nx
+		ylist = [None,]*ny
+		zlist = [None,]*ny
+		
+		# Check if such a surface exists, and add it to the lists if so
+		for surf in self.openmc_surfaces.values():
+			if surf.type == 'x-plane':
+				for i in range(nx):
+					if surf.x0 == x0s[i]:
+						xlist[i] = surf
+			elif surf.type == 'y-plane':
+				for i in range(ny):
+					if surf.y0 == y0s[i]:
+						ylist[i] = surf
+			elif surf.type == 'z-plane':
+				for i in range(nz):
+					if surf.z0 == z0s[i]:
+						zlist[i] = surf
+		
+		# If the surface doesn't exist, create it anew
+		for i in range(nx):
+			if not xlist[i]:
+				xp = openmc.XPlane(self.__counter(SURFACE), x0 = x0s[i])
+				self.openmc_surfaces[xp.type + '-' + str(xp.id)] = xp
+				xlist[i] = xp 
+		for i in range(ny):
+			if not ylist[i]:
+				yp = openmc.YPlane(self.__counter(SURFACE), y0 = y0s[i])
+				self.openmc_surfaces[yp.type + '-' + str(yp.id)] = yp
+				ylist[i] = yp
+		for i in range(nz):
+			if not zlist[i]:
+				zp = openmc.ZPlane(self.__counter(SURFACE), z0 = z0s[i])
+				self.openmc_surfaces[zp.type + '-' + str(zp.id)] = zp 
+				zlist[i] = zp
+		
+		return xlist, ylist, zlist
+	
+	def get_openmc_baffle(self, vera_core):
+		'''Generate the surfaces and cells required to model the baffle plates.
+		
+		**ASSUMPTION: All shape maps will have at most 2 edges
+		(no single protruding assemblies will be present). This may not be valid;
+		a few more lines of code in the if blocks can remedy this.
+		
+		Inputs:
+			vera_core:		instance of objects.Core
+		Outputs:
+			baffle_cells:	list of instances of openmc.Cell,
+							describing the baffle plates	
+		'''
+		baffle_cells = []
+		
+		baf = vera_core.baffle		# instance of objects.Baffle
+		pitch = vera_core.pitch		# assembly pitch
+		
+		# Useful distances
+		d1 = pitch/2.0 + baf.gap 	# dist from center of asmbly to inside of baffle
+		d2 = d1 + baf.thick			# dist from center of asmbly to outside of baffle 
+		width = vera_core.size * vera_core.pitch / 2.0	# dist from center of core to center of asmbly
+		
+		cmap = vera_core.shape_map()
+		n = vera_core.size - 1
+		
+		'''
+		# Corner cases
+				if (i == 0) and (j == 0):
+					#TODO: top left corner
+					continue
+				elif (i == 0) and (j == n):
+					#TODO: bottom left corner
+					continue
+				elif (i == n) and (j == 0):
+					#TODO: bottom right corner
+					continue
+				elif (i == n) and (j == n):
+					#TODO: bottom left corner
+					continue
+				
+		'''
+		
+		'''A note about the baffle Cells:
+		
+		Currently, I'm creating an individual cell for each little segment of the baffle plates.
+		        __________
+		       |__________|
+		       | |             Like this, so that the segment shown
+		       | |             here would be composed of 3 Cells.
+		 ______|_|
+		|________|
+		
+		It might be more efficient just to generate the regions of each of the cells,
+		concatenate each i^th region onto a "master region" using union operators,
+		and assign the master region to a single baffle Cell at the end of the loop.
+	
+		I plan to see if it makes sense to do this once I've verified that the independent
+		Cells work as expected.		
+		
+		
+		To model the gap, there will be a "buffer zone" of assembly-sized moderator cells
+		around all edges of the core lattice. The complement of the baffle.region will
+		be filled with the core lattice: fuel assemblies (and a little bit of a gap) will
+		go on the inside, and just moderator on the outside until the pressure vessel is reached. 
+		
+		'''
+		
+		
+		# Useful lambda functions
+		# These will be used for both x and y
+		x1 = lambda x: x + copysign(d1, x);				# To inner edge of this baffle
+		x2 = lambda x: x + copysign(d2, x);				# To outer edge of this baffle
+		x3 = lambda x: x2(x) - copysign(pitch, x);		# To outer edge of next baffle
+		
+		
+		# Regular: assemblies on all sides
+		
+		# For each row (moving vertically):
+		for j in range(1,n):
+			# For each column (moving horizontally):
+			for i in range(1,n):
+				
+				
+				this = cmap[j][i]
+				if this:
+					# Positions of surfaces
+					x = (i - 0.5)*pitch - width;	y = width - (j - 0.5)*pitch
+					
+					north = cmap[j-1][i]
+					south = cmap[j+1][i]
+					east  = cmap[j][i+1]
+					west  = cmap[j][i-1]
+					
+					
+					if (north and south and east and west):
+						# Surrounded; don't make the surfaces
+						continue
+					else:
+						# At least 1 baffle plate to add
+						
+						# Check if necessary surfs exist; if not, create them
+						((left1, left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( \
+												( x1(x), x2(x), x3(x)), (x1(y), x2(y), x3(y)) )[0:2]
+						
+						'''Naming convention:
+						
+						"left" and "top" refer to the positions in the NE quadrant, so that
+							- left1 is far to the left (inner edge of plate)
+							- left2 is the farthest to the left (outer edge of plate)
+							- right2 is left2 + the pitch (would be leftmost edge of next plate)
+						
+						For the other quadrants, the plane names have been kept, but their positions
+						are *mirrored*; so in the SW quadrant, "top" actually means "bottom", as shown:
+						
+								 NW: straight		|	NE: mirrored horiz
+								------------------------------------------------
+								 SW: mirrored vert	|	SE: mirrored horiz+vert						'''
+						
+						# Northwest (Top left corner)
+						if (not north) and (not west) and (south) and (east):
+							#region = +left2 & -left1 & +top1 & -top2
+							new_top_cell = openmc.Cell(self.__counter(CELL), name="baffle-nw-top")
+							new_top_cell.region = +left2 & -right2 & +top1 & -top2
+							baffle_cells.append(new_top_cell)
+							
+							new_side_cell = openmc.Cell(self.__counter(CELL), name="baffle-nw-left")
+							new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+							baffle_cells.append(new_side_cell)
+						# Northeast (Top right corner)
+						elif (not north) and (not east) and (south) and (west):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-top")
+							new_top_cell.region = +right2 & -left2 & +top1 & -top2
+							baffle_cells.append(new_top_cell)
+	
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-right")
+							new_side_cell.region = +bot2 & -top1 & +left1 & -left2
+							baffle_cells.append(new_side_cell)
+						# Southwest (Bottom left corner)
+						elif (not south) and (not west) and (north) and (east):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-bot")
+							new_top_cell.region = +left2 & -right2 & +top2 & -top1
+							baffle_cells.append(new_top_cell)
+							
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-left")
+							new_side_cell.region = +left2 & -left1 & +top2 & -bot2
+							baffle_cells.append(new_side_cell) 
+						# Southeast (Bottom right corner)
+						elif (not south) and (not east) and (north) and (west):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-bot")
+							new_top_cell.region = +right2 & -left2 & +top2 & -top1
+							baffle_cells.append(new_top_cell)
+	
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-right")
+							new_side_cell.region = +top1 & -bot2 & +left1 & -left2
+							baffle_cells.append(new_side_cell)
+							
+							
+						# North (top only)
+						elif (not north) and (east) and (south) and (west):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-n-top")
+							new_top_cell.region = +left2 & -right2 & +top1 & -top2
+							baffle_cells.append(new_top_cell)
+							
+						# South (bottom only)
+						elif (not south) and (east) and (north) and (west):
+							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-s-bot")
+							new_top_cell.region = +left2 & -right2 & +top2 & -top1
+							baffle_cells.append(new_top_cell)
+						
+						# West (left only)
+						elif (not west) and (east) and (north) and (south):
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-w-left")
+							if bot2.y0 > top1.y0:
+								new_side_cell.region = +left2 & -left1 & +top1 & -bot2
+							else:
+								new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+							baffle_cells.append(new_side_cell)
+						
+						# East (right only)
+						elif (not east) and (south) and (north) and (west):
+							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-e-right")
+							if bot2.y0 > top1.y0:
+								new_side_cell.region = +left2 & -left1 & +top1 & -bot2
+							else:
+								new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+							baffle_cells.append(new_side_cell)
+						
+						
+				else:
+					# Do anything if not an assembly position?
+					continue
+		
+		
+		# EDGE CASES
+		for i in range(1, n-1):
+			
+			# Top row
+			if cmap[0][i]: 	# Assembly is present
+				
+				y = width - 0.5*pitch
+				x = (i - 0.5)*pitch - width
+				((left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x2(x), x3(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				# Add a top row
+				new_top_cell = openmc.Cell(self.__counter(CELL), "top edge")
+				new_top_cell.region = +left2 & -right2 & +top1 & -top2
+				baffle_cells.append(new_top_cell)
+				
+				west  = cmap[0][i-1]
+				east  = cmap[0][i+1]
+				south = cmap[0+1][i]
+				
+				# Left edge (vertical)
+				if (not west): 
+					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
+					new_side_cell = openmc.Cell(self.__counter(CELL), "top edge (left)")
+					new_side_cell.region = +left2 & -left1 & +bot2 & -top1
+					baffle_cells.append(new_side_cell)
+				# Right edge (vertical)
+				if (not east): 
+					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
+					new_side_cell = openmc.Cell(self.__counter(CELL), "top edge (right)")
+					new_side_cell.region = +left1 & -left2 & +bot2 & -top1
+					baffle_cells.append(new_side_cell)
+			
+				
+			# Bottom row
+			if cmap[n][i]:	 	# Assembly is present
+				y = -(width - 0.5*pitch)
+				x =  (i - 0.5)*pitch - width
+				((left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x2(x), x3(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				# Add a bottom row
+				new_top_cell = openmc.Cell(self.__counter(CELL), "bottom edge")
+				new_top_cell.region = +left2 & -right2 & +top2 & -top1
+				baffle_cells.append(new_top_cell)
+				
+				west = cmap[n][i-1]
+				east = cmap[n][i+1]
+				north= cmap[n-1][i]
+				
+				# Left edge (vertical)
+				if (not west): 
+					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
+					new_side_cell = openmc.Cell(self.__counter(CELL), "bottom edge (left)")
+					new_side_cell.region = +left2 & -left1 & +top1 & -bot2
+					baffle_cells.append(new_side_cell)
+				# Right edge (vertical)
+				if (not east): 
+					left1 = self.__get_xyz_planes( (x1(x),), (), () )[0][0]
+					#(right1, bot1) = self.__get_xyz_planes( (x1(x) - pitch,), (x1(y) - pitch,), () )[0:2]
+					new_side_cell = openmc.Cell(self.__counter(CELL), "bottom edge (right)")
+					new_side_cell.region = +left1 & -left2 & +top1 & -bot2
+					baffle_cells.append(new_side_cell)
+			
+			
+				
+			# Left column
+			if cmap[i][0]:	 		# Assembly is present
+				x = -(width - 0.5*pitch)
+				y =  width - (i - 0.5)*pitch 
+				((left1, left2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x1(x), x2(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				# Add a left column
+				new_side_cell = openmc.Cell(self.__counter(CELL), "left edge")
+				new_side_cell.region = +left2 & -left1 & +bot2 & -top2 
+				baffle_cells.append(new_side_cell)
+				
+				east  = cmap[i][0+1]
+				north = cmap[i-1][0]
+				south = cmap[i+1][0]
+				
+				# Top edge (horizontal)
+				if (not north):
+					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
+					new_top_cell = openmc.Cell(self.__counter(CELL), "left edge (top)")
+					new_top_cell.region = +left1 & -right2 & +top1 & -top2 
+					baffle_cells.append(new_top_cell)
+				# Bottom edge (horizontal)
+				if (not south):
+					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
+					new_top_cell = openmc.Cell(self.__counter(CELL), "left edge (bot)")
+					new_top_cell.region = +left1 & -right2 & +top2 & -top1
+					baffle_cells.append(new_top_cell)
+	
+				
+			
+			# Right column
+			if cmap[i][n]:	 	# Assembly is present
+				x = width - 0.5*pitch
+				y = width - (i - 0.5)*pitch
+				((left1, left2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x1(x), x2(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				# Add a right column
+				new_side_cell = openmc.Cell(self.__counter(CELL), "right edge")
+				new_side_cell.region = +left1 & -left2 & +bot2 & -top2 
+				baffle_cells.append(new_side_cell)
+				
+				west  = cmap[i][n-1]
+				north = cmap[i-1][n]
+				south = cmap[i+1][n]
+				
+				
+				# Top edge (horizontal)
+				if (not north):
+					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
+					new_top_cell = openmc.Cell(self.__counter(CELL), "right edge (top)")
+					new_top_cell.region = +right2 & -left1 & +top1 & -top2 
+					baffle_cells.append(new_top_cell)
+				# Bottom edge (horizontal)
+				if (not south):
+					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
+					new_top_cell = openmc.Cell(self.__counter(CELL), "right edge (bot)")
+					new_top_cell.region = +right2 & -left1 & +top2 & -top1
+					baffle_cells.append(new_top_cell)
+				
+				#TODO: EDGE CASES HAVE BEEN VERIFIED UP TO WORK AS EXPECTED UP TO HERE
+		
+		
+				# TODO: Add 4 corner cases
+		
+		
+		
+		# Set ALL baffle cell materials in one fell swoop		
+		#for cell in baffle_cells:
+		#	cell.fill = self.get_openmc_material(baf.mat)
+		#	print(cell)
+		
+		return baffle_cells
+
+
+###################
+def test_baffle(baffle_cells, baffill, asmbly_lat, bounds):
+	'''Test the get_openmc_baffle() function for geometric integrity.
+	
+	Inputs:
+		baffle_cells:	list of instances of openmc.Cell describing the baffle make-up 
+		asmbly_lat:		instance of openmc.RectLattice describing the core layout
+		bounds:			tuple of instances of openmc.Surface that fall within asmbly_lat,
+						but outside the baffle.
+	
+	Output:
+		core_universe:	instance of openmc.Universe containing the baffle and the core lattice
+	'''
+	
+	(min_x, max_x, min_y, max_y, min_z, max_z) = bounds
+	
+	core_universe = openmc.Universe()
+	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
+	
+	the_baffle = openmc.Cell(101, name = "the baffle")
+	the_baffle.region = box
+	for c in baffle_cells:
+		the_baffle.region = the_baffle.region | c.region
+	the_baffle.fill = baffill
+	
+	print(the_baffle)
+	
+	not_the_baffle = openmc.Cell(102, name = "not the baffle")
+	not_the_baffle.region = ~the_baffle.region
+	#not_the_baffle.fill = asmbly_lat
+	not_the_baffle.fill = asmbly_lat
+	
+	core_universe.add_cells((the_baffle, not_the_baffle))
+	core_universe.add_cell(the_baffle)
+	
+	return core_universe
+	
+	
+def set_settings(pitch):
+	# OpenMC simulation parameters
+	min_batches = 20
+	max_batches = 200
+	inactive = 5
+	particles = 2500
+	
+	# Instantiate a Settings object
+	settings_file = openmc.Settings()
+	settings_file.batches = min_batches
+	settings_file.inactive = inactive
+	settings_file.particles = particles
+	settings_file.output = {'tallies': False}
+	settings_file.trigger_active = True
+	settings_file.trigger_max_batches = max_batches
+	# Create an initial uniform spatial source distribution over fissionable zones
+	#pitch = 10
+	bounds = (-pitch/2.0,)*3 + (pitch/2.0,)*3
+	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
+	settings_file.source = openmc.source.Source(space=uniform_dist)
+	settings_file.export_to_xml()
+	
+	
+	
+
+def set_cubic_boundaries(pitch, n, bounds=('reflective',)*6):
+	'''Inputs:
+		pitch:		float; pitch between fuel pins 
+		n:			int; number of fuel pins in an assembly (usually 1 or 17)
+		bounds:		tuple/list of strings with len=6, containing the respective
+					boundary types for min/max x, y, and z (default: all reflective)
+	
+	Outputs:
+		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
+	'''
+	
+	min_x = openmc.XPlane(x0=-n*pitch/2.0, boundary_type=bounds[0])
+	max_x = openmc.XPlane(x0=+n*pitch/2.0, boundary_type=bounds[1])
+	min_y = openmc.YPlane(y0=-n*pitch/2.0, boundary_type=bounds[2])
+	max_y = openmc.YPlane(y0=+n*pitch/2.0, boundary_type=bounds[3])
+	min_z = openmc.ZPlane(z0=-n*pitch/2.0, boundary_type=bounds[4])
+	max_z = openmc.ZPlane(z0=+n*pitch/2.0, boundary_type=bounds[5])
+	
+	return (min_x, max_x, min_y, max_y, min_z, max_z)
+
+
+
+def create_openmc_materials():
+	
+	# Essential materials
+	mod = openmc.Material(name="mod")
+	mod.add_nuclide("h-1", 1)
+	
+	fuel = openmc.Material(name="u31")
+	fuel.add_nuclide("u-238", (100-3.1)/100.0, 'wo')
+	fuel.add_nuclide("u-235", (3.1)/100.0, 'wo')
+	
+	
+	clad = openmc.Material(name="iron")
+	clad.add_nuclide("fe-56", 1, 'wo')
+	
+	
+	materials = openmc.Materials((mod, fuel, clad))
+	materials.default_xs = "71c"
+	materials.export_to_xml()
+	
+	return materials
+	
+
+def create_9x9_lattice(materials, pitch):
+	(mod, fuel, clad)  = materials
+	
+	# Make the pin surfaces
+	ring0 = openmc.ZCylinder(R = 0.5)
+	ring1 = openmc.ZCylinder(R = 0.75)
+	#baf_in = openmc.ZCylinder(R = 5.0)
+	#baf_out = openmc.ZCylinder(R = baf_in.coefficients['R'] + 1.0)
+	#vessel = openmc.ZCylinder(R = 10)
+	
+	
+	# Make the pin cells
+	# Universe for the lattice
+	cell0 = openmc.Cell()
+	cell0.region = -ring0
+	cell0.fill = fuel
+	cell1 = openmc.Cell()
+	cell1.region = -ring1 & +ring0
+	cell1.fill = clad
+	cell2 = openmc.Cell()
+	cell2.region = +ring1
+	cell2.fill = mod
+
+	
+	# Make the pin universes
+	fpin = openmc.Universe(1)
+	fpin.add_cells((cell0, cell1, cell2))
+	
+	puremodcell = openmc.Cell()
+	puremodcell.fill = mod
+	
+	mpin = openmc.Universe(2)
+	mpin.add_cell(puremodcell)
+
+
+	
+	lat = [[mpin, mpin, mpin, mpin, mpin, mpin, mpin, mpin, mpin],
+           [mpin, mpin, mpin, mpin, mpin, mpin, mpin, mpin, mpin],
+           [mpin, mpin, mpin, fpin, fpin, fpin, mpin, mpin, mpin],
+           [mpin, mpin, fpin, fpin, fpin, fpin, fpin, mpin, mpin],
+           [mpin, mpin, fpin, fpin, mpin, fpin, fpin, mpin, mpin],
+           [mpin, mpin, fpin, fpin, fpin, fpin, fpin, mpin, mpin],
+           [mpin, mpin, mpin, fpin, fpin, fpin, mpin, mpin, mpin],
+           [mpin, mpin, mpin, mpin, mpin, mpin, mpin, mpin, mpin],
+           [mpin, mpin, mpin, mpin, mpin, mpin, mpin, mpin, mpin]]
+	
+	
+	lattice = openmc.RectLattice(32)
+	lattice.universes = lat
+	lattice.pitch = (pitch, pitch)
+	lattice.lower_left = [-pitch * float(len(lat)) / 2.0] * 2
+
+	return lattice
+
+
+
+
+def plot_everything(pitch, n, width=1250, height=1250):
+	# Plot properties for this test
+	plot = openmc.Plot(plot_id=1)
+	plot.filename = 'materials-xy'
+	plot.origin = [0, 0, 0]
+	plot.width = [n*pitch - .01, n*pitch - .01]
+	plot.pixels = [width, height]
+	plot.color = 'mat'
+	# Instantiate a Plots collection and export to "plots.xml"
+	plot_file = openmc.Plots([plot])
+	plot_file.export_to_xml()
+	
+	
+	
+	
+	
+if __name__ == "__main__":
+	mats = create_openmc_materials()
+	pitch = 2.0; n = 9
+	core = Simplified_Vera_Core(pitch, n)
+	baf = Baffle(gap = 0.19, mat = mats[-1], thick = 2.85)
+	core.baffle = baf
+	asmbly_lat = create_9x9_lattice(mats, pitch)
+	edges = set_cubic_boundaries(pitch, n+4)
+	(min_x, max_x, min_y, max_y, min_z, max_z) = edges
+	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
+	baffle_verse = test_baffle(core.get_openmc_baffle(core), mats[-1], asmbly_lat, edges)
+	
+	
+	# Create Geometry and set root Universe
+	root_cell = openmc.Cell(name='root cell')
+	root_cell.region = box
+	root_cell.fill = baffle_verse
+	root_universe = openmc.Universe(universe_id=0, name='root universe')
+	root_universe.add_cell(root_cell)
+	geometry = openmc.Geometry()
+	geometry.root_universe = root_universe
+	# Export to "geometry.xml"
+	geometry.export_to_xml()
+	
+	plot_everything(pitch, n+3)
+	set_settings(pitch)
+	
+	
+	
+	
+	

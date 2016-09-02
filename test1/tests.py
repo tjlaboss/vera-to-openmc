@@ -122,6 +122,7 @@ def test_core(case_file = "../2o.xml.gold"):
 
 
 
+
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../1c.xml.gold", "assy1")
 	#case, fillcell, pitch, n, bounds = test_assembly("../p7.xml.gold")
