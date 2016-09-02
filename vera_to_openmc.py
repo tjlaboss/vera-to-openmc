@@ -159,24 +159,7 @@ class MC_Case(Case):
 		return openmc_material
 	
 	
-	'''def try_openmc_material(self, m):
-		Check if a material exists; if it doesn't, add it to the index
-		
-		Input:
-			m:		string; key of a VERA material in self.materials
-		Output:
-			mat:	instance of openmc.Material
-		
-		try:
-			# Look it up as normal
-			mat = self.openmc_materials[m]
-		except KeyError:
-			# Then the material really doesn't exist yet in OpenMC form
-			# Generate it and add it to the index 
-			mat = self.get_openmc_material(self.materials[m])
-			self.openmc_materials[m] = mat
-		
-		return mat'''
+
 	
 	
 	
@@ -536,19 +519,6 @@ class MC_Case(Case):
 					#TODO: bottom left corner
 					continue
 				
-				# Edge cases
-				elif i == 0:
-					#TODO: Left edge
-					continue
-				elif j == 0:
-					#TODO: Top edge
-					continue
-				elif i == n:
-					#TODO: Right edge
-					continue
-				elif j == n:
-					#TODO: Bottom edge
-					continue
 		'''
 		
 		'''A note about the baffle Cells:
@@ -566,7 +536,15 @@ class MC_Case(Case):
 		and assign the master region to a single baffle Cell at the end of the loop.
 
 		I plan to see if it makes sense to do this once I've verified that the independent
-		Cells work as expected.		'''
+		Cells work as expected.		
+		
+		
+		To model the gap, there will be a "buffer zone" of assembly-sized moderator cells
+		around all edges of the core lattice. The complement of the baffle.region will
+		be filled with the core lattice: fuel assemblies (and a little bit of a gap) will
+		go on the inside, and just moderator on the outside until the pressure vessel is reached. 
+		
+		'''
 		
 		
 		# Useful lambda functions

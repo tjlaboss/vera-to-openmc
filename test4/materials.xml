@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+    <default_xs>71c</default_xs>
+    <material id="10000" name="mod">
+        <density units="" value="None" />
+        <nuclide ao="1" name="h-1" />
+    </material>
+    <material id="10001" name="u31">
+        <density units="" value="None" />
+        <nuclide name="u-238" wo="0.9690000000000001" />
+        <nuclide name="u-235" wo="0.031" />
+    </material>
+    <material id="10002" name="iron">
+        <density units="" value="None" />
+        <nuclide name="fe-56" wo="1" />
+    </material>
+</materials>
