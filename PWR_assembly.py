@@ -8,7 +8,14 @@ import openmc
 import objects
 from functions import fill_lattice
 from copy import copy
-from opencg.surface import ZCylinder
+
+# Global constants for counters
+SURFACE, CELL, MATERIAL, UNIVERSE = range(-1,-5,-1)
+# Global variables for counters
+openmc_surface_count	= openmc.AUTO_SURFACE_ID + 1
+openmc_cell_count 		= openmc.AUTO_CELL_ID + 1
+openmc_material_count	= openmc.AUTO_MATERIAL_ID + 1
+openmc_universe_count	= openmc.AUTO_UNIVERSE_ID + 1
 
 
 class Mixture(openmc.Material):
@@ -132,6 +139,86 @@ class Nozzle(object):
 		return self.name
 
 
+def counter(count):
+		'''Get the next cell/surface/material/universe number, and update the counter.
+		Input:
+			count:		CELL, SURFACE, MATERIAL, or UNIVERSE
+		Output:
+			integer representing the next cell/surface/material/universe ID'''
+		if count == SURFACE:
+			global openmc_surface_count
+			openmc_surface_count += 1
+			return openmc_surface_count
+		elif count == CELL:
+			global openmc_cell_count
+			openmc_cell_count += 1
+			return openmc_cell_count
+		elif count == MATERIAL:
+			global openmc_cell_count
+			openmc_material_count += 1
+			return openmc_material_count
+		elif count == UNIVERSE:
+			global openmc_cell_count
+			openmc_universe_count += 1
+			return openmc_universe_count
+		else:
+			raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
+
+"""
+def duplicate(orig):
+	'''Copy an OpenMC object, except for a new id 
+	
+	Input:
+		orig: instance of openmc.(Surface, Cell, Material, or Universe)
+	
+	Output:
+		dupl: same, but with a different instance.id 
+	'''
+	dup = copy(orig)
+	if isinstance(orig, openmc.Surface):
+		dup.id = openmc.AUTO_SURFACE_ID
+		openmc.AUTO_SURFACE_ID += 1
+	elif isinstance(orig, openmc.Cell):
+		dup.id = openmc.AUTO_CELL_ID
+		openmc.AUTO_CELL_ID += 1
+	elif isinstance(orig, openmc.Material):
+		dup.id = openmc.AUTO_MATERIAL_ID
+		openmc.AUTO_MATERIAL_ID += 1
+	elif isinstance(orig, openmc.Universe):
+		dup.id = openmc.AUTO_UNIVERSE_ID
+		openmc.AUTO_UNIVERSE_ID += 1
+	else:
+		name = orig.__class__.__name__
+		raise TypeError(str(orig) + " is an instance of " + name + 
+					"; expected Surface, Cell, Material, or Universe")
+	return dup
+"""
+def duplicate(orig):
+	'''Copy an OpenMC object, except for a new id 
+	
+	Input:
+		orig: instance of openmc.(Surface, Cell, Material, or Universe)
+	
+	Output:
+		dupl: same, but with a different instance.id 
+	'''
+	dup = copy(orig)
+	if isinstance(orig, openmc.Surface):
+		dup.id = counter(SURFACE)
+	elif isinstance(orig, openmc.Cell):
+		dup.id = counter(CELL)
+	elif isinstance(orig, openmc.Material):
+		dup.id = counter(MATERIAL)
+	elif isinstance(orig, openmc.Universe):
+		dup.id = counter(UNIVERSE)
+	else:
+		name = orig.__class__.__name__
+		raise TypeError(str(orig) + " is an instance of " + name + 
+					"; expected Surface, Cell, Material, or Universe")
+	return dup
+
+
+
 def add_grid_to(pincell, pitch, t, material):
 	'''Given a pincell to be placed in a lattice, add
 	the spacer grid to the individual cell.
@@ -150,7 +237,8 @@ def add_grid_to(pincell, pitch, t, material):
 	'''
 	assert isinstance(pincell, openmc.Universe), str(pincell) + "must be an openmc.Universe (not a Cell)"
 	assert isinstance(material, openmc.Material), str(material) + "is not an instance of openmc.Material" 
-	#assert isinstance(cell.region, openmc.surface.Halfspace), "Cell " + cell.name + " is not a single Halfspace." 
+	
+	orig_list = list(pincell.cells.values())
 	
 	# Create necessary planes
 	p = pitch / 2.0
@@ -160,19 +248,30 @@ def add_grid_to(pincell, pitch, t, material):
 	bot_out = openmc.YPlane(y0 = -p)
 	left_out  = openmc.XPlane(x0 = -p)		# He feels left out
 	left_in   = openmc.XPlane(x0 = -p + t)
-	right_in  = openmc.XPlane(x0 =  p + t)
+	right_in  = openmc.XPlane(x0 =  p - t)
 	right_out = openmc.XPlane(x0 =  p)
+	
+	# Get the outermost (mod) Cell of the pincell
+	mod_cell = duplicate(orig_list[-1])
 	
 	# Make a cell encompassing the 4 sides of the spacer
 	spacer = openmc.Cell(name = pincell.name + " spacer")
 	spacer.region = (+left_out	& +top_in 	& -top_out	&	-right_out) | \
 					(+right_in	& -right_out& +bot_in	& 	-top_in)	| \
 					(+left_out	& -left_in	& +bot_in	&	-top_in)	| \
-					(+bot_out 	& -bot_in	& +left_out	&	-right_out )
+					(+bot_out 	& -bot_in	& +left_out	&	-right_out )  
+					#& mod_cell.region	# top; bottom; right; left; #outside cylinder	 
 	spacer.fill = material
 	
+	# Then fix the moderator cell to be within the bounds of the spacer
+	mod_cell.region = mod_cell.region & \
+					(+bot_in	& +left_in	& -top_in	& -right_in )
+	
 	new_cell = openmc.Universe(name = pincell.name + " gridded")
-	new_cell.add_cells(pincell.cells.values())
+	# Add all of the original cells except the old mod cell
+	for i in range(len(orig_list) - 1):
+		new_cell.add_cell(orig_list[i])
+	new_cell.add_cell(mod_cell) 	# the new mod cell
 	new_cell.add_cell(spacer)
 	
 	return new_cell
@@ -180,6 +279,8 @@ def add_grid_to(pincell, pitch, t, material):
 
 # Test
 if __name__ == '__main__':
+	
+	
 	
 	# Define a global test moderator
 	mod = openmc.Material(1, "mod")
@@ -204,9 +305,9 @@ if __name__ == '__main__':
 	ring1 = openmc.Cell(101, fill = mod, region = (-cyl1 & +cyl0) )
 	ring2 = openmc.Cell(102, fill = mix1, region = (-cyl2 & +cyl1) )
 	outer = openmc.Cell(199, fill = mod, region = +cyl2)
-	uni = openmc.Universe(cells = (ring0, ring1, ring2, outer))
+	uni = openmc.Universe(cells = (ring0, ring1, ring2, outer), name = "test pincell")
 	print(uni)
 	gridded = add_grid_to(uni, 1.0, 0.10, iron)
 	print(gridded)
-
+	#print(duplicate(uni))
 
