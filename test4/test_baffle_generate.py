@@ -26,19 +26,19 @@ def test_baffle(baffle_cells, baffill, asmbly_lat, bounds):
 	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
 	
 	the_baffle = openmc.Cell(101, name = "the baffle")
-	the_baffle.region = box
-	for c in baffle_cells:
+	the_baffle.region = baffle_cells[0].region
+	for c in baffle_cells[1:len(baffle_cells)]:
 		the_baffle.region = the_baffle.region | c.region
+	#the_baffle.region = the_baffle.region & (+min_z & -max_z)
 	the_baffle.fill = baffill
 	
 	print(the_baffle)
 	
 	not_the_baffle = openmc.Cell(102, name = "not the baffle")
-	not_the_baffle.region = ~the_baffle.region
+	not_the_baffle.region = ~the_baffle.region & box
 	not_the_baffle.fill = asmbly_lat
 	
 	core_universe.add_cells((the_baffle, not_the_baffle))
-	core_universe.add_cell(the_baffle)
 	
 	return core_universe
 	
@@ -169,7 +169,7 @@ def create_9x9_lattice(materials, pitch):
 
 
 
-def plot_everything(pitch, n, width=1250, height=1250):
+def plot_everything(apitch, n, width=1250, height=1250):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
@@ -189,6 +189,7 @@ if __name__ == "__main__":
 	case = vera_to_openmc.MC_Case("../p7.xml.gold")
 	mats = create_openmc_materials()
 	pitch = 2.0; n = 9
+	apitch = case.core.pitch
 	asmbly_lat = create_9x9_lattice(mats, pitch)
 	edges = set_cubic_boundaries(pitch, n+4)
 	(min_x, max_x, min_y, max_y, min_z, max_z) = edges
@@ -207,8 +208,8 @@ if __name__ == "__main__":
 	# Export to "geometry.xml"
 	geometry.export_to_xml()
 	
-	plot_everything(pitch, n+3)
-	set_settings(pitch)
+	plot_everything(apitch, n+3)
+	set_settings(apitch)
 	
 	
 	

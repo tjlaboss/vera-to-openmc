@@ -32,11 +32,11 @@ class Simplified_Vera_Core(object):
 		self.openmc_surface_count = 0;	self.openmc_cell_count = 0
 	
 	def shape_map(self):
-		smap = [[0, 1, 1, 1, 0],
+		smap = [[0, 0, 1, 0, 0],
+				[0, 1, 1, 1, 0],
 				[1, 1, 1, 1, 1],
-				[1, 1, 1, 1, 1],
-				[1, 1, 1, 1, 1],
-				[0, 1, 1, 1, 0]]
+				[0, 1, 1, 1, 0],
+				[0, 0, 1, 0, 0]]
 		return smap
 	
 
@@ -465,20 +465,19 @@ def test_baffle(baffle_cells, baffill, asmbly_lat, bounds):
 	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
 	
 	the_baffle = openmc.Cell(101, name = "the baffle")
-	the_baffle.region = box
-	for c in baffle_cells:
+	the_baffle.region = baffle_cells[0].region
+	for c in baffle_cells[1:len(baffle_cells)]:
 		the_baffle.region = the_baffle.region | c.region
+	#the_baffle.region = the_baffle.region & (+min_z & -max_z)
 	the_baffle.fill = baffill
 	
 	print(the_baffle)
 	
 	not_the_baffle = openmc.Cell(102, name = "not the baffle")
 	not_the_baffle.region = ~the_baffle.region
-	#not_the_baffle.fill = asmbly_lat
 	not_the_baffle.fill = asmbly_lat
 	
 	core_universe.add_cells((the_baffle, not_the_baffle))
-	core_universe.add_cell(the_baffle)
 	
 	return core_universe
 	
@@ -603,13 +602,39 @@ def create_9x9_lattice(materials, pitch):
 	lattice.universes = lat
 	lattice.pitch = (pitch, pitch)
 	lattice.lower_left = [-pitch * float(len(lat)) / 2.0] * 2
+	
+	# remove next line after error is found
+	lattice.outer = fpin
 
 	return lattice
 
 
+def create_5x5_as_lattice(as1, apitch, mod_mat):
+	
+	
+	modcell = openmc.Cell()
+	modcell.fill = mod_mat
+	mmm = openmc.Universe()
+	mmm.add_cell(modcell)
+	
+	cmap = [[mmm, mmm, as1, mmm, mmm],
+			[mmm, as1, as1, as1, mmm],
+			[as1, as1, mmm, as1, as1],
+			[mmm, as1, as1, as1, mmm],
+			[mmm, mmm, as1, mmm, mmm]]
+	
+	
+	lat5 = openmc.RectLattice(35)
+	lat5.universes = cmap
+	lat5.pitch = (apitch, apitch)
+	lat5.lower_left = [-apitch * 5 / 2.0] * 2
+	lat5.outer = mmm
+	
+	return lat5
 
 
-def plot_everything(pitch, n, width=1250, height=1250):
+
+def plot_everything(pitch, n, width=750, height=750):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
@@ -627,21 +652,31 @@ def plot_everything(pitch, n, width=1250, height=1250):
 	
 if __name__ == "__main__":
 	mats = create_openmc_materials()
+	(mod, fuel, clad) = mats
+	# Assembly params
 	pitch = 2.0; n = 9
-	core = Simplified_Vera_Core(pitch, n)
-	baf = Baffle(gap = 0.19, mat = mats[-1], thick = 2.85)
+	core = Simplified_Vera_Core(ppitch = pitch, npins = n)
+	baf = Baffle(gap = 0.19, mat = clad, thick = 2.85)
 	core.baffle = baf
 	asmbly_lat = create_9x9_lattice(mats, pitch)
-	edges = set_cubic_boundaries(pitch, n+4)
+	asmbly_cell = openmc.Cell(fill=asmbly_lat)
+	asmbly_uni = openmc.Universe(cells = ((asmbly_cell,)))
+	
+	core_lat = create_5x5_as_lattice(asmbly_uni, core.pitch, mod)
+	
+	
+	edges = set_cubic_boundaries(core.pitch, 10)
 	(min_x, max_x, min_y, max_y, min_z, max_z) = edges
 	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
-	baffle_verse = test_baffle(core.get_openmc_baffle(core), mats[-1], asmbly_lat, edges)
+	#baffle_verse = test_baffle(core.get_openmc_baffle(core), baf.mat, asmbly_lat, edges)
+	baffle_verse = test_baffle(core.get_openmc_baffle(core), baf.mat, core_lat, edges)
 	
 	
 	# Create Geometry and set root Universe
 	root_cell = openmc.Cell(name='root cell')
 	root_cell.region = box
 	root_cell.fill = baffle_verse
+	
 	root_universe = openmc.Universe(universe_id=0, name='root universe')
 	root_universe.add_cell(root_cell)
 	geometry = openmc.Geometry()
@@ -649,7 +684,7 @@ if __name__ == "__main__":
 	# Export to "geometry.xml"
 	geometry.export_to_xml()
 	
-	plot_everything(pitch, n+3)
+	plot_everything(core.pitch, 8)
 	set_settings(pitch)
 	
 	
