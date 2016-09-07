@@ -199,6 +199,7 @@ class Simplified_Vera_Core(object):
 		x1 = lambda x: x + copysign(d1, x);				# To inner edge of this baffle
 		x2 = lambda x: x + copysign(d2, x);				# To outer edge of this baffle
 		x3 = lambda x: x2(x) - copysign(pitch, x);		# To outer edge of next baffle
+		x4 = lambda x: x1(x) - copysign(pitch, x);		# To inner edge of next baffle
 		
 		
 		# Regular: assemblies on all sides
@@ -212,7 +213,7 @@ class Simplified_Vera_Core(object):
 				this = cmap[j][i]
 				if this:
 					# Positions of surfaces
-					x = (i - 0.5)*pitch - width;	y = width - (j - 0.5)*pitch
+					x = (i + 0.5)*pitch - width;	y = width - (j + 0.5)*pitch
 					
 					north = cmap[j-1][i]
 					south = cmap[j+1][i]
@@ -227,8 +228,8 @@ class Simplified_Vera_Core(object):
 						# At least 1 baffle plate to add
 						
 						# Check if necessary surfs exist; if not, create them
-						((left1, left2, right2), (top1, top2, bot2)) = self.__get_xyz_planes( \
-												( x1(x), x2(x), x3(x)), (x1(y), x2(y), x3(y)) )[0:2]
+						((left1, left2, right2, right1), (top1, top2, bot2, bot1)) = self.__get_xyz_planes( \
+												( x1(x), x2(x), x3(x), x4(x)), (x1(y), x2(y), x3(y), x4(y)) )[0:2]
 						
 						'''Naming convention:
 						
@@ -246,21 +247,22 @@ class Simplified_Vera_Core(object):
 						
 						# Northwest (Top left corner)
 						if (not north) and (not west) and (south) and (east):
-							top_region = (+left2 & -right2 & +top1 & -top2)
+							top_region = (+left2 & -right1 & +top1 & -top2)
 							master_region |= top_region
 							
 							side_region = (+left2 & -left1 & +bot2 & -top1)
 							master_region |= side_region
-						'''
+						
 						# Northeast (Top right corner)
 						elif (not north) and (not east) and (south) and (west):
-							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-top")
-							new_top_cell.region = +right2 & -left2 & +top1 & -top2
-							baffle_cells.append(new_top_cell)
-	
-							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-right")
-							new_side_cell.region = +bot2 & -top1 & +left1 & -left2
-							baffle_cells.append(new_side_cell)
+							# Left and Right are reflected
+							top_region = (+right1 & -left2 & +top1 & -top2)
+							master_region |= top_region
+							
+
+							side_region = (+left1 & -left2 & +bot2 & -top1)
+							master_region |= side_region
+						'''
 						# Southwest (Bottom left corner)
 						elif (not south) and (not west) and (north) and (east):
 							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-bot")
