@@ -39,7 +39,7 @@ class Simplified_Vera_Core(object):
 	def shape_map(self):
 		smap = [[0, 0, 0, 0, 0],
 				[0, 1, 1, 1, 0],
-				[1, 1, 1, 1, 1],
+				[0, 1, 1, 1, 0],
 				[0, 1, 1, 1, 0],
 				[0, 0, 0, 0, 0]]
 		return smap
@@ -266,7 +266,7 @@ class Simplified_Vera_Core(object):
 							top_region = (+xthis2 & -xnext0 & +ythis1 & -ythis2)
 							master_region |= top_region
 							
-							side_region = (+xthis2 & -xthis1 & +ynextc & -ythis1)
+							side_region = (+xthis2 & -xthis1 & +ynext0 & -ythis1)
 							master_region |= side_region
 						
 						# Northeast (Top right corner)
@@ -275,7 +275,7 @@ class Simplified_Vera_Core(object):
 							top_region = (+xnext0 & -xthis2 & +ythis1 & -ythis2)
 							master_region |= top_region
 							
-							side_region = (+xthis1 & -xthis2 & +ynextc & -ythis1)
+							side_region = (+xthis1 & -xthis2 & +ynext0 & -ythis1)
 							master_region |= side_region
 												
 						# Southwest (Bottom left corner)
@@ -284,7 +284,7 @@ class Simplified_Vera_Core(object):
 							top_region = (+xthis2 & -xnext0 & +ythis2 & -ythis1)
 							master_region |= top_region
 							
-							side_region = (+xthis2 & -xthis1 & +ythis1 & -ynextc)
+							side_region = (+xthis2 & -xthis1 & +ythis1 & -ynext0)
 							master_region |= side_region
 						
 						# Southeast (Bottom right corner)
@@ -294,7 +294,7 @@ class Simplified_Vera_Core(object):
 							top_region = (+xnext0 & -xthis2 & +ythis2 & -ythis1)
 							master_region |= top_region
 							
-							side_region = (+xthis1 & -xthis2 & +ythis1 & -ynextc)
+							side_region = (+xthis1 & -xthis2 & +ythis1 & -ynext0)
 							master_region |= side_region
 							
 						
@@ -322,29 +322,31 @@ class Simplified_Vera_Core(object):
 								top_region = (+xnext0 & -xthis0 & +ythis2 & -ythis1)
 							master_region |= top_region
 							
-						'''						
+												
 						# West (left only)
 						elif (not west) and (east) and (north) and (south):
-							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-w-left")
-							if bot2.y0 > top1.y0:
-								new_side_cell.region = +left2 & -left1 & +top1 & -bot2
+							if ythis0.y0 < ynext0.y0:
+								side_region = (+xthis2 & -xthis0 & +ythis0 & -ynext0)
 							else:
-								new_side_cell.region = +left2 & -left1 & +bot2 & -top1
-							baffle_cells.append(new_side_cell)
+								side_region = (+xthis2 & -xthis0 & +ynext0 & -ythis0)
+							master_region |= side_region
 						
 						# East (right only)
 						elif (not east) and (south) and (north) and (west):
-							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-e-right")
-							if bot2.y0 > top1.y0:
-								new_side_cell.region = +left2 & -left1 & +top1 & -bot2
+							if ythis0.y0 < ynext0.y0:
+								side_region = (+xthis0 & -xthis2 & +ythis0 & -ynext0)
 							else:
-								new_side_cell.region = +left2 & -left1 & +bot2 & -top1
-							baffle_cells.append(new_side_cell)
-						'''
+								side_region = (+xthis0 & -xthis2 & +ynext0 & -ythis0)
+							master_region |= side_region
+
 						
 				else:
 					# Do anything if not an assembly position?
-					continue
+					from warnings import warn
+					warnstr = "Error at i=" + str(i) + ", j=" + str(j) + " (x=" + str(x) + ", y=" + str(y) + ");\n" +\
+								"Unexpected geometry encountered. There may be a gap in the baffle." 
+					warn(warnstr)
+					#continue
 		
 		
 		# EDGE CASES
