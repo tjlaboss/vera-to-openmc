@@ -255,34 +255,45 @@ class Simplified_Vera_Core(object):
 						
 						# Northeast (Top right corner)
 						elif (not north) and (not east) and (south) and (west):
-							# Left and Right are reflected
+							# Left and Right are inverted
 							top_region = (+right1 & -left2 & +top1 & -top2)
 							master_region |= top_region
 							
 
 							side_region = (+left1 & -left2 & +bot2 & -top1)
 							master_region |= side_region
-						'''
+						
 						# Southwest (Bottom left corner)
 						elif (not south) and (not west) and (north) and (east):
-							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-bot")
-							new_top_cell.region = +left2 & -right2 & +top2 & -top1
-							baffle_cells.append(new_top_cell)
+							#new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-bot")
+							#new_top_cell.region = +left2 & -right2 & +top2 & -top1
+							#baffle_cells.append(new_top_cell)
+							# Top and Bottom are inverted
+							top_region = (+left2 & -right1 & +top2 & -top1)
+							master_region |= top_region
 							
-							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-left")
-							new_side_cell.region = +left2 & -left1 & +top2 & -bot2
-							baffle_cells.append(new_side_cell) 
+							#new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-left")
+							#new_side_cell.region = +left2 & -left1 & +top2 & -bot2
+							#baffle_cells.append(new_side_cell)
+							side_region = (+left2 & -left1 & +top1 & -bot2)
+							master_region |= side_region
 						# Southeast (Bottom right corner)
 						elif (not south) and (not east) and (north) and (west):
-							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-bot")
-							new_top_cell.region = +right2 & -left2 & +top2 & -top1
-							baffle_cells.append(new_top_cell)
-	
-							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-right")
-							new_side_cell.region = +top1 & -bot2 & +left1 & -left2
-							baffle_cells.append(new_side_cell)
+							#new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-bot")
+							#new_top_cell.region = +right2 & -left2 & +top2 & -top1
+							#baffle_cells.append(new_top_cell)
+							# Left and Right are inverted
+							# Top and Bottom are inverted
+							top_region = (+right1 & -left2 & +top2 & -top1)
+							master_region |= top_region
 							
+							side_region = (+left1 & -left2 & +top1 & -bot2)
+							master_region |= side_region
+							#new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-right")
+							#new_side_cell.region = +top1 & -bot2 & +left1 & -left2
+							#baffle_cells.append(new_side_cell)
 							
+						'''	
 						# North (top only)
 						elif (not north) and (east) and (south) and (west):
 							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-n-top")
@@ -546,14 +557,16 @@ def create_openmc_materials():
 	# Essential materials
 	mod = openmc.Material(name="mod")
 	mod.add_nuclide("h-1", 1)
+	mod.set_density("g/cc", 1.0)
 	
 	fuel = openmc.Material(name="u31")
 	fuel.add_nuclide("u-238", (100-3.1)/100.0, 'wo')
 	fuel.add_nuclide("u-235", (3.1)/100.0, 'wo')
-	
+	fuel.set_density("g/cc", 10.0)
 	
 	clad = openmc.Material(name="iron")
 	clad.add_nuclide("fe-56", 1, 'wo')
+	clad.set_density("g/cc", 7.0)
 	
 	
 	materials = openmc.Materials((mod, fuel, clad))
@@ -631,7 +644,7 @@ def create_5x5_as_lattice(as1, apitch, mod_mat):
 	
 	cmap = [[mmm, mmm, as1, mmm, mmm],
 			[mmm, as1, as1, as1, mmm],
-			[as1, as1, mmm, as1, as1],
+			[as1, as1, as1, as1, as1],
 			[mmm, as1, as1, as1, mmm],
 			[mmm, mmm, as1, mmm, mmm]]
 	
@@ -697,7 +710,7 @@ if __name__ == "__main__":
 	geometry.export_to_xml()
 	
 	plot_everything(core.pitch, 8)
-	set_settings(pitch)
+	set_settings(core.pitch)
 	
 	
 	

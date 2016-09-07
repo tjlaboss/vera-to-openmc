@@ -93,14 +93,16 @@ def create_openmc_materials():
 	# Essential materials
 	mod = openmc.Material(name="mod")
 	mod.add_nuclide("h-1", 1)
+	mod.set_density("g/cc", 1.0)
 	
 	fuel = openmc.Material(name="u31")
 	fuel.add_nuclide("u-238", (100-3.1)/100.0, 'wo')
 	fuel.add_nuclide("u-235", (3.1)/100.0, 'wo')
-	
+	fuel.set_density("g/cc", 10.0)
 	
 	clad = openmc.Material(name="iron")
 	clad.add_nuclide("fe-56", 1, 'wo')
+	clad.set_density("g/cc", 7.0)
 	
 	
 	materials = openmc.Materials((mod, fuel, clad))
