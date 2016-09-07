@@ -2,8 +2,6 @@
 import sys; sys.path.append('..')
 import openmc
 import vera_to_openmc
-from vera_to_openmc import MC_Case
-
 
 
 
