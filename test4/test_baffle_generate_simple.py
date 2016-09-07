@@ -37,11 +37,11 @@ class Simplified_Vera_Core(object):
 		self.openmc_surface_count = 0;	self.openmc_cell_count = 0
 	
 	def shape_map(self):
-		smap = [[0, 0, 1, 0, 0],
+		smap = [[0, 0, 0, 0, 0],
 				[0, 1, 1, 1, 0],
 				[1, 1, 1, 1, 1],
 				[0, 1, 1, 1, 0],
-				[0, 0, 1, 0, 0]]
+				[0, 0, 0, 0, 0]]
 		return smap
 	
 
@@ -69,12 +69,14 @@ class Simplified_Vera_Core(object):
 	
 	
 	
-	def __get_xyz_planes(self, x0s = (), y0s = (), z0s = ()):
+	def __get_xyz_planes(self, x0s = (), y0s = (), z0s = (), rd = 5):
 		'''
 		Inputs:
 			x0s:		list or tuple of x0's to check for; default is empty tuple
 			y0s:		same for y0's
 			z0s:		same for z0's
+			rd:			integer; number of digits to round to when comparing surface
+						equality. Default is 5
 		Outputs:
 			xlist:		list of instances of openmc.XPlane, of length len(x0s)
 			ylist:		ditto, for openmc.YPlane, y0s
@@ -92,15 +94,15 @@ class Simplified_Vera_Core(object):
 		for surf in self.openmc_surfaces.values():
 			if surf.type == 'x-plane':
 				for i in range(nx):
-					if surf.x0 == x0s[i]:
+					if round(surf.x0, rd) == round(x0s[i], rd):
 						xlist[i] = surf
 			elif surf.type == 'y-plane':
 				for i in range(ny):
-					if surf.y0 == y0s[i]:
+					if round(surf.y0, rd) == round(y0s[i], rd):
 						ylist[i] = surf
 			elif surf.type == 'z-plane':
 				for i in range(nz):
-					if surf.z0 == z0s[i]:
+					if round(surf.z0, rd) == round(z0s[i], rd):
 						zlist[i] = surf
 		
 		# If the surface doesn't exist, create it anew
@@ -141,7 +143,8 @@ class Simplified_Vera_Core(object):
 		pitch = vera_core.pitch		# assembly pitch
 		
 		# Useful distances
-		d1 = pitch/2.0 + baf.gap 	# dist from center of asmbly to inside of baffle
+		d0 = pitch/2.0				# dist from center of asmbly to edge of asmbly
+		d1 = d0 + baf.gap 			# dist from center of asmbly to inside of baffle
 		d2 = d1 + baf.thick			# dist from center of asmbly to outside of baffle 
 		width = vera_core.size * vera_core.pitch / 2.0	# dist from center of core to center of asmbly
 		
@@ -150,6 +153,10 @@ class Simplified_Vera_Core(object):
 		
 		# Unite all individual regions with the Master Region
 		master_region = openmc.Intersection()
+		#FIXME: Workaround
+		zcyl = openmc.ZCylinder(self.__counter(SURFACE), R = 4*width**2)
+		master_region = +zcyl
+		
 		
 		'''
 		# Corner cases
@@ -196,10 +203,14 @@ class Simplified_Vera_Core(object):
 		
 		# Useful lambda functions
 		# These will be used for both x and y
-		x1 = lambda x: x + copysign(d1, x);				# To inner edge of this baffle
-		x2 = lambda x: x + copysign(d2, x);				# To outer edge of this baffle
-		x3 = lambda x: x2(x) - copysign(pitch, x);		# To outer edge of next baffle
-		x4 = lambda x: x1(x) - copysign(pitch, x);		# To inner edge of next baffle
+		x0 = lambda x: x + copysign(d0, x)			# To edge of this assembly	    (a)
+		x1 = lambda x: x + copysign(d1, x)			# To inner edge of this baffle  (a+gap)
+		x2 = lambda x: x + copysign(d2, x)			# To outer edge of this baffle  (a+gap+thick)
+		x3 = lambda x: x - copysign(d0, x) 			# To other edge of this asmbly (-a)
+		x4 = lambda x: x - copysign(d1, x)			# To outer edge of next baffle (-a-gap)
+		x5 = lambda x: x - copysign(d2, x)			# To inner edge of next baffle (-a-gap-thick)
+		xc = lambda x: x - copysign(d1 - baf.thick, x)# To     edge of next crossing baffle
+		xb = lambda x: xc(x) - copysign(pitch, x) 	  # To     edge of this crossing baffle
 		
 		
 		# Regular: assemblies on all sides
@@ -228,10 +239,15 @@ class Simplified_Vera_Core(object):
 						# At least 1 baffle plate to add
 						
 						# Check if necessary surfs exist; if not, create them
-						((left1, left2, right2, right1), (top1, top2, bot2, bot1)) = self.__get_xyz_planes( \
-												( x1(x), x2(x), x3(x), x4(x)), (x1(y), x2(y), x3(y), x4(y)) )[0:2]
+						#((left1, left2, right2, right1), (top1, top2, bot2, bot1)) = self.__get_xyz_planes( \
+						#						( x1(x), x2(x), x3(x), x4(x)), (x1(y), x2(y), x3(y), x4(y)) )[0:2]
+						((xthis0, xthis1, xthis2, xthisc, xnext0, xnext2, xnext1, xnextc), 
+						 (ythis0, ythis1, ythis2, ythisc, ynext0, ynext2, ynext1, ynextc)) \
+							= self.__get_xyz_planes(\
+							(x0(x), x1(x), x2(x), xb(x), 	x3(x), x4(x), x5(x), xc(x)), \
+							(x0(y), x1(y), x2(y), xb(y), 	x3(y), x4(y), x5(y), xc(y)) )[0:2]
 						
-						'''Naming convention:
+						'''Old Naming convention:
 						
 						"left" and "top" refer to the positions in the NE quadrant, so that
 							- left1 is far to the left (inner edge of plate)
@@ -247,65 +263,66 @@ class Simplified_Vera_Core(object):
 						
 						# Northwest (Top left corner)
 						if (not north) and (not west) and (south) and (east):
-							top_region = (+left2 & -right1 & +top1 & -top2)
+							top_region = (+xthis2 & -xnext0 & +ythis1 & -ythis2)
 							master_region |= top_region
 							
-							side_region = (+left2 & -left1 & +bot2 & -top1)
+							side_region = (+xthis2 & -xthis1 & +ynextc & -ythis1)
 							master_region |= side_region
 						
 						# Northeast (Top right corner)
 						elif (not north) and (not east) and (south) and (west):
 							# Left and Right are inverted
-							top_region = (+right1 & -left2 & +top1 & -top2)
+							top_region = (+xnext0 & -xthis2 & +ythis1 & -ythis2)
 							master_region |= top_region
 							
-
-							side_region = (+left1 & -left2 & +bot2 & -top1)
+							side_region = (+xthis1 & -xthis2 & +ynextc & -ythis1)
 							master_region |= side_region
-						
+												
 						# Southwest (Bottom left corner)
 						elif (not south) and (not west) and (north) and (east):
-							#new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-bot")
-							#new_top_cell.region = +left2 & -right2 & +top2 & -top1
-							#baffle_cells.append(new_top_cell)
 							# Top and Bottom are inverted
-							top_region = (+left2 & -right1 & +top2 & -top1)
+							top_region = (+xthis2 & -xnext0 & +ythis2 & -ythis1)
 							master_region |= top_region
 							
-							#new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-ne-left")
-							#new_side_cell.region = +left2 & -left1 & +top2 & -bot2
-							#baffle_cells.append(new_side_cell)
-							side_region = (+left2 & -left1 & +top1 & -bot2)
+							side_region = (+xthis2 & -xthis1 & +ythis1 & -ynextc)
 							master_region |= side_region
+						
 						# Southeast (Bottom right corner)
 						elif (not south) and (not east) and (north) and (west):
-							#new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-bot")
-							#new_top_cell.region = +right2 & -left2 & +top2 & -top1
-							#baffle_cells.append(new_top_cell)
 							# Left and Right are inverted
 							# Top and Bottom are inverted
-							top_region = (+right1 & -left2 & +top2 & -top1)
+							top_region = (+xnext0 & -xthis2 & +ythis2 & -ythis1)
 							master_region |= top_region
 							
-							side_region = (+left1 & -left2 & +top1 & -bot2)
+							side_region = (+xthis1 & -xthis2 & +ythis1 & -ynextc)
 							master_region |= side_region
-							#new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-se-right")
-							#new_side_cell.region = +top1 & -bot2 & +left1 & -left2
-							#baffle_cells.append(new_side_cell)
 							
-						'''	
+						
 						# North (top only)
 						elif (not north) and (east) and (south) and (west):
-							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-n-top")
-							new_top_cell.region = +left2 & -right2 & +top1 & -top2
-							baffle_cells.append(new_top_cell)
+							#if left2.x0 < right2.x0:
+							#	top_region = (+left1 & -right2 & +top1 & -top2)
+							#else:
+							#	top_region = (+right1 & -left2 & +top1 & -top2)
+							if xthis0.x0 < xnext0.x0:
+								top_region = (+xthis0 & -xnext0 & +ythis1 & -ythis2)
+							else:
+								top_region = (+xnext0 & -xthis0 & +ythis1 & -ythis2)
+							master_region |= top_region
 							
+		
 						# South (bottom only)
 						elif (not south) and (east) and (north) and (west):
-							new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-s-bot")
-							new_top_cell.region = +left2 & -right2 & +top2 & -top1
-							baffle_cells.append(new_top_cell)
-						
+							#new_top_cell = openmc.Cell(self.__counter(CELL), name = "baffle-s-bot")
+							#new_top_cell.region = +left2 & -right2 & +top2 & -top1
+							#baffle_cells.append(new_top_cell)
+							if xthis0.x0 < xnext0.x0:
+								top_region = (+xthis0 & -xnext0 & +ythis2 & -ythis1)
+							else:
+								top_region = (+xnext0 & -xthis0 & +ythis2 & -ythis1)
+							master_region |= top_region
+							
+						'''						
 						# West (left only)
 						elif (not west) and (east) and (north) and (south):
 							new_side_cell = openmc.Cell(self.__counter(CELL), name = "baffle-w-left")
@@ -497,7 +514,7 @@ def test_baffle(baffle_region, baffill, asmbly_lat, bounds):
 	print(the_baffle)
 	
 	not_the_baffle = openmc.Cell(102, name = "not the baffle")
-	not_the_baffle.region = ~the_baffle.region
+	not_the_baffle.region = ~the_baffle.region & box
 	not_the_baffle.fill = asmbly_lat
 	
 	core_universe.add_cells((the_baffle, not_the_baffle))
