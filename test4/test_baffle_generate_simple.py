@@ -40,7 +40,7 @@ class Simplified_Vera_Core(object):
 		smap = [[0, 0, 1, 1, 0],
 				[0, 1, 1, 1, 0],
 				[1, 1, 1, 1, 0],
-				[0, 1, 1, 1, 0],
+				[1, 1, 1, 1, 0],
 				[0, 0, 1, 0, 0]]
 		return smap
 	
@@ -437,7 +437,7 @@ class Simplified_Vera_Core(object):
 				x = -(width - 0.5*pitch)
 				y =  width - (i + 0.5)*pitch
 				# Force a signed zero
-				if y == 0:  y = +0.0
+				if y == 0:  y = -0.0
 				
 				((xthis0, xthis1, xthis2, xthisc, xnext0, xnext2, xnext1, xnextc), 
 				 (ythis0, ythis1, ythis2, ythisc, ynext0, ynext2, ynext1, ynextc)) \
@@ -446,9 +446,12 @@ class Simplified_Vera_Core(object):
 					(x0(y), x1(y), x2(y), xb(y), 	x3(y), x4(y), x5(y), xc(y)) )[0:2]
 				
 				# Add a left column
-				side_region = (+xthis2 & -xthis1 & +ynext2 & -ythis1)
+				if ythis1.y0 < ynext2.y0:
+					side_region = (+xthis2 & -xthis1 & +ythis1 & -ynext2)
+
+				else:
+					side_region = (+xthis2 & -xthis1 & +ynext2 & -ythis1)
 				master_region.nodes.append(side_region)
-				
 				
 				east  = cmap[i][0+1]
 				north = cmap[i-1][0]
@@ -456,21 +459,22 @@ class Simplified_Vera_Core(object):
 				
 				# Top edge (horizontal)
 				if (not north):
-					#right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
-					#new_top_cell = openmc.Cell(self.__counter(CELL), "left edge (top)")
-					#new_top_cell.region = +left1 & -right2 & +top1 & -top2 
-					#baffle_cells.append(new_top_cell)
-					continue
-				'''
+					if ythis1.y0 < ythis2.y0:
+						top_region = (+xthis2 & -xnext2 & +ynext1 & -ynext2)
+					else:
+						top_region = (+xthis2 & -xnext2 & +ynext2 & -ynext1)
+					master_region.nodes.append(top_region)
+
 				# Bottom edge (horizontal)
 				if (not south):
-					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
-					new_top_cell = openmc.Cell(self.__counter(CELL), "left edge (bot)")
-					new_top_cell.region = +left1 & -right2 & +top2 & -top1
-					baffle_cells.append(new_top_cell)
+					if ythis1.y0 < ythis2.y0:
+						bot_region = (+xthis2 & -xnext2 & +ythis1 & -ythis2)
+					else:
+						bot_region = (+xthis2 & -xnext2 & +ythis2 & -ythis1)
+					master_region.nodes.append(bot_region)
 	
 				
-			
+				'''			
 			# Right column
 			if cmap[i][n]:	 	# Assembly is present
 				x = width - 0.5*pitch
