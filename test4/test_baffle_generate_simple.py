@@ -152,10 +152,7 @@ class Simplified_Vera_Core(object):
 		n = vera_core.size - 1
 		
 		# Unite all individual regions with the Master Region
-		master_region = openmc.Intersection()
-		#FIXME: Workaround
-		zcyl = openmc.ZCylinder(self.__counter(SURFACE), R = 4*width**2)
-		master_region = +zcyl
+		master_region = openmc.Union()
 		
 		
 		'''
@@ -264,38 +261,38 @@ class Simplified_Vera_Core(object):
 						# Northwest (Top left corner)
 						if (not north) and (not west) and (south) and (east):
 							top_region = (+xthis2 & -xnext0 & +ythis1 & -ythis2)
-							master_region |= top_region
+							master_region.nodes.append(top_region)
 							
 							side_region = (+xthis2 & -xthis1 & +ynext0 & -ythis1)
-							master_region |= side_region
+							master_region.nodes.append(side_region)
 						
 						# Northeast (Top right corner)
 						elif (not north) and (not east) and (south) and (west):
 							# Left and Right are inverted
 							top_region = (+xnext0 & -xthis2 & +ythis1 & -ythis2)
-							master_region |= top_region
+							master_region.nodes.append(top_region)
 							
 							side_region = (+xthis1 & -xthis2 & +ynext0 & -ythis1)
-							master_region |= side_region
+							master_region.nodes.append(side_region)
 												
 						# Southwest (Bottom left corner)
 						elif (not south) and (not west) and (north) and (east):
 							# Top and Bottom are inverted
 							top_region = (+xthis2 & -xnext0 & +ythis2 & -ythis1)
-							master_region |= top_region
+							master_region.nodes.append(top_region)
 							
 							side_region = (+xthis2 & -xthis1 & +ythis1 & -ynext0)
-							master_region |= side_region
+							master_region.nodes.append(side_region)
 						
 						# Southeast (Bottom right corner)
 						elif (not south) and (not east) and (north) and (west):
 							# Left and Right are inverted
 							# Top and Bottom are inverted
 							top_region = (+xnext0 & -xthis2 & +ythis2 & -ythis1)
-							master_region |= top_region
+							master_region.nodes.append(top_region)
 							
 							side_region = (+xthis1 & -xthis2 & +ythis1 & -ynext0)
-							master_region |= side_region
+							master_region.nodes.append(side_region)
 							
 						
 						# North (top only)
@@ -308,7 +305,7 @@ class Simplified_Vera_Core(object):
 								top_region = (+xthis0 & -xnext0 & +ythis1 & -ythis2)
 							else:
 								top_region = (+xnext0 & -xthis0 & +ythis1 & -ythis2)
-							master_region |= top_region
+							master_region.nodes.append(top_region)
 							
 		
 						# South (bottom only)
@@ -320,7 +317,7 @@ class Simplified_Vera_Core(object):
 								top_region = (+xthis0 & -xnext0 & +ythis2 & -ythis1)
 							else:
 								top_region = (+xnext0 & -xthis0 & +ythis2 & -ythis1)
-							master_region |= top_region
+							master_region.nodes.append(top_region)
 							
 												
 						# West (left only)
@@ -329,7 +326,7 @@ class Simplified_Vera_Core(object):
 								side_region = (+xthis2 & -xthis0 & +ythis0 & -ynext0)
 							else:
 								side_region = (+xthis2 & -xthis0 & +ynext0 & -ythis0)
-							master_region |= side_region
+							master_region.nodes.append(side_region)
 						
 						# East (right only)
 						elif (not east) and (south) and (north) and (west):
@@ -337,7 +334,7 @@ class Simplified_Vera_Core(object):
 								side_region = (+xthis0 & -xthis2 & +ythis0 & -ynext0)
 							else:
 								side_region = (+xthis0 & -xthis2 & +ynext0 & -ythis0)
-							master_region |= side_region
+							master_region.nodes.append(side_region)
 
 						
 				else:
