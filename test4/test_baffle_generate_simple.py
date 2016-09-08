@@ -37,11 +37,11 @@ class Simplified_Vera_Core(object):
 		self.openmc_surface_count = 0;	self.openmc_cell_count = 0
 	
 	def shape_map(self):
-		smap = [[0, 0, 1, 1, 0],
-				[0, 1, 1, 1, 0],
-				[1, 1, 1, 1, 0],
-				[1, 1, 1, 1, 0],
-				[0, 0, 1, 0, 0]]
+		smap = [[0, 1, 1, 1, 0],
+				[1, 1, 1, 1, 1],
+				[1, 1, 1, 1, 1],
+				[1, 1, 1, 1, 1],
+				[0, 1, 1, 1, 0]]
 		return smap
 	
 
@@ -348,9 +348,10 @@ class Simplified_Vera_Core(object):
 			
 			# Top row
 			if cmap[0][i]: 	# Assembly is present
-				
 				y = width - 0.5*pitch
 				x = (i + 0.5)*pitch - width
+				# Need to use -0 for copysign(), in the lambda functions
+				if x == 0:	x = -0.0
 				
 				((xthis1, xthis2, 		xnext2, xnext1), 
 				 (ythis1, ythis2, 		ynext2, ynextc)) \
@@ -369,32 +370,27 @@ class Simplified_Vera_Core(object):
 					top_region = (+xnext2 & -xthis1 & +ythis1 & -ythis2)
 				master_region.nodes.append(top_region)
 				
-				
-				# Left edge (vertical)
-				if (not west): 
+				# Left/right edges (vertical)
+				if (not west) or (not east): 
 					if xthis1.x0 < xthis2.x0:
-						side_region = (+xnext1 & -xnext2 & +ynextc & -ythis2)
+						side_region = (+xthis1 & -xthis2 & +ynextc & -ythis2)
 					else:
-						side_region = (+xnext2 & -xnext1 & +ynextc & -ythis2)
+						side_region = (+xthis2 & -xthis1 & +ynextc & -ythis2)
 					master_region.nodes.append(side_region)
-					
-				
-				# Right edge (vertical)
-				if (not east): 
-					print("Right edge")
-					if xthis1.x0 < xthis2.x0:
-						side_region = (+xthis1 & -xthis2 & +ynext2 & -ythis2)
-					else:
-						side_region = (+xthis2 & -xthis1 & +ynext2 & -ythis2)
-					master_region.nodes.append(side_region)
-				
+					# And then the peninsula case
+					if (not west) and (not east):
+						if xnext1.x0 < xnext2.x0:
+							side_region = (+xnext1 & -xnext2 & +ynext2 & -ythis2)
+						else:
+							side_region = (+xnext2 & -xnext1 & +ynext2 & -ythis2)
+						master_region.nodes.append(side_region)
 				
 				
 			# Bottom row
 			if cmap[n][i]:	 	# Assembly is present
 				y = -(width - 0.5*pitch)
 				x =  (i + 0.5)*pitch - width
-				# Need to use -0 for copysign()
+				# Force signed 0 
 				if x == 0.0:	x = -0.0
 				
 				((xthis1, xthis2,  	xnext2, xnext1), 
@@ -414,22 +410,20 @@ class Simplified_Vera_Core(object):
 				east = cmap[n][i+1]
 				north= cmap[n-1][i]
 				
-				# Left edge (vertical)
-				if (not west): 
-					print("not west")
+				# Left/right edges (vertical)
+				if (not west) or (not east): 
 					if xthis1.x0 < xthis2.x0:
 						side_region = (+xthis1 & -xthis2 & +ythis2 & -ynext0)
 					else:
 						side_region = (+xthis2 & -xthis1 & +ythis2 & -ynext0)
 					master_region.nodes.append(side_region)
-	
-				# Right edge (vertical)
-				if (not east): 
-					if xnext1.x0 < xnext2.x0:
-						side_region = (+xnext1 & -xnext2 & +ythis2 & -ynext0)
-					else:
-						side_region = (+xnext2 & -xnext1 & +ythis2 & -ynext0)
-					master_region.nodes.append(side_region)
+					# Peninsula case
+					if (not west) and (not east):
+						if xnext1.x0 < xnext2.x0:
+							side_region = (+xnext1 & -xnext2 & +ythis2 & -ynext0)
+						else:
+							side_region = (+xnext2 & -xnext1 & +ythis2 & -ynext0)
+						master_region.nodes.append(side_region)
 			
 				
 			# Left column
@@ -439,11 +433,11 @@ class Simplified_Vera_Core(object):
 				# Force a signed zero
 				if y == 0:  y = -0.0
 				
-				((xthis0, xthis1, xthis2, xthisc, xnext0, xnext2, xnext1, xnextc), 
-				 (ythis0, ythis1, ythis2, ythisc, ynext0, ynext2, ynext1, ynextc)) \
+				((xthis1, xthis2, 	xnext2), 
+				 (ythis1, ythis2, 	ynext2, ynext1)) \
 					= self.__get_xyz_planes(\
-					(x0(x), x1(x), x2(x), xb(x), 	x3(x), x4(x), x5(x), xc(x)), \
-					(x0(y), x1(y), x2(y), xb(y), 	x3(y), x4(y), x5(y), xc(y)) )[0:2]
+					(x1(x), x2(x),  	x4(x)), \
+					(x1(y), x2(y),  	x4(y), x5(y)) )[0:2]
 				
 				# Add a left column
 				if ythis1.y0 < ynext2.y0:
@@ -457,55 +451,63 @@ class Simplified_Vera_Core(object):
 				north = cmap[i-1][0]
 				south = cmap[i+1][0]
 				
-				# Top edge (horizontal)
-				if (not north):
+				# Top/bottom edges (horizontal)
+				if (not north) or (not south):
 					if ythis1.y0 < ythis2.y0:
-						top_region = (+xthis2 & -xnext2 & +ynext1 & -ynext2)
+						top_region = (+xthis2 & -xnext2 & +ythis1 & -ythis2)
 					else:
-						top_region = (+xthis2 & -xnext2 & +ynext2 & -ynext1)
+						top_region = (+xthis2 & -xnext2 & +ythis2 & -ythis1)
 					master_region.nodes.append(top_region)
-
-				# Bottom edge (horizontal)
-				if (not south):
-					if ythis1.y0 < ythis2.y0:
-						bot_region = (+xthis2 & -xnext2 & +ythis1 & -ythis2)
-					else:
-						bot_region = (+xthis2 & -xnext2 & +ythis2 & -ythis1)
-					master_region.nodes.append(bot_region)
-	
+					# Then the special case where it's just a single assembly piece
+					if (not north) and (not south):
+						if ynext1.y0 < ynext2.y0:
+							bot_region = (+xthis2 & -xnext2 & +ynext1 & -ynext2)
+						else:
+							bot_region = (+xthis2 & -xnext2 & +ynext2 & -ynext1)
+						master_region.nodes.append(bot_region)
 				
-				'''			
+						
 			# Right column
 			if cmap[i][n]:	 	# Assembly is present
 				x = width - 0.5*pitch
-				y = width - (i - 0.5)*pitch
-				((left1, left2), (top1, top2, bot2)) = self.__get_xyz_planes( ( x1(x), x2(x) ), ( x1(y), x2(y), x3(y) ), () )[0:2]
+				y = width - (i + 0.5)*pitch
+				if y == 0:	y = +0.0
+				
+				((xthis0, xthis1, xthis2, xthisc, xnext0, xnext2, xnext1, xnextc), 
+				 (ythis0, ythis1, ythis2, ythisc, ynext0, ynext2, ynext1, ynextc)) \
+					= self.__get_xyz_planes(\
+					(x0(x), x1(x), x2(x), xb(x), 	x3(x), x4(x), x5(x), xc(x)), \
+					(x0(y), x1(y), x2(y), xb(y), 	x3(y), x4(y), x5(y), xc(y)) )[0:2]
+			
 				# Add a right column
-				new_side_cell = openmc.Cell(self.__counter(CELL), "right edge")
-				new_side_cell.region = +left1 & -left2 & +bot2 & -top2 
-				baffle_cells.append(new_side_cell)
+				if ythis1.y0 < ynext1.y0:
+					side_region = (+xthis1 & -xthis2 & +ythis2 & -ynext1)
+				else:
+					side_region = (+xthis1 & -xthis2 & +ynext2 & -ythis1)
+				master_region.nodes.append(side_region)
 				
 				west  = cmap[i][n-1]
 				north = cmap[i-1][n]
 				south = cmap[i+1][n]
 				
-				
-				# Top edge (horizontal)
-				if (not north):
-					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
-					new_top_cell = openmc.Cell(self.__counter(CELL), "right edge (top)")
-					new_top_cell.region = +right2 & -left1 & +top1 & -top2 
-					baffle_cells.append(new_top_cell)
-				# Bottom edge (horizontal)
-				if (not south):
-					right2 = self.__get_xyz_planes( (x3(x),), (), () )[0][0]
-					new_top_cell = openmc.Cell(self.__counter(CELL), "right edge (bot)")
-					new_top_cell.region = +right2 & -left1 & +top2 & -top1
-					baffle_cells.append(new_top_cell)
+				# Top/bottom edges (horizontal)
+				if (not north) or (not south):
+					if ythis1.y0 < ythis2.y0:
+						top_region = (+xnext2 & -xthis2 & +ythis1 & -ythis2)
+					else:
+						top_region = (+xnext2 & -xthis2 & +ythis2 & -ythis1)
+					master_region.nodes.append(top_region)
+					# Then the special case where it's just a single assembly piece
+					if (not north) and (not south):
+						if ynext1.y0 < ynext2.y0:
+							bot_region = (+xnext2 & -xthis2 & +ynext1 & -ynext2)
+						else:
+							bot_region = (+xnext2 & -xthis2 & +ynext2 & -ynext1)
+						master_region.nodes.append(bot_region)
+					
 				
 				#TODO: EDGE CASES HAVE BEEN VERIFIED UP TO WORK AS EXPECTED UP TO HERE
 		
-		'''
 				# TODO: Add 4 corner cases
 		
 		
@@ -695,11 +697,11 @@ def create_5x5_as_lattice(as1, apitch, mod_mat):
 	mmm = openmc.Universe()
 	mmm.add_cell(modcell)
 	
-	cmap = [[mmm, mmm, as1, as1, mmm],
-			[mmm, as1, as1, as1, mmm],
+	cmap = [[mmm, as1, as1, as1, mmm],
+			[mmm, as1, as1, as1, as1],
 			[as1, as1, as1, as1, as1],
-			[mmm, as1, as1, as1, mmm],
-			[mmm, as1, as1, mmm, mmm]]
+			[mmm, as1, as1, as1, as1],
+			[mmm, mmm, as1, mmm, mmm]]
 	
 	
 	lat5 = openmc.RectLattice(35)
