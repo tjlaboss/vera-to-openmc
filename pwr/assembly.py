@@ -5,7 +5,7 @@
 # a model of a Westinghouse-style PWR assembly
 
 import openmc
-from functions import fill_lattice
+#from functions import fill_lattice
 from copy import copy
 from math import sqrt
 
@@ -426,8 +426,18 @@ class Assembly(object):
 						lattices = [], 	lattice_elevs = [],	spacers = [], 	spacer_mids = [],
 						lower_nozzle = None, 				upper_nozzle = None, 
 						mod = None):
-		
-		return None
+		self.key = key
+		self.name = name
+		self.universe_id = universe_id
+		self.pitch = pitch;					self.npins = npins
+		self.lattices = lattices;			self.lattices_elevs = lattice_elevs
+		self.spacers = spacers;				self.spacer_mids = spacer_mids
+		self.lower_nozzle = lower_nozzle;	self.upper_nozzle = upper_nozzle
+		self.mod = mod
+	
+	
+	def __str__(self):
+		return self.name
 	
 	
 	def __prebuild(self):
@@ -436,11 +446,9 @@ class Assembly(object):
 		
 		if not self.name:
 			self.name = self.key
-		
 		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle']
 		if min(self.lattice_elevs) == 0:
 			blank_allowable.append('lower_nozzle')
-		
 		
 		# Check that all necessary parameters are present.
 		err_str = "Error: the following parameters need to be set:\n"
@@ -499,9 +507,7 @@ class Assembly(object):
 							[Default: empty string]
 			eps:			int; number of decimal places after which two planes
 							are considered to be the same.
-							[Default: 5]
-		'''
-		
+							[Default: 5]	'''
 		dim = dim.lower()
 		valid = ("x", "xplane", "y", "yplane", "z", "zplane")
 		assert (dim in valid), "You must specify one of " + str(valid)
@@ -531,7 +537,6 @@ class Assembly(object):
 			self.openmc_surfaces.append(zplane)
 			return zplane
 		
-	
 	
 	def test_prebuild(self):
 		'''Temporary method--to be removed once this class is complete'''
@@ -626,7 +631,6 @@ class Assembly(object):
 		self.assembly.add_cells(self.openmc_cells)
 		
 		return self.assembly
-		
 
 
 
