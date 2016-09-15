@@ -5,9 +5,9 @@
 # a model of a Westinghouse-style PWR assembly
 
 import openmc
-import objects
 from functions import fill_lattice
 from copy import copy
+from math import sqrt
 
 # Global constants for counters
 SURFACE, CELL, MATERIAL, UNIVERSE = range(-1,-5,-1)
@@ -139,6 +139,9 @@ class Nozzle(object):
 		return self.name
 
 
+
+
+
 def counter(count):
 		'''Get the next cell/surface/material/universe number, and update the counter.
 		Input:
@@ -218,6 +221,64 @@ def duplicate(orig):
 	return dup
 
 
+class SpacerGrid(object):
+	'''Object to hold properties of an assembly's spacer grids
+	
+	Parameters:
+		key: 		string; unique name of this spacer grid
+		height:		float; height (cm) of the spacer around the pins
+		mass:		float; mass in g of the entire spacer grid's material
+		material:	instance of class openmc.Material
+		pitch:		float; pin pitch (cm) 
+		npins:		number of pins across an assembly
+	Attributes:
+		(key, height, mass, material - as above)
+		thickness:	float; thickness (cm) of the grid around each pin, 
+					or half the total thickness between pins
+		'''
+	
+	def __init__(self, key, height, mass, material, pitch, npins):
+		self.key = key	
+		self.height = height	
+		self.mass = mass		
+		self.material = material
+		self.thickness = self.calculate_thickness(pitch, npins)
+	
+	def calculate_thickness(self, pitch, npins):
+		'''Calculate the thickness of the spacer surrounding each pincell.
+		Inputs:
+			pitch:		float; pin pitch (cm)
+			npins:		int; number of pins across Assembly (npinsxnpins)
+		'''
+		
+		''' Method:
+		
+		Volume = mass / density;		Combined Area = Volume / height
+			Therefore, [ A = m/rho/h ],		and the area around a single pincell:
+												a = m/rho/h / npins^2
+			
+			The area of the spacer material around one cell can also be found:
+				a = p^2 - (p - 2*t)^2,		where 't' is the thickness and 'p' is the pitch
+			->  a = p^2 - [p^2 - 4*t*p + 4*t^2]
+			->  a = 4*t*p - 4*t^2
+				
+			Equate the two expressions for a:
+				m/rho/h / npins^2 = 4*t*p - 4*t^2
+			Then solve for 't' using the quadratic equation:
+			
+			              [             (          m/rho/h   ) ]
+				t = 0.5 * [ p  +/- sqrt ( p^2 -   ---------- ) ]
+				          [             (          npins^2   ) ]
+        '''
+		
+		A = self.mass / self.materials[self.material].density / self.height
+		t = 0.5*(pitch - sqrt(pitch**2 - A/npins**2))
+		return t
+		
+	def __str__(self):
+		name = self.key + ': ' + str(self.thickness) + " cm"
+		return name
+
 
 def add_grid_to(pincell, pitch, t, material):
 	'''Given a pincell to be placed in a lattice, add
@@ -275,6 +336,67 @@ def add_grid_to(pincell, pitch, t, material):
 	new_cell.add_cell(spacer)
 	
 	return new_cell
+
+
+class Assembly(object):
+	'''An OpenMC Universe containing cells for the upper/lower nozzles,
+	lattices (with and without spacer grids), and surrounding moderator.
+	
+	Parameters (all optional except "key"):
+		key:			str; short, unique name of this Assembly as will appear in the core lattice.
+		name:			str; more descriptive name of this Assembly, if desired
+						[Default: same as key]
+		universe_id:	int; unique integer identifier for its OpenMC universe
+						[Default: None, and will be assigned automatically at instantiation of openmc.Universe]
+		lattices:		list of instances of openmc.RectLattice, in the axial order they appear in the assembly
+						(bottom -> top).
+						[Default: empty list]
+		lattice_elevs:	list of floats describing the elevations (cm) of each boundary in 'lattices',
+						relative to the bottom core plate. The next lattice starts where the last leaves off.
+						**Must contain exactly len(lattices)+1 entries**
+						[Default: empty list] 
+		spacers:		list of instances of SpacerGrid, in the axial order they appear in the assembly
+						(bottom -> top). 
+						[Default: empty list]
+		spacer_elevs:	list of floats describing the elevations (cm) of the midpoint of each spacer grid
+						in 'spacers', relative to the bottom core plate. Gaps are expected.
+						***Must contain exactly len(spacers) entries**
+						[Default: empty list]
+		lower_nozzle:	instance of Nozzle, starting at z=0 and terminating at min(lattice_elevs)
+						[Default: None]
+		upper_nozzle:	instance of Nozzle, starting at max(lattice_elevs) and terminating at z += Nozzle.height
+						[Default: None]
+		mod:			instance of openmc.Material describing  moderator surrounding the assembly.
+						[Default: None] 
+	
+	Attributes:
+		All the above
+	'''
+
+	def __init__(self, key = "", name = "", universe_id = None,
+				lattices = [], lattice_elevs = [], spacers = [], spacer_elevs = [],
+				lower_nozzle = None, upper_nozzle = None, 
+				mod = None):
+		
+		return None
+	
+	
+	def __prebuild(self):
+		'''Check that all the required properties are there.'''
+	
+	
+	def build(self):
+		'''Construct the assembly from the ground up.
+		
+		Output:
+			instance of openmc.Universe'''
+		
+		self.__prebuild()
+		
+		return None
+		
+
+
 
 
 # Test

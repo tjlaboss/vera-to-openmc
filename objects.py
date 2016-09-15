@@ -4,7 +4,7 @@
 
 from math import sqrt
 from functions import clean
-from PWR_assembly import Nozzle
+#from PWR_assembly import Nozzle
 import isotopes
 
 class Material(object):
