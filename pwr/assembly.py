@@ -358,7 +358,7 @@ class Assembly(object):
 		spacers:		list of instances of SpacerGrid, in the axial order they appear in the assembly
 						(bottom -> top). 
 						[Default: empty list]
-		spacer_elevs:	list of floats describing the elevations (cm) of the midpoint of each spacer grid
+		spacer_mids:	list of floats describing the elevations (cm) of the midpoint of each spacer grid
 						in 'spacers', relative to the bottom core plate. Gaps are expected.
 						***Must contain exactly len(spacers) entries**
 						[Default: empty list]
@@ -370,7 +370,11 @@ class Assembly(object):
 						[Default: None] 
 	
 	Attributes:
-		All the above
+		All the above, plus the following created at self.build():
+		spacer_elevs:	list of the elevations of the tops/bottoms of all spacer grids
+		all_elevs:		list of all axial elevations, created when (lattice_elevs + spacer_elevs)
+						have been concatenated, sorted, and checked for duplicates
+		
 	'''
 
 	def __init__(self, key = "", name = "", universe_id = None,
@@ -382,7 +386,38 @@ class Assembly(object):
 	
 	
 	def __prebuild(self):
-		'''Check that all the required properties are there.'''
+		'''Check that all the required properties are there.
+		If not, error out. Otherwise, do a few operations prior to build().'''
+		
+		if not self.name:
+			self.name = self.key
+		
+		blank_allowable = ['universe_id', 'spacers', 'spacer_elevs', 'upper_nozzle']
+		if min(self.lattice_elevs) == 0:
+			blank_allowable.append('lower_nozzle')
+		
+		
+		# Check that all necessary parameters are present.
+		err_str = "Error: the following parameters need to be set:\n"
+		errs = 0
+		for attr in self.dict:
+			if not self.dict[attr]:
+				if attr not in blank_allowable:
+					errs += 1
+					err_str += '\t- ' + attr + '\n'
+		if errs:
+			raise TypeError(err_str)
+		
+		# Check that the number of entries in the lists is correct
+		assert (len(self.lattice_elevs) == len(self.lattices) +1), \
+			"Error: number of entries in lattice_elevs must be len(lattices) + 1"
+		assert (len(self.spacers) == len(self.spacer_elevs)), \
+			"Error: number of entries in spacer_elevs must be len(spacers)"
+		
+		# Combine spacer_elevs and lattice_elevs into one list to rule them all
+		elevs = self.spacer_elevs + self.lattice_elevs
+		elevs.sort
+		self.all_elevs = list(set(elevs))
 	
 	
 	def build(self):
