@@ -280,7 +280,7 @@ class SpacerGrid(object):
 		return name
 
 
-def add_grid_to(pincell, pitch, t, material):
+def add_spacer_to(pincell, pitch, t, material):
 	'''Given a pincell to be placed in a lattice, add
 	the spacer grid to the individual cell.
 	
@@ -338,6 +338,41 @@ def add_grid_to(pincell, pitch, t, material):
 	return new_cell
 
 
+def add_grid_to(lattice, pitch, npins, spacergrid):
+	'''Add a spacer to every pincell in the lattice.
+	FIXME: Determine 'pitch' and 'npins' from the attributes of 'lattice'
+
+	Inputs:
+		lattice:		instance of openmc.RectLattice
+		pitch:			float; its pitch (cm)
+		npins:			int; number of pins across
+		spacergrid:		instance of SpacerGrid
+	Output:
+		gridded:		instance of openmc.RectLattice with the grid applied
+						to every cell'''
+	
+	assert isinstance(lattice, openmc.RectLattice), "'lattice' must be a RectLattice."
+	assert isinstance(spacergrid, SpacerGrid), "'spacergrid' must be an instance of SpacerGrid."
+	n = int(npins)
+	new_universes = [[None,]*n,]*n
+	
+	for j in range(n):
+		row = new_universes[j]
+		for i in range(n):
+			old_cell = lattice.universes[j][i]
+			new_cell = add_spacer_to(old_cell, pitch, spacergrid.thickness, spacergrid.material)
+			row[i] = new_cell
+		new_universes[j] = row
+	
+	new_name = lattice.id + "-gridded"
+	gridded = openmc.RectLattice(counter(UNIVERSE), name = new_name)
+	gridded.pitch = (pitch, pitch)
+	gridded.lower_left = [-pitch * npins / 2.0] * 2
+	gridded.universes = new_universes
+	return gridded
+	
+
+
 class Assembly(object):
 	'''An OpenMC Universe containing cells for the upper/lower nozzles,
 	lattices (with and without spacer grids), and surrounding moderator.
@@ -381,6 +416,9 @@ class Assembly(object):
 		openmc_surfs:	list of instances of openmc.Surface used in the construction of this assembly
 		walls:			instance of openmc.Intersection; the 2D region within the assembly.
 		openmc_cells:	list of all instances of openmc.Cell used in the construction of this assembly
+		assembly:		instance of openmc.Universe.
+						the whole reason you instantiated THIS object.
+						the OpenMC representation of the fuel assembly
 	'''
 
 	def __init__(self, 	key = "", 		name = "", 			universe_id = None,
@@ -518,14 +556,76 @@ class Assembly(object):
 			nozzle_top = self.__get_plane('z', self.lower_nozzle.height)
 			lnoz.region = (self.walls & +last_s & -nozzle_top)
 			lnoz.fill = self.lower_nozzle.material
+			self.openmc_cells.append(lnoz)
 			last_s = nozzle_top
+		
+		# The convention used here to avoid creating extra lattices when applying grids:
+		# When a grid is added by calling add_grid_to(), the lattice's name becomes "oldname-gridded".
+		gridded_lattices = {}
 		
 		for z in self.all_elevs:
 			s = self.__get_plane('z', z)
+			# See what lattice we are in
+			for i in range(len(self.lattices)):
+				if z > self.lattice_elevs[i]:
+					break
+			lat = self.lattices[i-1]
+			# Check if there is a spacer grid
+			for g in range(len(self.spacer_elevs)):
+				if z > self.spacer_elevs[g]:
+					break
+			# Even numbers are bottoms, odds are top
+			grid = False
+			if (g-1) % 2 == 0:
+				# Then the last one was a bottom: a grid is present
+				grid = self.spacers[g-1]
 			
+			# OK--now we know what the current lattice is, and whether there's a grid here.
+			if grid:
+				gname = lat.name + "-gridded"
+				if gname in gridded_lattices:
+					# Then this one has been done before
+					lat = gridded_lattices[gname]
+				else:
+					# We need to add the spacer grid to this one, and then add it to the index
+					lat = add_grid_to(lat, self.pitch, self.npins, grid)
+					gridded_lattices[lat.name] = lat
+			
+			# Now, we have the current lattice, for the correct level, with or with a spacer
+			# grid as appropriate. Time to make the layer.
+			layer = openmc.Cell(counter(CELL), name = lat.name)
+			layer.region = (self.walls & +last_s & -s)
+			layer.fill = lat
+			self.openmc_cells.append(layer)
+			
+			# And then prepare for the next loop around
+			last_s = s
 		
+		# Great, we've done all the layers now!
+		# Add the top nozzle if necessary:
+		if self.upper_nozzle:
+			unoz = openmc.Cell(counter(CELL), "upper nozzle")
+			nozzle_top = self.__get_plane('z', self.upper_nozzle.height)
+			unoz.region = (self.walls & +last_s & -nozzle_top)
+			unoz.fill = self.upper_nozzle.material
+			self.openmc_cells.append(lnoz)
+			last_s = nozzle_top
 		
-		return None
+		# Finally, surround the whole assembly with moderator
+		mod_cell = openmc.Cell(counter(CELL), name = self.name + " mod")
+		mod_cell.region = (~self.walls | +last_s | -surf0)
+		mod_cell.fill = self.mod
+		self.openmc_cells.append(mod_cell)
+		
+		# And we're done!! Zip it all up in a universe.
+		if self.universe_id:
+			id = self.universe_id
+		else:
+			id = counter(UNIVERSE)
+		self.assembly = openmc.Universe(id, name = self.name)
+		self.assembly.add_cells(self.openmc_cells)
+		
+		return self.assembly
 		
 
 
