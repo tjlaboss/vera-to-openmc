@@ -348,6 +348,10 @@ class Assembly(object):
 						[Default: same as key]
 		universe_id:	int; unique integer identifier for its OpenMC universe
 						[Default: None, and will be assigned automatically at instantiation of openmc.Universe]
+		pitch:			float; pitch (cm) between pincells in the lattices
+						[Default: 0.0]
+		npins:			int; number of pins across the assembly
+						[Default: 0]
 		lattices:		list of instances of openmc.RectLattice, in the axial order they appear in the assembly
 						(bottom -> top).
 						[Default: empty list]
@@ -374,13 +378,16 @@ class Assembly(object):
 		spacer_elevs:	list of the elevations of the tops/bottoms of all spacer grids
 		all_elevs:		list of all axial elevations, created when (lattice_elevs + spacer_elevs)
 						have been concatenated, sorted, and checked for duplicates
-		
+		openmc_surfs:	list of instances of openmc.Surface used in the construction of this assembly
+		walls:			instance of openmc.Intersection; the 2D region within the assembly.
+		openmc_cells:	list of all instances of openmc.Cell used in the construction of this assembly
 	'''
 
-	def __init__(self, key = "", name = "", universe_id = None,
-				lattices = [], lattice_elevs = [], spacers = [], spacer_elevs = [],
-				lower_nozzle = None, upper_nozzle = None, 
-				mod = None):
+	def __init__(self, 	key = "", 		name = "", 			universe_id = None,
+						pitch = 0.0, 	npins = 0,
+						lattices = [], 	lattice_elevs = [],	spacers = [], 	spacer_mids = [],
+						lower_nozzle = None, 				upper_nozzle = None, 
+						mod = None):
 		
 		return None
 	
@@ -392,7 +399,7 @@ class Assembly(object):
 		if not self.name:
 			self.name = self.key
 		
-		blank_allowable = ['universe_id', 'spacers', 'spacer_elevs', 'upper_nozzle']
+		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle']
 		if min(self.lattice_elevs) == 0:
 			blank_allowable.append('lower_nozzle')
 		
@@ -415,9 +422,82 @@ class Assembly(object):
 			"Error: number of entries in spacer_elevs must be len(spacers)"
 		
 		# Combine spacer_elevs and lattice_elevs into one list to rule them all
-		elevs = self.spacer_elevs + self.lattice_elevs
-		elevs.sort
-		self.all_elevs = list(set(elevs))
+		if self.spacer_mids:
+			spacer_elevs = []
+			for i in range(len(self.spacers)):
+				spacer = self.spacers[i]
+				mid = self.spacer_mids[i]
+				s_bot = mid - spacer.height / 2.0
+				s_top = mid + spacer.height / 2.0
+				spacer_elevs.append((s_bot, s_top))
+			elevs = spacer_elevs + self.lattice_elevs
+			elevs.sort()
+			self.all_elevs = list(set(elevs))	# Remove the duplicates
+		else:
+			self.all_elevs = self.lattice_elevs
+		
+		# Finally, create the xy bounding planes
+		half = self.pitch*self.npins
+		min_x = self.__get_plane('x', -half, name = self.name + ' - min_x') 
+		max_x = self.__get_plane('x', +half, name = self.name + ' - max_x') 
+		min_y = self.__get_plane('y', -half, name = self.name + ' - min_y') 
+		max_y = self.__get_plane('y', +half, name = self.name + ' - max_y') 
+		
+		self.openmc_surfaces = [min_x, max_x, min_y, max_y]
+		self.walls = openmc.Region(+min_x & +min_y & -max_x & -max_y)
+		self.openmc_cells = []
+	
+	
+	def __get_plane(self, dim, val, boundary_type = "transmission", name = "", eps = 5):
+		'''Return an instance of openmc.(X/Y/Z)Plane. Check if it exists, within
+		a precision of 'eps'. If so, return it. Otherwise, create it.
+		
+		Inputs:
+			dim:			str; 'x', 'y', or 'z'
+			val:			float; value for x0, y0, or z0
+			boundary_type:	"transmission", "vacuum", or "reflective".
+							[Default: "transmission"]
+			name:			str; creative name of surface
+							[Default: empty string]
+			eps:			int; number of decimal places after which two planes
+							are considered to be the same.
+							[Default: 5]
+		'''
+		
+		dim = dim.lower()
+		valid = ("x", "xplane", "y", "yplane", "z", "zplane")
+		assert (dim in valid), "You must specify one of " + str(valid)
+		
+		if dim in ("x", "xplane"):
+			for xplane in self.openmc_surfaces:
+				if val == round(xplane.x0, eps):
+					return xplane
+			xplane =  openmc.XPlane(counter(SURFACE),
+						boundary_type = boundary_type, x0 = val, name = name)
+			self.openmc_surfaces.append(xplane)
+			return xplane
+		elif dim in ("y", "yplane"):
+			for yplane in self.openmc_surfaces:
+				if val == round(yplane.y0, eps):
+					return yplane
+			yplane =  openmc.YPlane(counter(SURFACE),
+						boundary_type = boundary_type, y0 = val, name = name)
+			self.openmc_surfaces.append(yplane)
+			return yplane
+		elif dim in ("z", "zplane"):
+			for zplane in self.openmc_surfaces:
+				if val == round(zplane.z0, eps):
+					return zplane
+			zplane =  openmc.ZPlane(counter(SURFACE),
+						boundary_type = boundary_type, z0 = val, name = name)
+			self.openmc_surfaces.append(zplane)
+			return zplane
+		
+	
+	
+	def test_prebuild(self):
+		'''Temporary method--to be removed once this class is complete'''
+		self.__prebuild()
 	
 	
 	def build(self):
@@ -427,6 +507,23 @@ class Assembly(object):
 			instance of openmc.Universe'''
 		
 		self.__prebuild()
+		
+		# Start at the bottom
+		surf0 = openmc.ZPlane(counter(SURFACE), z0 = 0)
+		last_s = surf0
+		self.openmc_surfaces.append(surf0)
+		
+		if self.lower_nozzle:
+			lnoz = openmc.Cell(counter(CELL), "lower nozzle")
+			nozzle_top = self.__get_plane('z', self.lower_nozzle.height)
+			lnoz.region = (self.walls & +last_s & -nozzle_top)
+			lnoz.fill = self.lower_nozzle.material
+			last_s = nozzle_top
+		
+		for z in self.all_elevs:
+			s = self.__get_plane('z', z)
+			
+		
 		
 		return None
 		
