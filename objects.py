@@ -90,6 +90,41 @@ class Mixture(Material):
 		self.density = density
 
 
+class State(object):
+	'''The [STATE] block defines the state of the core (power, flow, pressure, inlet temperature, rod
+	positions, boron concentration, etc.) at a particular point in time. These values will typically
+	change during a cycle depletion.
+	
+	Required Parameters:
+		key:		str; unique name of the state
+		tfuel:		float; fuel temperature (K)
+		tinlet:		float; coolant inlet temperature (K)
+		## boron:		float; boron concentration in ppm
+		mod:		instance of Material describing the moderator
+	Optional:
+		##b10:		atom fraction of boron which is b-10
+		##			[Default: 0.199]
+		name:		str; descriptive title of the state
+					[Default: empty string]
+		params:		catch-all dictionary for the raw parameters from the deck
+		---more to come---
+		 
+	'''
+	def __init__(self, key, tfuel, tinlet, mod,
+					#boron, b10 = 0.199,
+					name = "",
+					bank_labels = (), bank_pos = (),
+					params = {},):
+		self.key = key
+		self.tfuel = tfuel
+		self.tinlet = tinlet
+		self.mod = mod
+		
+		self.bank_labels = bank_labels
+		self.bank_pos = bank_pos
+		self.params = params
+
+
 class Assembly(object):
 	'''VERA decks often contain descriptions of fuel assemblies.
 	Although I am not sure how to represent these in OpenMC/OpenCG yet,

@@ -68,7 +68,10 @@ class Case(object):
 		self.errors = 0; self.warnings = 0
 		self.__read_xml()
 		
-		
+		# And now, select a state and use its properties
+		#FIXME: Right now, this just selects the first state encountered
+		state = self.states[0]
+		self.materials['mod'] = state.mod
 		
 		print("There were", self.warnings, "warnings and", self.errors, "errors.")
 		
@@ -307,8 +310,10 @@ class Case(object):
 						# a description of each. Generate a geometry for each
 						# of them, or ask the user which one he wants?
 						
-						#FIXME: This is where the moderator density/boron/temperature come in!
-						do_states_stuff = True
+						for stat in child:
+							new_state = self.__get_state(stat)
+							self.states.append(new_state)
+							
 					elif name == "CONTROLS":
 						do_control_stuff = True
 					elif name == "DETECTORS":
@@ -482,6 +487,72 @@ class Case(object):
 		# Instantiate a new material and add it to the dictionary
 		a_material = objects.Material(mname, mdens, isos)
 		return a_material
+	
+	
+	def __get_state(self, state):
+		'''Similar to the other __get_thing() methods
+		
+		Input:
+			state:		The ParameterList object describing an operating state
+		Output:
+			a_state:	instance of objects.State
+		'''
+		key = state.attrib["name"].lower()
+		# dictionary of all independent parameters for this assembly
+		for prop in state:
+			p = prop.attrib["name"]
+			v = prop.attrib["value"]
+			state_params = {}
+			'''Parameters to look for:
+				title,
+				tinlet, tfuel,	(temperatures, K)
+				boron, 			(boron concentration, ppm) 
+				b10,			(boron 10 atom percent; default is 19.9)
+				modden			(moderator density, g/cc)
+			...and more...
+			'''
+			title = ""
+			tinlet = 0.0;	tfuel = 0.0;
+			b10 = 0.199;	#boron = 0.0 -->
+			modden = 1.0
+			bank_labels = (); bank_pos = ()
+			if p == "title":
+				name = v
+			elif p == "tinlet":
+				tinlet = float(v)
+			elif p == "tfuel":
+				tfuel = float(v)
+			elif p == "boron":
+				bfrac = float(v)/10**6
+			elif p == "b10":
+				b10 = float(v)/100
+			#elif p == "b10_depl":
+			elif p == "modden":
+				density = float(v)
+			elif p == "bank_labels":
+				bank_labels = clean(v, str)
+			elif p == "bank_pos":
+				bank_pos = clean(v, int)
+			else:
+				state_params[p] = v
+		
+		# Calculate the actual boron composition, and create
+		# a new VERA material for it.
+		# The following are atom fractions
+		h2ofrac = 1.0 - bfrac
+		b10frac = b10*bfrac
+		b11frac = (1.0-b10)*bfrac
+		mod_isos = {"b-10" : b10frac,
+					"b-11" : b11frac,
+					"h-1"  : h2ofrac * 2/3.0,
+					"o-16" : h2ofrac * 1/3.0}
+		mod = objects.Material("mod", density, mod_isos)
+		mod.convert_at_to_wt()
+		
+		# Instantiate and return the State object
+		a_state = objects.State(key, tfuel, tinlet, mod, name, bank_labels, bank_pos, state_params)
+		return a_state
+	
 	
 	
 	def __get_grid(self, grid):
