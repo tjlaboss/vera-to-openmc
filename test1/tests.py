@@ -7,18 +7,39 @@ import openmc
 import vera_to_openmc
 
 
-def test_pincell(case_file = "../1c.xml.gold", aname="assy"):
-	'''Create and run a simple pincell'''
+def test_pincell(case_file = "../1c.xml.gold", aname="", pname = ""):
+	'''Create and run a simple pincell.
+	
+	True pincell cases (those starting with a '1') only have 1 assembly consisting of 1 pin cell.
+	In that case, just take the first (and only) entry in case.assemblies and assembly.cells.
+	
+	This function may also be used to run individual pin cells that are parts of larger cases.
+	In this event, the user must specify the assembly name 'aname' in which the pincell lies,
+	and the pincell name 'pname' referring to the cell itself.
+	
+	Inputs:
+		case_file:		string of the location on the filesystem of the XML.GOLD input
+		aname:			string; unique key of the Assembly in which the cell lies.
+		pname:			string; unique key of the Cell in the Assembly 
+	'''
 	pincell_case = vera_to_openmc.MC_Case(case_file)
 	
+	assembly1 = list(pincell_case.assemblies.values())[0]
+	veracell1 = list(assembly1.cells.values())[0]
 	
-	assembly = pincell_case.assemblies[aname]
-	veracell1 = assembly.cells['PIN1']
+	if aname and pname:
+		try:
+			assembly1 = pincell_case.assemblies[aname.lower()]
+			veracell1 = assembly1.cells[pname.lower()]
+		except KeyError as e:
+			print("Key", e, "not found; autodetecting.")
+			print("Using Assembly:", assembly1.name, "and Cell:", veracell1.name)
+	
 	openmc_cell1 = pincell_case.get_openmc_pincell(veracell1)
 	
 	
 	
-	plot_assembly(assembly.pitch, 1)
+	plot_assembly(assembly1.pitch, 1)
 	'''# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
@@ -30,9 +51,9 @@ def test_pincell(case_file = "../1c.xml.gold", aname="assy"):
 	plot_file = openmc.Plots([plot])
 	plot_file.export_to_xml()'''
 	
-	bounds = set_cubic_boundaries(assembly.pitch, 1, ("reflective",)*6)
+	bounds = set_cubic_boundaries(assembly1.pitch, 1, ("reflective",)*6)
 
-	return pincell_case, openmc_cell1, assembly.pitch, 1, bounds
+	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds
 
 
 def test_assembly(case_file = "../p7.xml.gold", aname='2'):
@@ -120,17 +141,41 @@ def test_core(case_file = "../2o.xml.gold"):
 	return core_case, fillcore, pitch, n, boundaries
 	
 
+def set_settings(pitch, bounds):
+	'''Create the OpenMC settings and export to XML.
+	
+	Inputs:
+		pitch:		float; distance in cm of the assembly/pin cell.
+					Used for detecting fissionable zones.
+		bounds:		iterable (tuple, list, etc.) of the X, Y, and Z bounding Planes:
+					 (min_x, max_x, min_y, max_y, min_z, max_z)
+	'''
+	# Instantiate a Settings object
+	settings_file = openmc.Settings()
+	settings_file.batches = min_batches
+	settings_file.inactive = inactive
+	settings_file.particles = particles
+	settings_file.output = {'tallies': False}
+	settings_file.trigger_active = True
+	settings_file.trigger_max_batches = max_batches
+	# Create an initial uniform spatial source distribution over fissionable zones
+	bounds = (-pitch/2.0,)*3 + (pitch/2.0,)*3
+	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
+	settings_file.source = openmc.source.Source(space=uniform_dist)
+	settings_file.export_to_xml()
+
 
 
 
 if __name__ == "__main__":
-	#case, fillcell, pitch, n, bounds = test_pincell("../1c.xml.gold", "assy1")
+	case, fillcell, pitch, n, bounds = test_pincell("../1c.xml.gold", "assy1")
 	#case, fillcell, pitch, n, bounds = test_assembly("../p7.xml.gold")
-	case, fillcell, pitch, n, bounds = test_assembly("../2a_dep.xml.gold", "assy")
+	#case, fillcell, pitch, n, bounds = test_assembly("../2a_dep.xml.gold", "assy")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
 	materials = openmc.Materials(case.openmc_materials.values())
-	materials.default_xs = '71c'
+	#materials.default_xs = '71c'
+	materials.default_xs = '06c'
 	materials.export_to_xml()
 	
 	# Create root Cell
@@ -164,21 +209,8 @@ if __name__ == "__main__":
 	max_batches = 200
 	inactive = 5
 	particles = 2500
+	set_settings(pitch, bounds)
 	
-	# Instantiate a Settings object
-	settings_file = openmc.Settings()
-	settings_file.batches = min_batches
-	settings_file.inactive = inactive
-	settings_file.particles = particles
-	settings_file.output = {'tallies': False}
-	settings_file.trigger_active = True
-	settings_file.trigger_max_batches = max_batches
-	# Create an initial uniform spatial source distribution over fissionable zones
-	pitch = 10
-	bounds = (-pitch/2.0,)*3 + (pitch/2.0,)*3
-	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
-	settings_file.source = openmc.source.Source(space=uniform_dist)
-	settings_file.export_to_xml()
 	
 	
 	
