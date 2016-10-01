@@ -511,7 +511,7 @@ class Case(object):
 				modden			(moderator density, g/cc)
 			...and more...
 			'''
-			title = ""
+			name = ""
 			tinlet = 0.0;	tfuel = 0.0;
 			b10 = 0.199;	#boron = 0.0 -->
 			modden = 1.0
@@ -538,16 +538,18 @@ class Case(object):
 		
 		# Calculate the actual boron composition, and create
 		# a new VERA material for it.
-		# The following are atom fractions
+		# The following are WEIGHT fractions
 		h2ofrac = 1.0 - bfrac
 		b10frac = b10*bfrac
 		b11frac = (1.0-b10)*bfrac
+		hmass = isotopes.MASS['h-1']*2
+		omass = isotopes.MASS['o-16']
 		mod_isos = {"b-10" : b10frac,
 					"b-11" : b11frac,
-					"h-1"  : h2ofrac * 2/3.0,
-					"o-16" : h2ofrac * 1/3.0}
+					"h-1"  : h2ofrac * hmass/(hmass + omass),
+					"o-16" : h2ofrac * omass/(hmass + omass)}
 		mod = objects.Material("mod", density, mod_isos)
-		mod.convert_at_to_wt()
+		#mod.convert_at_to_wt()
 		
 		# Instantiate and return the State object
 		a_state = objects.State(key, tfuel, tinlet, mod, name, bank_labels, bank_pos, state_params)

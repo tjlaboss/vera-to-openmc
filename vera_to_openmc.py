@@ -38,12 +38,15 @@ class MC_Case(Case):
 		FIXME: The material uses a simple form of water as a placeholder and does NOT represent the actual
 		composition of the moderator!
 		The expected composition of "mod" appears in the STATE block of the VERA deck.'''
-		self.__counter(MATERIAL)
+		self.mod = self.get_openmc_material("mod")
+		self.openmc_materials["mod"] = self.mod
+		'''self.__counter(MATERIAL)
 		self.mod = openmc.Material(self.__counter(MATERIAL), "mod")
 		self.mod.set_density("g/cc", 1.0)
 		self.mod.add_nuclide("h-1", 2.0/3, 'ao')
 		self.mod.add_nuclide("o-16", 1.0/3, 'ao')
-		self.openmc_materials["mod"] = self.mod
+		self.openmc_materials["mod"] = self.mod'''
+		
 		
 	
 	def __counter(self, count):
@@ -522,7 +525,7 @@ class MC_Case(Case):
 			# Look it up as normal
 			openmc_material = self.openmc_materials[material]
 		except KeyError:
-			# Then the material really doesn't exist yet in OpenMC form
+			# Then the material doesn't exist yet in OpenMC form
 			# Generate it and add it to the index 
 			vera_mat = self.materials[material]
 			openmc_material = openmc.Material(self.__counter(MATERIAL), material)
