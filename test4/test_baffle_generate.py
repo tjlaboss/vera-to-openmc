@@ -5,7 +5,7 @@ import vera_to_openmc
 
 
 
-def test_baffle(baffle_cells, baffill, asmbly_lat, bounds):
+def test_baffle(baffle_region, baffill, asmbly_lat, bounds):
 	'''Test the get_openmc_baffle() function for geometric integrity.
 	
 	Inputs:
@@ -18,16 +18,15 @@ def test_baffle(baffle_cells, baffill, asmbly_lat, bounds):
 		core_universe:	instance of openmc.Universe containing the baffle and the core lattice
 	'''
 	
+	
+	
 	(min_x, max_x, min_y, max_y, min_z, max_z) = bounds
 	
 	core_universe = openmc.Universe()
 	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
 	
 	the_baffle = openmc.Cell(101, name = "the baffle")
-	the_baffle.region = baffle_cells[0].region
-	for c in baffle_cells[1:len(baffle_cells)]:
-		the_baffle.region = the_baffle.region | c.region
-	#the_baffle.region = the_baffle.region & (+min_z & -max_z)
+	the_baffle.region = baffle_region
 	the_baffle.fill = baffill
 	
 	print(the_baffle)
@@ -194,7 +193,7 @@ if __name__ == "__main__":
 	edges = set_cubic_boundaries(pitch, n+4)
 	(min_x, max_x, min_y, max_y, min_z, max_z) = edges
 	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
-	baffle_verse = test_baffle(case.get_openmc_baffle(case.core), mats[-1], asmbly_lat, edges)
+	baffle_verse = test_baffle(case.get_openmc_baffle().region, mats[-1], asmbly_lat, edges)
 	
 	
 	# Create Geometry and set root Universe
