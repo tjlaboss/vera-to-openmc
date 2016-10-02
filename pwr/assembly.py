@@ -5,7 +5,7 @@
 # a model of a Westinghouse-style PWR assembly
 
 import openmc
-from nozzle import Nozzle
+from pwr.nozzle import Nozzle
 #from functions import fill_lattice
 from copy import copy
 from math import sqrt

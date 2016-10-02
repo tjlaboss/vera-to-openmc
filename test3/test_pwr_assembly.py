@@ -1,7 +1,7 @@
 import sys; sys.path.append('..')
 import openmc
 import objects
-import PWR_assembly
+import pwr
 
 
 def plot_assembly(pitch, npins, width=1250, height=1250):
@@ -77,9 +77,9 @@ if __name__ == '__main__':
 	fuel.set_density("g/cc", 8.1)
 	fuel.add_nuclide("u-233", 1, 'ao')
 	
-	mix1 = PWR_assembly.Mixture([mod, iron], [0.5,0.5], 33, 'watery iron')
+	mix1 = pwr.Mixture([mod, iron], [0.5,0.5], 33, 'watery iron')
 	assert isinstance(mix1, openmc.Material)	
-	noz1 = objects.Nozzle(10, 6250, iron, mod, 1, 10)
+	noz1 = pwr.Nozzle(10, 6250, iron, mod, 1, 10)
 
 	# Test a pincell
 	pitch = 1.0
@@ -92,7 +92,7 @@ if __name__ == '__main__':
 	outer = openmc.Cell(199, fill = mod, region = +cyl2)
 	uni = openmc.Universe(cells = (ring0, ring1, ring2, outer), name = "test pincell")
 	print(uni)
-	gridded = PWR_assembly.add_grid_to(uni, pitch, 0.10, iron)
+	gridded = pwr.add_grid_to(uni, pitch, 0.10, iron)
 	print(gridded)
 	
 	

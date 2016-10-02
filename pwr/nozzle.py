@@ -2,7 +2,7 @@
 #
 # Module for the Nozzle class used in the construction of Assembly instances
 
-from mixture import Mixture
+from pwr.mixture import Mixture
 
 
 class Nozzle(object):
