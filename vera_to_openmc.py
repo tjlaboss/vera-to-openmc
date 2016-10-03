@@ -860,9 +860,9 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a test case with a simple VERA XML.gold
-	filename = "p7.xml.gold"
-	#filename = "2a_dep.xml.gold"
-	#filename = "2o.xml.gold"
+	filename = "gold/p7.xml.gold"
+	#filename = "gold/2a_dep.xml.gold"
+	#filename = "gold/2o.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	

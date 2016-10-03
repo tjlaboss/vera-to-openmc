@@ -7,7 +7,7 @@ import openmc
 import vera_to_openmc
 
 
-def test_pincell(case_file = "../1c.xml.gold", aname="", pname = ""):
+def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	'''Create and run a simple pincell.
 	
 	True pincell cases (those starting with a '1') only have 1 assembly consisting of 1 pin cell.
@@ -56,7 +56,7 @@ def test_pincell(case_file = "../1c.xml.gold", aname="", pname = ""):
 	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds
 
 
-def test_assembly(case_file = "../p7.xml.gold", aname='2'):
+def test_assembly(case_file = "../gold/p7.xml.gold", aname='2'):
 	'''Create and run a more complicated assembly'''
 	
 	ascase = vera_to_openmc.MC_Case(case_file)
@@ -108,7 +108,7 @@ def plot_assembly(pitch, npins, width=1250, height=1250):
 	
 
 
-def test_core(case_file = "../2o.xml.gold"):
+def test_core(case_file = "../gold/2o.xml.gold"):
 	'''Create a full core geometry'''
 	core_case = vera_to_openmc.MC_Case(case_file)
 	c = core_case.core

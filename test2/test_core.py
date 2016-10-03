@@ -153,7 +153,7 @@ def get_mod_universe(case, fill):
 	return mod_cell_universe
 
 if __name__ == "__main__":
-	file = "../p7.xml.gold"
+	file = "../gold/p7.xml.gold"
 	convert_to_openmc(file)
 	
 	
