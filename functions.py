@@ -64,6 +64,27 @@ def fill_lattice(keys, lam, n=0):
 	
 	return lattice
 
-	
+
+def set_nuclide_xs(material, xstring):
+	'''Set the cross section for each nuclide of a material.
+	Inputs:
+		material:		instance of openmc.Material
+		xstring:		string; identifier of the cross section to use
+	Outputs:
+		None: modifies the Material directly'''
+	for n in material.nuclides:
+		n[0].xs = xstring
+
+
+def select_nearest_temperature(temp, dictionary):
+	avail_temps = tuple(map(float, dictionary.keys()))
+	n = len(avail_temps)
+	diff = [None,]*n
+	for t in range(n):	diff[t] = abs(temp - avail_temps[t])
+	for t in range(n):
+		if diff[t] == min(diff):
+			tkey = str(int(avail_temps[t]))
+			break
+	return dictionary[tkey]
 	
 

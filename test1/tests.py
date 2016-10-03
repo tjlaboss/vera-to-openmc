@@ -5,6 +5,9 @@
 import sys; sys.path.append('..')
 import openmc
 import vera_to_openmc
+import functions
+from isotopes import XS
+
 
 
 def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
@@ -168,13 +171,27 @@ def set_settings(pitch, bounds):
 
 
 if __name__ == "__main__":
-	case, fillcell, pitch, n, bounds = test_pincell("../gold/1d.xml.gold")
+	case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/2a_dep.xml.gold", "assy")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
+	
+	
+	# Set the appropriate cross section for each nuclide
+	# TODO: Update this to reflect more recent versions of OpenMC.
+	for mat in matlist:
+		tkey = str(int(mat.temperature))
+		if tkey in XS.keys():
+			temp = XS[tkey]
+		else:
+			temp = functions.select_nearest_temperature(mat.temperature, XS)
+			print("Warning: xs for temp", mat.temperature, "K in Material", mat.name, "not available; using", tkey, "K.")
+		functions.set_nuclide_xs(mat, temp)
+	
 	materials = openmc.Materials(matlist)
+	#for m in matlist: print(m.name, m.temperature)
 	#materials.default_xs = '71c'
 	materials.default_xs = '06c'
 	materials.export_to_xml()
@@ -217,7 +234,7 @@ if __name__ == "__main__":
 	
 	###DEBUG###
 	
-	print(case)
+	print('\n', case)
 	#print(case.openmc_surfaces)
 	#print(case.openmc_cells)
 	print(fillcell)

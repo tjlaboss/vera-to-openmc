@@ -597,6 +597,7 @@ class MC_Case(Case):
 				# This normally will not exist, so:
 			else:
 				fill = self.get_openmc_material(m)
+			new_cell.temperature = fill.temperature
 			
 				
 			# What I want to do instead is, somewhere else in the code, generate the corresponding

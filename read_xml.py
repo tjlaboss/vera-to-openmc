@@ -537,7 +537,8 @@ class Case(object):
 			state_params = {}
 			'''Parameters to look for:
 				title,
-				tinlet, tfuel,	(temperatures, K)
+				tinlet,			(mod/clad temperature, C)
+				tfuel,			(fuel temperature, K)
 				boron, 			(boron concentration, ppm) 
 				b10,			(boron 10 atom percent; default is 19.9)
 				modden			(moderator density, g/cc)
@@ -547,7 +548,7 @@ class Case(object):
 			if p == "title":
 				name = v
 			elif p == "tinlet":
-				tinlet = float(v)
+				tinlet = float(v) + 273.15
 			elif p == "tfuel":
 				tfuel = float(v)
 			elif p == "boron":

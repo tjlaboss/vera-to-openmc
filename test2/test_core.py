@@ -147,7 +147,7 @@ def get_mod_universe(case, fill):
 	mod_cell_universe = openmc.Universe(name='mod assembly universe')
 	mod_cell = openmc.Cell(name='mod')
 	mod_cell.fill = case.openmc_materials[fill]
-	mod_cell.region = +min_x & -max_x & +min_y & -min_y
+	mod_cell.region = +min_x & -max_x & +min_y & -max_y
 	mod_cell_universe.add_cell(mod_cell)
 	
 	return mod_cell_universe
