@@ -264,7 +264,6 @@ class Case(object):
 												print("In self.materials")
 												self.materials[newname + cname] = new_material
 											else:
-												print("Not in self.materials")
 												self.materials[newname] = new_material
 									elif aname ==  "fuels":
 										# More materials are found here
@@ -511,6 +510,11 @@ class Case(object):
 		'''
 		key = state.attrib["name"].lower()
 		# dictionary of all independent parameters for this assembly
+		name = ""
+		tinlet = 0.0;	tfuel = 0.0;
+		b10 = 0.184309	# wt fraction
+		density = 0.0
+		bank_labels = (); bank_pos = ()
 		for prop in state:
 			p = prop.attrib["name"]
 			v = prop.attrib["value"]
@@ -523,11 +527,7 @@ class Case(object):
 				modden			(moderator density, g/cc)
 			...and more...
 			'''
-			name = ""
-			tinlet = 0.0;	tfuel = 0.0;
-			b10 = 0.199;	#boron = 0.0 -->
-			modden = 1.0
-			bank_labels = (); bank_pos = ()
+			
 			if p == "title":
 				name = v
 			elif p == "tinlet":
@@ -551,6 +551,7 @@ class Case(object):
 		# Calculate the actual boron composition, and create
 		# a new VERA material for it.
 		# The following are WEIGHT fractions
+		
 		h2ofrac = 1.0 - bfrac
 		b10frac = b10*bfrac
 		b11frac = (1.0-b10)*bfrac
@@ -561,7 +562,6 @@ class Case(object):
 					"h-1"  : h2ofrac * hmass/(hmass + omass),
 					"o-16" : h2ofrac * omass/(hmass + omass)}
 		mod = objects.Material("mod", density, mod_isos)
-		#mod.convert_at_to_wt()
 		
 		# Instantiate and return the State object
 		a_state = objects.State(key, tfuel, tinlet, mod, name, bank_labels, bank_pos, state_params)
