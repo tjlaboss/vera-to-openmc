@@ -168,7 +168,7 @@ def set_settings(pitch, bounds):
 
 
 if __name__ == "__main__":
-	case, fillcell, pitch, n, bounds = test_pincell("../1c.xml.gold", "assy1")
+	case, fillcell, pitch, n, bounds = test_pincell("../1a.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../2a_dep.xml.gold", "assy")
 	#case, fillcell, pitch, n, bounds = test_core()
@@ -205,10 +205,10 @@ if __name__ == "__main__":
 
 	
 	# OpenMC simulation parameters
-	min_batches = 20
-	max_batches = 200
-	inactive = 5
-	particles = 2500
+	min_batches = 20	*2
+	max_batches = 200	*2
+	inactive = 5		*2
+	particles = 2500	*2
 	set_settings(pitch, bounds)
 	
 	
