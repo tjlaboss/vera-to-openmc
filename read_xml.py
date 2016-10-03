@@ -254,6 +254,18 @@ class Case(object):
 										for cell in asmbly_child:
 											new_cell = self.__get_cell(cell, cname)
 											cells[new_cell.label] = new_cell
+									elif aname == "materials":
+										for mat in asmbly_child:
+											# Create a material object for each listed material
+											new_material = self.__get_material(mat)
+											newname = new_material.name
+											# Check if a material with this name already exists
+											if newname in self.materials:
+												print("In self.materials")
+												self.materials[newname + cname] = new_material
+											else:
+												print("Not in self.materials")
+												self.materials[newname] = new_material
 									elif aname ==  "fuels":
 										# More materials are found here
 										for fuel in asmbly_child:

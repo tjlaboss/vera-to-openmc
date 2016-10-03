@@ -39,14 +39,8 @@ class MC_Case(Case):
 		composition of the moderator!
 		The expected composition of "mod" appears in the STATE block of the VERA deck.'''
 		self.mod = self.get_openmc_material("mod")
-		self.openmc_materials["mod"] = self.mod
-		'''self.__counter(MATERIAL)
-		self.mod = openmc.Material(self.__counter(MATERIAL), "mod")
-		self.mod.set_density("g/cc", 1.0)
-		self.mod.add_nuclide("h-1", 2.0/3, 'ao')
-		self.mod.add_nuclide("o-16", 1.0/3, 'ao')
-		self.openmc_materials["mod"] = self.mod'''
-		
+		#self.openmc_materials["mod"] = self.mod
+		debug = True
 		
 	
 	def __counter(self, count):
@@ -521,10 +515,10 @@ class MC_Case(Case):
 		refer to weight fractions. If negative fractions are used, they refer to atomic	fractions.
 		'''
 		
-		try:
+		if material in self.openmc_materials:
 			# Look it up as normal
 			openmc_material = self.openmc_materials[material]
-		except KeyError:
+		else:
 			# Then the material doesn't exist yet in OpenMC form
 			# Generate it and add it to the index 
 			vera_mat = self.materials[material]
@@ -596,11 +590,11 @@ class MC_Case(Case):
 			
 			# Fill the cell in with a material
 			m = vera_cell.mats[ring]
-			try:
-				# First, check if this is a local, duplicate material
+			# First, check if this is a local, duplicate material
+			if vera_cell.asname + m in self.openmc_materials:
 				fill = self.openmc_materials[vera_cell.asname + m]
 				# This normally will not exist, so:
-			except KeyError:
+			else:
 				fill = self.get_openmc_material(m)
 			
 				
