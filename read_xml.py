@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 from warnings import warn
 from functions import clean, calc_u234_u236_enrichments
 import objects, isotopes
+from objects import FUELTEMP, MODTEMP
 
 
 '''The VERAin XML files have the following structure:
@@ -72,6 +73,21 @@ class Case(object):
 		#FIXME: Right now, this just selects the first state encountered
 		state = self.states[0]
 		self.materials['mod'] = state.mod
+		
+		# Set all material temperatures based off the STATE block
+		for mat in self.materials.values():
+			if mat.temperature:
+				# Then we know what material temperature to set
+				if mat.temperature == FUELTEMP:
+					mat.temperature = state.tfuel
+				elif mat.temperature == MODTEMP:
+					mat.temperature = state.tinlet
+			else:
+				mat.temperature = state.tinlet
+				warnstr = "Material " + mat.name + " does not have a temperature specified; defaulting to tinlet."
+				warn(warnstr)
+				self.warnings += 1
+		
 		
 		print("There were", self.warnings, "warnings and", self.errors, "errors.")
 		
@@ -389,7 +405,7 @@ class Case(object):
 			isos[miso_names[i]] = mfracs[i]
 		
 		# Instantiate a new material return it
-		a_material = objects.Material(mname, mdens, isos)
+		a_material = objects.Material(mname, mdens, isos, MODTEMP)
 		return a_material
 	
 	
@@ -496,7 +512,7 @@ class Case(object):
 		
 		
 		# Instantiate a new material and add it to the dictionary
-		a_material = objects.Material(mname, mdens, isos)
+		a_material = objects.Material(mname, mdens, isos, FUELTEMP)
 		return a_material
 	
 	
@@ -561,7 +577,7 @@ class Case(object):
 					"b-11" : b11frac,
 					"h-1"  : h2ofrac * hmass/(hmass + omass),
 					"o-16" : h2ofrac * omass/(hmass + omass)}
-		mod = objects.Material("mod", density, mod_isos)
+		mod = objects.Material("mod", density, mod_isos, tinlet)
 		
 		# Instantiate and return the State object
 		a_state = objects.State(key, tfuel, tinlet, mod, name, bank_labels, bank_pos, state_params)

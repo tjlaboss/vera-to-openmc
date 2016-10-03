@@ -7,17 +7,23 @@ from functions import clean
 #from PWR_assembly import Nozzle
 import isotopes
 
+FUELTEMP = -1; MODTEMP = -2
+
 class Material(object):
 	'''Basics of a material card
 	Parameters:
-		name:		string; unique material name
-		density:	float; density in g/cm^3
-		isotopes:	dictionary of {"isotope name":isotope_fraction}
+		name:			string; unique material name
+		density:		float; density in g/cm^3
+		isotopes:		dictionary of {"isotope name":isotope_fraction}
+		temperature:	float; temperature of the material in Kelvins [optional]
+						-1 indicates fuel temperature; -2 indicates moderator temperature.
+						0 is unknown. Positive values are real temperatures.  
 	'''
-	def __init__(self, key_name, density, isotopes):
+	def __init__(self, key_name, density, isotopes, temperature = 0):
 		self.name = key_name
 		self.density = density
 		self.isotopes = isotopes
+		self.temperature = temperature
 
 	def __str__(self):
 		'''Use this to print a brief description of each material'''
@@ -68,7 +74,7 @@ class Material(object):
 class Mixture(Material):
 	'''Two mixed Material instances. 
 	Functionally exactly the same as Material, but initialized differently.'''
-	def __init__(self, name, materials, vfracs):
+	def __init__(self, name, materials, vfracs, temperature = 0):
 		self.name = name
 		mix_isos = {}
 		density = 0.0
@@ -88,6 +94,7 @@ class Mixture(Material):
 					
 		self.isotopes = mix_isos
 		self.density = density
+		self.temperature = temperature
 
 
 class State(object):
