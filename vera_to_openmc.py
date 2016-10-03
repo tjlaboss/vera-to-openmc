@@ -524,7 +524,8 @@ class MC_Case(Case):
 			vera_mat = self.materials[material]
 			openmc_material = openmc.Material(self.__counter(MATERIAL), material)
 			openmc_material.set_density("g/cc", vera_mat.density)
-			for i in vera_mat.isotopes:
+			openmc_material.temperature = vera_mat.temperature
+			for i in sorted(vera_mat.isotopes):
 				nuclide = i
 				frac = vera_mat.isotopes[i]
 				if frac < 0:

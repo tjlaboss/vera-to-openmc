@@ -168,12 +168,13 @@ def set_settings(pitch, bounds):
 
 
 if __name__ == "__main__":
-	case, fillcell, pitch, n, bounds = test_pincell("../gold/1b.xml.gold")
+	case, fillcell, pitch, n, bounds = test_pincell("../gold/1d.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/2a_dep.xml.gold", "assy")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
-	materials = openmc.Materials(case.openmc_materials.values())
+	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
+	materials = openmc.Materials(matlist)
 	#materials.default_xs = '71c'
 	materials.default_xs = '06c'
 	materials.export_to_xml()
