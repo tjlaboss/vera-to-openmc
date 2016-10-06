@@ -39,8 +39,6 @@ class MC_Case(Case):
 		composition of the moderator!
 		The expected composition of "mod" appears in the STATE block of the VERA deck.'''
 		self.mod = self.get_openmc_material("mod")
-		#self.openmc_materials["mod"] = self.mod
-		debug = True
 		
 	
 	def __counter(self, count):
@@ -203,6 +201,7 @@ class MC_Case(Case):
 		x5 = lambda x: x - copysign(d2, x)			# To inner edge of next baffle (-a-gap-thick)
 		xc = lambda x: x - copysign(d1 - baf.thick, x)# To     edge of next crossing baffle
 		xb = lambda x: xc(x) - copysign(pitch, x) 	  # To     edge of this crossing baffle
+		# TODO: Fix the little overhang
 		
 		
 		# Regular: assemblies on all sides
@@ -577,8 +576,6 @@ class MC_Case(Case):
 			# Otherwise, the surface s already exists
 			# Proceed to define the cell inside that surface:
 			new_cell = openmc.Cell(self.__counter(CELL), name)
-			#FIXME: Remove next line, here for debugging purposes only
-			new_cell.asname = vera_cell.asname
 			
 			if ring == 0:
 				# Inner ring
@@ -606,7 +603,7 @@ class MC_Case(Case):
 			
 		
 			##TMP--debug this weird case
-			if name == "Cell_1-ring2":
+			if "Cell_2" in name:
 				debug = True
 						
 			new_cell.fill = fill
@@ -619,11 +616,12 @@ class MC_Case(Case):
 			
 
 		
-		mod_cell = openmc.Cell(self.__counter(MATERIAL), vera_cell.name + "-Mod")
+		mod_cell = openmc.Cell(self.__counter(CELL), vera_cell.name + "-Mod")
 		#FIXME: Remove next line, here for debugging purposes only
 		mod_cell.asname = vera_cell.asname
 		mod_cell.fill = self.mod
-		mod_cell.region = +s
+		#mod_cell.region = +s
+		mod_cell.region = +last_s
 		openmc_cells.append(mod_cell)
 		
 		# Create a new universe in which the pin cell exists 
