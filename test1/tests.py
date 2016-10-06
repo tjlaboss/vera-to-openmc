@@ -59,15 +59,34 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds
 
 
-def test_assembly(case_file = "../gold/p7.xml.gold", aname='2'):
-	'''Create and run a more complicated assembly'''
+def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
+	'''Create and run a more complicated assembly
+	
+	Plain lattice cases (those starting with a '2') are composed of a 2D lattice extended 1 cm
+	in the Z axis. In this case, just take the first (and only) entry in case.assemblies.
+	
+	This function may also be used to run individual pin cells that are parts of larger cases.
+	In this event, the user must specify the assembly name 'aname'.
+	
+	!! TODO !! 
+	Edit this method to actually be able to run arbitrary assemblies from full-core cases. 
+	
+	Inputs:
+		case_file:		string of the location on the filesystem of the XML.GOLD input
+		aname:			string; unique key of the Assembly to run.
+	'''
 	
 	ascase = vera_to_openmc.MC_Case(case_file)
-	as2 = ascase.assemblies[aname]
-	#print(ascase.assemblies.keys())
+	as2 = list(ascase.assemblies.values())[0]
+	if aname:
+		try:
+			as2 = ascase.assemblies[aname.lower()]
+		except KeyError as e:
+			print("Key", e, "not found; autodetecting.")
+			print("Using Assembly:", as2.name)
 	
 	openmc_as2_layers = ascase.get_openmc_assemblies(as2) 
-	some_asmbly = openmc_as2_layers[0]	# 2 is the one with fuel
+	some_asmbly = openmc_as2_layers[0]
 	
 	plot_assembly(as2.pitch, as2.npins)
 	bounds = set_cubic_boundaries(as2.npins, as2.pitch)
@@ -144,11 +163,13 @@ def test_core(case_file = "../gold/2o.xml.gold"):
 	return core_case, fillcore, pitch, n, boundaries
 	
 
-def set_settings(pitch, bounds):
+def set_settings(npins, pitch, bounds):
 	'''Create the OpenMC settings and export to XML.
 	
 	Inputs:
-		pitch:		float; distance in cm of the assembly/pin cell.
+		npins:		int; number of pins across an assembly. Use 1 for a pin cell,
+					and the lattice size for an assembly (usually 17).
+		pitch:		float; distance in cm between two pin cells.
 					Used for detecting fissionable zones.
 		bounds:		iterable (tuple, list, etc.) of the X, Y, and Z bounding Planes:
 					 (min_x, max_x, min_y, max_y, min_z, max_z)
@@ -162,7 +183,7 @@ def set_settings(pitch, bounds):
 	settings_file.trigger_active = True
 	settings_file.trigger_max_batches = max_batches
 	# Create an initial uniform spatial source distribution over fissionable zones
-	bounds = (-pitch/2.0,)*3 + (pitch/2.0,)*3
+	bounds = (-npins*pitch/2.0,)*3 + (npins*pitch/2.0,)*3
 	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
@@ -171,9 +192,9 @@ def set_settings(pitch, bounds):
 
 
 if __name__ == "__main__":
-	case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
+	#case, fillcell, pitch, n, bounds = test_pincell("../gold/1a.xml.gold")
+	case, fillcell, pitch, n, bounds = test_assembly("../gold/2a_dep.xml.gold") #, "assy")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
-	#case, fillcell, pitch, n, bounds = test_assembly("../gold/2a_dep.xml.gold", "assy")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
@@ -187,7 +208,7 @@ if __name__ == "__main__":
 			temp = XS[tkey]
 		else:
 			temp = functions.select_nearest_temperature(mat.temperature, XS)
-			print("Warning: xs for temp", mat.temperature, "K in Material", mat.name, "not available; using", tkey, "K.")
+			print("Warning: xs for temp", mat.temperature, "K in Material", mat.name, "not available; using", temp, "library.")
 		functions.set_nuclide_xs(mat, temp)
 	
 	materials = openmc.Materials(matlist)
@@ -202,11 +223,12 @@ if __name__ == "__main__":
 	
 	# Handle boundary conditions
 	if len(bounds) == 3:
+		# Spherical
 		radius, min_z, max_z = bounds
 		root_cell.region = -radius & +min_z & -max_z
 	elif len(bounds) == 6:
+		# Cartesian
 		min_x, max_x, min_y, max_y, min_z, max_z = bounds
-		# Create boundary planes to surround the geometry
 		root_cell.region = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
 	
 	
@@ -223,11 +245,11 @@ if __name__ == "__main__":
 
 	
 	# OpenMC simulation parameters
-	min_batches = 20	*2
-	max_batches = 200	*2
-	inactive = 5		*2
-	particles = 2500	*2
-	set_settings(pitch, bounds)
+	min_batches = 20	#*2
+	max_batches = 200	#*2
+	inactive = 5		#*2
+	particles = 2500	#*2
+	set_settings(n, pitch, bounds)
 	
 	
 	
