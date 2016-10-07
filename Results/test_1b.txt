@@ -1,0 +1,36 @@
+CASL AMA Benchmark Problem 1B - Pin Cell- Public
+
+# OpenMC simulation parameters
+min_batches = 20	*10
+max_batches = 200	*10
+inactive = 5		*5
+particles = 2500	*20
+
+Serpent cross sections--.06c for moderator and cladding, and .06c for fuel as well.
+
+
+=======================>     TIMING STATISTICS     <=======================
+
+ Total time for initialization     =  7.6150E+00 seconds
+   Reading cross sections          =  6.5280E+00 seconds
+ Total time in simulation          =  4.3104E+03 seconds
+   Time in transport only          =  4.3097E+03 seconds
+   Time in inactive batches        =  5.3407E+02 seconds
+   Time in active batches          =  3.7763E+03 seconds
+   Time synchronizing fission bank =  5.1800E-01 seconds
+     Sampling source sites         =  2.4900E-01 seconds
+     SEND/RECV source sites        =  2.6900E-01 seconds
+   Time accumulating tallies       =  1.0000E-03 seconds
+ Total time for finalization       =  0.0000E+00 seconds
+ Total time elapsed                =  4.3184E+03 seconds
+ Calculation Rate (inactive)       =  2340.52 neutrons/second
+ Calculation Rate (active)         =  2317.07 neutrons/second
+
+ ============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  1.18255 +/-  0.00045
+ k-effective (Track-length)  =  1.18242 +/-  0.00053
+ k-effective (Absorption)    =  1.18257 +/-  0.00031
+ Combined k-effective        =  1.18256 +/-  0.00030
+ Leakage Fraction            =  0.00000 +/-  0.00000
+

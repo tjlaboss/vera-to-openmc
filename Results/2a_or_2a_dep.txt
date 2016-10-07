@@ -1,0 +1,36 @@
+CASL AMA Benchmark Problem 2A - Fuel Lattice - Public
+RectLattice
+
+# OpenMC simulation parameters
+        min_batches = 20        *10
+        max_batches = 200       *10
+        inactive = 5            *3
+        particles = 2500        *20
+
+
+=======================>     TIMING STATISTICS     <=======================
+
+ Total time for initialization     =  7.7810E+00 seconds
+   Reading cross sections          =  6.7310E+00 seconds
+ Total time in simulation          =  4.0972E+03 seconds
+   Time in transport only          =  4.0965E+03 seconds
+   Time in inactive batches        =  5.3491E+02 seconds
+   Time in active batches          =  3.5623E+03 seconds
+   Time synchronizing fission bank =  5.6000E-01 seconds
+     Sampling source sites         =  2.8400E-01 seconds
+     SEND/RECV source sites        =  2.7600E-01 seconds
+   Time accumulating tallies       =  0.0000E+00 seconds
+ Total time for finalization       =  0.0000E+00 seconds
+ Total time elapsed                =  4.1055E+03 seconds
+ Calculation Rate (inactive)       =  2336.82 neutrons/second
+ Calculation Rate (active)         =  2456.26 neutrons/second
+
+ ============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  1.18304 +/-  0.00038
+ k-effective (Track-length)  =  1.18274 +/-  0.00048
+ k-effective (Absorption)    =  1.18340 +/-  0.00035
+ Combined k-effective        =  1.18322 +/-  0.00031
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
+
