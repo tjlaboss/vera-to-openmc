@@ -1,0 +1,18 @@
+1a_dep
+CASL AMA Benchmark Problem 1A - Pin Cell- Public
+
+  # OpenMC simulation parameters
+    min_batches = 20    *10
+    max_batches = 200   *10
+    inactive = 5        *3
+    particles = 2500    *30
+
+============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  1.18644 +/-  0.00033
+ k-effective (Track-length)  =  1.18634 +/-  0.00040
+ k-effective (Absorption)    =  1.18543 +/-  0.00025
+ Combined k-effective        =  1.18574 +/-  0.00024
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
+

@@ -1,0 +1,18 @@
+
+ # OpenMC simulation parameters
+    min_batches = 20    *10
+    max_batches = 200   *10
+    inactive = 5        *3
+    particles = 2500    *20
+    set_settings(n, pitch, bounds)
+
+
+
+ k-effective (Collision)     =  1.16712 +/-  0.00043
+ k-effective (Track-length)  =  1.16712 +/-  0.00051
+ k-effective (Absorption)    =  1.16659 +/-  0.00034
+ Combined k-effective        =  1.16677 +/-  0.00030
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
+
+I think this was for 1b

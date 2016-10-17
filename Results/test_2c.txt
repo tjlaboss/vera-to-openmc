@@ -1,0 +1,28 @@
+ CASL AMA Benchmark Problem 2C - Fuel Lattice - Public
+RectLattice
+
+ =======================>     TIMING STATISTICS     <=======================
+
+ Total time for initialization     =  9.2270E+00 seconds
+   Reading cross sections          =  8.1610E+00 seconds
+ Total time in simulation          =  3.9839E+03 seconds
+   Time in transport only          =  3.9834E+03 seconds
+   Time in inactive batches        =  2.9754E+02 seconds
+   Time in active batches          =  3.6864E+03 seconds
+   Time synchronizing fission bank =  5.0900E-01 seconds
+     Sampling source sites         =  2.5400E-01 seconds
+     SEND/RECV source sites        =  2.5400E-01 seconds
+   Time accumulating tallies       =  0.0000E+00 seconds
+ Total time for finalization       =  0.0000E+00 seconds
+ Total time elapsed                =  3.9936E+03 seconds
+ Calculation Rate (inactive)       =  2520.69 neutrons/second
+ Calculation Rate (active)         =  2509.23 neutrons/second
+
+ ============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  1.17556 +/-  0.00039
+ k-effective (Track-length)  =  1.17514 +/-  0.00048
+ k-effective (Absorption)    =  1.17501 +/-  0.00032
+ Combined k-effective        =  1.17517 +/-  0.00030
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
