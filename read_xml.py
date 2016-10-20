@@ -389,7 +389,7 @@ class Case(object):
 				mfracs = clean(v, float)
 			elif p == "mat_names":
 				# Convert a string to a list of strings
-				miso_names = clean(v.title(), str)
+				miso_names = clean(v.replace("-", "").title(), str)
 			else:
 				warn("Warning: unused property " + p)
 				self.warnings += 1
@@ -439,7 +439,7 @@ class Case(object):
 				mfracs = clean(v, float)
 			elif p == "fuel_names":
 				# Convert a string to a list of strings
-				miso_names = clean(v.strip("-").title(), str)			
+				miso_names = clean(v.replace("-", "").title(), str)			
 			elif p == "thden":
 				# A studiously ignored property
 				continue

@@ -117,7 +117,7 @@ def set_cubic_boundaries(pitch, n, bounds=('reflective',)*6):
 def plot_assembly(pitch, npins, width=1250, height=1250):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
-	plot.filename = 'materials-xy'
+	plot.filename = 'plot-materials-xy'
 	plot.origin = [0, 0, 0]
 	plot.width = [npins*pitch - .01, npins*pitch - .01]
 	plot.pixels = [width, height]
@@ -230,10 +230,10 @@ if __name__ == "__main__":
 
 	
 	# OpenMC simulation parameters
-	min_batches = 20	*10
-	max_batches = 200	*10
-	inactive = 5		*3
-	particles = 2500	*30
+	min_batches = 20	#*10
+	max_batches = 200	#*10
+	inactive = 5		#*3
+	particles = 2500	#*30
 	set_settings(n, pitch, bounds, min_batches, max_batches, inactive, particles)
 	
 	
