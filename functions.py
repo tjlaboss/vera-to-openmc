@@ -10,7 +10,7 @@ def clean(vera_list, type = str):
 	Usage: clean(value, str)
 	Returns list'''
 	
-	clean_list = list(map(type, vera_list.strip('}').strip('{').split(',')))
+	clean_list = list(map(type, vera_list.strip('}').strip('{').replace("-","").split(',')))
 	return clean_list
 
 

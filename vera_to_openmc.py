@@ -39,6 +39,7 @@ class MC_Case(Case):
 		composition of the moderator!
 		The expected composition of "mod" appears in the STATE block of the VERA deck.'''
 		self.mod = self.get_openmc_material("mod")
+		#self.mod.add_s_alpha_beta("c_H_in_H2O") 	--> to fix once I update openmc!
 		
 	
 	def __counter(self, count):

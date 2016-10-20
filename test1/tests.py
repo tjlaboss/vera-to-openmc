@@ -200,20 +200,7 @@ if __name__ == "__main__":
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
 	
 	
-	# Set the appropriate cross section for each nuclide
-	# TODO: Update this to reflect more recent versions of OpenMC.
-	for mat in matlist:
-		tkey = str(int(mat.temperature))
-		if tkey in XS.keys():
-			temp = XS[tkey]
-		else:
-			temp = functions.select_nearest_temperature(mat.temperature, XS)
-			print("Warning: xs for temp", mat.temperature, "K in Material", mat.name, "not available; using", temp, "library.")
-		functions.set_nuclide_xs(mat, temp)
-	
 	materials = openmc.Materials(matlist)
-	#for m in matlist: print(m.name, m.temperature)
-	#materials.default_xs = '71c'
 	materials.default_xs = '06c'
 	materials.export_to_xml()
 	

@@ -61,7 +61,7 @@ class Case(object):
 		
 		
 		# Placeholder for an essential material
-		mod_density = 1.0; mod_isotopes = {"h-1":-2.0/3, "o-16":-1.0/3}
+		mod_density = 1.0; mod_isotopes = {"H1":-2.0/3, "O16":-1.0/3}
 		self.materials['mod'] = objects.Material("mod", mod_density, mod_isotopes)
 		
 		
@@ -389,7 +389,7 @@ class Case(object):
 				mfracs = clean(v, float)
 			elif p == "mat_names":
 				# Convert a string to a list of strings
-				miso_names = clean(v, str)
+				miso_names = clean(v.title(), str)
 			else:
 				warn("Warning: unused property " + p)
 				self.warnings += 1
@@ -439,7 +439,7 @@ class Case(object):
 				mfracs = clean(v, float)
 			elif p == "fuel_names":
 				# Convert a string to a list of strings
-				miso_names = clean(v, str)			
+				miso_names = clean(v.strip("-").title(), str)			
 			elif p == "thden":
 				# A studiously ignored property
 				continue
@@ -459,22 +459,23 @@ class Case(object):
 		# Turn isotope names and fractions into a dictionary
 		isos = {}
 		for i in range(len(miso_names)):
-			isos[miso_names[i]] = mfracs[i]/100.0
+			iname = miso_names[i].replace("-", "").title()
+			isos[iname] = mfracs[i]/100.0
 		
 		# Do NOT use miso_names/mfracs after this point!	
 		
 		# Complete the material composition (done implicitly in VERA)
-		if (miso_names[0][0].lower() == 'u') or (miso_names[0][:1] == '92'):
+		if (miso_names[0][0].title() == 'U') or (miso_names[0][:1] == '92'):
 			# Uranium
 			# Add U-234 and U-236 to the composition, according to the formulas in the VERA manual,
 			# if the user has not specified them himself
-			u234, u236 = calc_u234_u236_enrichments(isos['u-235'])
-			if 'u-236' not in isos:
-				isos['u-236'] = u236
-			if 'u-234' not in isos:
-				isos['u-234'] = u234
+			u234, u236 = calc_u234_u236_enrichments(isos['U235'])
+			if 'U236' not in isos:
+				isos['U236'] = u236
+			if 'U234' not in isos:
+				isos['U234'] = u234
 			# Add U-238 to composition
-			isos['u-238'] = ( 1 - sum(isos.values()) )
+			isos['U238'] = ( 1 - sum(isos.values()) )
 		# With other HMs, the complete composition is already specified in the VERA deck
 		
 		# Calculate the weight of the HMs, add the weight of oxygen and gadolinia, and normalize
@@ -483,7 +484,7 @@ class Case(object):
 			isomass = isotopes.MASS[i]
 			mass += isos[i]*isomass
 		# Add Oxygen: (HM)-O2
-		oname = 'o-16'
+		oname = 'O16'
 		omass = isotopes.MASS[oname]*2.0
 		ofrac = omass/mass  # Non-normalized; use: ( omass/(mass + omass) ) to pre-normalize oxygen
 		mass += omass
@@ -572,12 +573,12 @@ class Case(object):
 		h2ofrac = 1.0 - bfrac
 		b10frac = b10*bfrac
 		b11frac = (1.0-b10)*bfrac
-		hmass = isotopes.MASS['h-1']*2
-		omass = isotopes.MASS['o-16']
-		mod_isos = {"b-10" : b10frac,
-					"b-11" : b11frac,
-					"h-1"  : h2ofrac * hmass/(hmass + omass),
-					"o-16" : h2ofrac * omass/(hmass + omass)}
+		hmass = isotopes.MASS['H1']*2
+		omass = isotopes.MASS['O16']
+		mod_isos = {"B10" : b10frac,
+					"B11" : b11frac,
+					"H1"  : h2ofrac * hmass/(hmass + omass),
+					"O16" : h2ofrac * omass/(hmass + omass)}
 		mod = objects.Material("mod", density, mod_isos, tinlet)
 		
 		# Instantiate and return the State object
