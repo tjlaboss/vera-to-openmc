@@ -7,3 +7,6 @@
 /openmc.sh
 /statepoint.040.h5
 /.tests.py.swp
+/plot-materials-xy.ppm
+/summary.h5
+/statepoint.0200.h5

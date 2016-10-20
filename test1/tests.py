@@ -230,10 +230,10 @@ if __name__ == "__main__":
 
 	
 	# OpenMC simulation parameters
-	min_batches = 20	#*10
-	max_batches = 200	#*10
-	inactive = 5		#*3
-	particles = 2500	#*30
+	min_batches = 20	*10
+	max_batches = 200	*10
+	inactive = 5		*3
+	particles = 2500	*30
 	set_settings(n, pitch, bounds, min_batches, max_batches, inactive, particles)
 	
 	

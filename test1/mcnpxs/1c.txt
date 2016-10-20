@@ -1,0 +1,11 @@
+1c
+ CASL AMA Benchmark Problem 1C - Pin Cell- Public
+
+ ============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  1.17134 +/-  0.00033
+ k-effective (Track-length)  =  1.17139 +/-  0.00042
+ k-effective (Absorption)    =  1.17142 +/-  0.00027
+ Combined k-effective        =  1.17139 +/-  0.00025
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
