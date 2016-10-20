@@ -5,8 +5,6 @@
 import sys; sys.path.append('..')
 import openmc
 import vera_to_openmc
-import functions
-from isotopes import XS
 
 
 
@@ -163,7 +161,7 @@ def test_core(case_file = "../gold/2o.xml.gold"):
 	return core_case, fillcore, pitch, n, boundaries
 	
 
-def set_settings(npins, pitch, bounds):
+def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, particles):
 	'''Create the OpenMC settings and export to XML.
 	
 	Inputs:
@@ -236,7 +234,7 @@ if __name__ == "__main__":
 	max_batches = 200	*10
 	inactive = 5		*3
 	particles = 2500	*30
-	set_settings(n, pitch, bounds)
+	set_settings(n, pitch, bounds, min_batches, max_batches, inactive, particles)
 	
 	
 	
