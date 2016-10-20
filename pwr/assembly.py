@@ -43,7 +43,7 @@ def counter(count):
 			openmc_material_count += 1
 			return openmc_material_count
 		elif count == UNIVERSE:
-			global openmc_cell_count
+			global openmc_universe_count
 			openmc_universe_count += 1
 			return openmc_universe_count
 		else:
@@ -312,7 +312,7 @@ class Assembly(object):
 		self.name = name
 		self.universe_id = universe_id
 		self.pitch = pitch;					self.npins = npins
-		self.lattices = lattices;			self.lattices_elevs = lattice_elevs
+		self.lattices = lattices;			self.lattice_elevs = lattice_elevs
 		self.spacers = spacers;				self.spacer_mids = spacer_mids
 		self.lower_nozzle = lower_nozzle;	self.upper_nozzle = upper_nozzle
 		self.mod = mod
@@ -335,8 +335,8 @@ class Assembly(object):
 		# Check that all necessary parameters are present.
 		err_str = "Error: the following parameters need to be set:\n"
 		errs = 0
-		for attr in self.dict:
-			if not self.dict[attr]:
+		for attr in self.__dict__:
+			if not self.__dict__[attr]:
 				if attr not in blank_allowable:
 					errs += 1
 					err_str += '\t- ' + attr + '\n'
@@ -346,8 +346,12 @@ class Assembly(object):
 		# Check that the number of entries in the lists is correct
 		assert (len(self.lattice_elevs) == len(self.lattices) +1), \
 			"Error: number of entries in lattice_elevs must be len(lattices) + 1"
-		assert (len(self.spacers) == len(self.spacer_elevs)), \
+		assert (len(self.spacers) == len(self.spacer_mids)), \
 			"Error: number of entries in spacer_elevs must be len(spacers)"
+		
+		# Initialize the openmc list attributes
+		self.openmc_cells = []
+		self.openmc_surfaces = []
 		
 		# Combine spacer_elevs and lattice_elevs into one list to rule them all
 		if self.spacer_mids:
@@ -372,7 +376,7 @@ class Assembly(object):
 		max_y = self.__get_plane('y', +half, name = self.name + ' - max_y') 
 		
 		self.openmc_surfaces = [min_x, max_x, min_y, max_y]
-		self.walls = openmc.Region(+min_x & +min_y & -max_x & -max_y)
+		self.walls = openmc.Intersection(+min_x & +min_y & -max_x & -max_y)
 		self.openmc_cells = []
 	
 	
@@ -396,24 +400,27 @@ class Assembly(object):
 		
 		if dim in ("x", "xplane"):
 			for xplane in self.openmc_surfaces:
-				if val == round(xplane.x0, eps):
-					return xplane
+				if isinstance(xplane, openmc.XPlane):
+					if val == round(xplane.x0, eps):
+						return xplane
 			xplane =  openmc.XPlane(counter(SURFACE),
 						boundary_type = boundary_type, x0 = val, name = name)
 			self.openmc_surfaces.append(xplane)
 			return xplane
 		elif dim in ("y", "yplane"):
 			for yplane in self.openmc_surfaces:
-				if val == round(yplane.y0, eps):
-					return yplane
+				if isinstance(yplane, openmc.YPlane):
+					if val == round(yplane.y0, eps):
+						return yplane
 			yplane =  openmc.YPlane(counter(SURFACE),
 						boundary_type = boundary_type, y0 = val, name = name)
 			self.openmc_surfaces.append(yplane)
 			return yplane
 		elif dim in ("z", "zplane"):
 			for zplane in self.openmc_surfaces:
-				if val == round(zplane.z0, eps):
-					return zplane
+				if isinstance(zplane, openmc.ZPlane):
+					if val == round(zplane.z0, eps):
+						return zplane
 			zplane =  openmc.ZPlane(counter(SURFACE),
 						boundary_type = boundary_type, z0 = val, name = name)
 			self.openmc_surfaces.append(zplane)
@@ -458,26 +465,27 @@ class Assembly(object):
 					break
 			lat = self.lattices[i-1]
 			# Check if there is a spacer grid
-			for g in range(len(self.spacer_elevs)):
-				if z > self.spacer_elevs[g]:
-					break
-			# Even numbers are bottoms, odds are top
-			grid = False
-			if (g-1) % 2 == 0:
-				# Then the last one was a bottom: a grid is present
-				grid = self.spacers[g-1]
-			
-			# OK--now we know what the current lattice is, and whether there's a grid here.
-			if grid:
-				gname = lat.name + "-gridded"
-				if gname in gridded_lattices:
-					# Then this one has been done before
-					lat = gridded_lattices[gname]
-				else:
-					# We need to add the spacer grid to this one, and then add it to the index
-					lat = add_grid_to(lat, self.pitch, self.npins, grid)
-					gridded_lattices[lat.name] = lat
-			
+			if self.spacer_mids:
+				for g in range(len(self.spacer_mids)):
+					if z > self.spacer_mids[g]:
+						break
+				# Even numbers are bottoms, odds are top
+				grid = False
+				if (g-1) % 2 == 0:
+					# Then the last one was a bottom: a grid is present
+					grid = self.spacers[g-1]
+				
+				# OK--now we know what the current lattice is, and whether there's a grid here.
+				if grid:
+					gname = lat.name + "-gridded"
+					if gname in gridded_lattices:
+						# Then this one has been done before
+						lat = gridded_lattices[gname]
+					else:
+						# We need to add the spacer grid to this one, and then add it to the index
+						lat = add_grid_to(lat, self.pitch, self.npins, grid)
+						gridded_lattices[lat.name] = lat
+				
 			# Now, we have the current lattice, for the correct level, with or with a spacer
 			# grid as appropriate. Time to make the layer.
 			layer = openmc.Cell(counter(CELL), name = lat.name)
@@ -506,10 +514,10 @@ class Assembly(object):
 		
 		# And we're done!! Zip it all up in a universe.
 		if self.universe_id:
-			id = self.universe_id
+			uid = self.universe_id
 		else:
-			id = counter(UNIVERSE)
-		self.assembly = openmc.Universe(id, name = self.name)
+			uid = counter(UNIVERSE)
+		self.assembly = openmc.Universe(uid, name = self.name)
 		self.assembly.add_cells(self.openmc_cells)
 		
 		return self.assembly
@@ -519,9 +527,7 @@ class Assembly(object):
 
 # Test
 if __name__ == '__main__':
-	
-	from mixture import Mixture
-	
+	from pwr.mixture import Mixture
 	# Define a global test moderator
 	mod = openmc.Material(1, "mod")
 	mod.set_density("g/cc", 1.0)
