@@ -5,14 +5,15 @@
 # a model of a Westinghouse-style PWR assembly
 
 import openmc
-from pwr.nozzle import Nozzle
-from pwr.functions import *
+from nozzle import Nozzle
+from functions import *
+from settings import SURFACE, CELL, MATERIAL, UNIVERSE
 from copy import copy
 from math import sqrt
 
-# Global constants for counters
-SURFACE, CELL, MATERIAL, UNIVERSE = range(-1,-5,-1)
+
 # Global variables for counters
+global openmc_surface_count, openmc_cell_count, openmc_material_cuont, openmc_universe_count
 openmc_surface_count	= openmc.AUTO_SURFACE_ID + 1
 openmc_cell_count 		= openmc.AUTO_CELL_ID + 1
 openmc_material_count	= openmc.AUTO_MATERIAL_ID + 1
@@ -29,19 +30,15 @@ def counter(count):
 		Output:
 			integer representing the next cell/surface/material/universe ID'''
 		if count == SURFACE:
-			global openmc_surface_count
 			openmc_surface_count += 1
 			return openmc_surface_count
 		elif count == CELL:
-			global openmc_cell_count
 			openmc_cell_count += 1
 			return openmc_cell_count
 		elif count == MATERIAL:
-			global openmc_cell_count
 			openmc_material_count += 1
 			return openmc_material_count
 		elif count == UNIVERSE:
-			global openmc_universe_count
 			openmc_universe_count += 1
 			return openmc_universe_count
 		else:
@@ -489,7 +486,7 @@ class Assembly(object):
 
 # Test
 if __name__ == '__main__':
-	from pwr.mixture import Mixture
+	from mixture import Mixture
 	# Define a global test moderator
 	mod = openmc.Material(1, "mod")
 	mod.set_density("g/cc", 1.0)
