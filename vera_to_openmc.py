@@ -7,6 +7,7 @@ from read_xml import Case
 from functions import fill_lattice, clean
 from math import sqrt, copysign
 import objects
+import pwr
 
 try:
 	import openmc
@@ -33,11 +34,7 @@ class MC_Case(Case):
 		# Create the essential moderator material
 		'''The outside of each cell is automatically filled with the special material "mod", which refers to
 		the moderator (or coolant). The composition of "mod" is calculated by the codes using the local T/H
-		conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.
-		
-		FIXME: The material uses a simple form of water as a placeholder and does NOT represent the actual
-		composition of the moderator!
-		The expected composition of "mod" appears in the STATE block of the VERA deck.'''
+		conditions and the soluble boron concentration, and cannot be specified by a user on a mat card.'''
 		self.mod = self.get_openmc_material("mod")
 		self.mod.add_s_alpha_beta("c_H_in_H2O")
 		
@@ -619,8 +616,7 @@ class MC_Case(Case):
 	
 	
 	
-	def get_openmc_assemblies(self, vera_asmbly):
-	#TODO: Rename to get_openmc_lattices(vera_asmbly)
+	def get_openmc_lattices(self, vera_asmbly):
 		'''Creates the  assembly geometry and lattices of pin cells
 		required to define an assembly in OpenMC.
 		
@@ -748,8 +744,8 @@ class MC_Case(Case):
 		npins = vera_asmbly.npins
 		
 		# Start by getting the lattices and layers
-		lattices = self.get_openmc_assemblies(vera_asmbly)
-		#lattices = self.get_openmc_lattices(vera_asmbly)
+		#lattices = self.get_openmc_assemblies(vera_asmbly)
+		lattices = self.get_openmc_lattices(vera_asmbly)
 		nlats = len(lattices)
 		
 		for layer in range(nlats):
@@ -769,7 +765,7 @@ class MC_Case(Case):
 			vera_core:		instance of objects.Core
 		
 		Outputs:
-			openmc_core:	instance of openmc.Universe containing all the cells
+			openmc_vessel:	instance of openmc.Universe containing all the cells
 							describing the reactor pressure vessel EXCEPT inside_cell
 			inside_cell:	instance of openmc.Cell containing the innermost ring
 							of the vessel, TO BE FILLED with assemblies
@@ -836,11 +832,66 @@ class MC_Case(Case):
 		
 		outer_surfs = (vessel_surf, plate_bot, plate_top) 
 		
-		openmc_core = openmc.Universe(self.__counter(UNIVERSE), "Reactor Vessel")
-		openmc_core.add_cells(core_cells)
+		openmc_vessel = openmc.Universe(self.__counter(UNIVERSE), "Reactor Vessel")
+		openmc_vessel.add_cells(core_cells)
 		
-		return openmc_core, inside_cell, inside_fill, outer_surfs
+		return openmc_vessel, inside_cell, inside_fill, outer_surfs
 			
+	
+	
+	def get_openmc_core(self):
+		'''Create the reactor core lattice. 
+		
+		This is an extremely important function that hasn't really been written yet.
+		What it needs to do is iterate through the shape map.
+			If an assembly belongs in that location:
+				check for inserts, controls, and detectors
+				refer to the assembly map
+				get_openmc_assembly(asmbly, inserts, controls, detectors)
+					get_openmc_lattices() based on that
+				we then have an instance of pwr.Assembly
+				place that in the core map
+			Else:
+				fill with mod
+		Then zip this lattice up in a universe and return it.
+		Later, that will be placed inside the baffle, and the reactor vessel.
+		
+		Output:
+			openmc_core:	instance of openmc.RectLattice; the lattice contains [read: will contain]
+							instances of pwr.Assembly
+		'''
+		shape, asmap = self.core.square_maps(space = "")
+		n = len(shape)
+		halfwidth = self.core.pitch * n / 2.0
+		as_min_x = pwr.get_plane(self.openmc_surfaces, self.__counter, 'x', -halfwidth)
+		as_max_x = pwr.get_plane(self.openmc_surfaces, self.__counter, 'x', +halfwidth)
+		as_min_y = pwr.get_plane(self.openmc_surfaces, self.__counter, 'y', -halfwidth)
+		as_may_x = pwr.get_plane(self.openmc_surfaces, self.__counter, 'y', +halfwidth)
+		
+		
+		openmc_core = openmc.RectLattice(self.__counter(UNIVERSE), "Core Lattice")
+		openmc_core.pitch = (core.pitch, core.pitch)
+		openmc_core.lower_left = [-halfwidth * n / 2.0] * 2
+		
+		
+		lattice = [[None,]*n]*n
+		
+		# Note: For efficiency, see if I can replace this with functions.fill_lattice()
+		for j in range(n):
+			new_row = [None,]*n
+			for i in range(n):
+				# Check if there is supposed to be an assembly in this position
+				if shape[j][i]:
+					c = asmap[j][i]
+					# Then use the key to get the assembly
+					new_row[i] = 1 # REPLACE WITH: this assembly
+				else:
+					# Then install the moderator universe instead
+					new_row[i] = 0 # REPLACE WITH: that universe
+			lattice[j] = new_row
+			
+	
+	
 	
 	
 	
@@ -890,7 +941,7 @@ if __name__ == "__main__":
 
 	Works in Python 3.5.'''
 	
-	test_asmblys = test_case.get_openmc_assemblies(a)[0]
+	test_asmblys = test_case.get_openmc_lattices(a)[0]
 	#print(test_asmbly)
 	
 	#print('\n', a.name, test_asmblys.name, '\n')
