@@ -25,6 +25,7 @@ class MC_Case(Case):
 		super(MC_Case, self).__init__(source_file)
 		
 		self.openmc_surfaces = {}; self.openmc_materials = {}
+		self.openmc_pincells = {}
 		
 		# ID Counters
 		self.openmc_surface_count = 0; self.openmc_cell_count = 0 ;self.openmc_material_count = 0; self.openmc_universe_count = 0
@@ -535,11 +536,12 @@ class MC_Case(Case):
 	
 
 	
-	
-	
-	
 	def get_openmc_pincell(self, vera_cell):
-		'''Inputs:
+		'''Converts a VERA cell to an OpenMC universe. If this pincell universe
+		already exists, return it; otherwise, construct it anew, and add it
+		to self.openmc_pincells.
+		
+		Inputs:
 			vera_cell:			instance of objects.Cell from the vera deck
 		
 		Outputs:
@@ -550,68 +552,74 @@ class MC_Case(Case):
 				.name:			string; more descriptive name of the universe (pin cell)			
 			'''
 		
-		openmc_cells = []
-		
-		# First, define the OpenMC surfaces (Z cylinders)
-		for ring in range(vera_cell.num_rings):
-			r = vera_cell.radii[ring]
-			name = vera_cell.name + "-ring" + str(ring)
-			# Check if the outer bounding surface exists
-			surf_id = None
-			for s in self.openmc_surfaces.values():
-				if (s.type == "z-cylinder"):
-					if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
-						# Then the cylinder is the same
-						surf_id = s.id
-						break # from the "for s in" loop
-			if not surf_id:
-				# Generate new surface and get its surf_id
-				s = openmc.ZCylinder(self.__counter(SURFACE), "transmission", 0, 0, r)
-				# Add the new surfaces to the registry
-				self.openmc_surfaces[s.id] = s
+		# First, check if this cell has already been created
+		if vera_cell.key in self.openmc_pincells:
+			return self.openmc_pincells[vera_cell.key]
+		else:
+			openmc_cells = []
+			# Before proceeding, define the OpenMC surfaces (Z cylinders)
+			for ring in range(vera_cell.num_rings):
+				r = vera_cell.radii[ring]
+				name = vera_cell.name + "-ring" + str(ring)
+				# Check if the outer bounding surface exists
+				surf_id = None
+				for s in self.openmc_surfaces.values():
+					if (s.type == "z-cylinder"):
+						if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
+							# Then the cylinder is the same
+							surf_id = s.id
+							break # from the "for s in" loop
+				if not surf_id:
+					# Generate new surface and get its surf_id
+					s = openmc.ZCylinder(self.__counter(SURFACE), "transmission", 0, 0, r)
+					# Add the new surfaces to the registry
+					self.openmc_surfaces[s.id] = s
+					
+				# Otherwise, the surface s already exists
+				# Proceed to define the cell inside that surface:
+				new_cell = openmc.Cell(self.__counter(CELL), name)
 				
-			# Otherwise, the surface s already exists
-			# Proceed to define the cell inside that surface:
-			new_cell = openmc.Cell(self.__counter(CELL), name)
-			
-			if ring == 0:
-				# Inner ring
-				new_cell.region = -s
-				last_s = s
-			else:
-				# Then this OpenMC cell is outside the previous (last_s), inside the current
-				new_cell.region = -s & +last_s 
-				last_s = s
-			
-			# Fill the cell in with a material
-			m = vera_cell.mats[ring]
-			# First, check if this is a local, duplicate material
-			if vera_cell.asname + m in self.openmc_materials:
-				fill = self.openmc_materials[vera_cell.asname + m]
-				# This normally will not exist, so:
-			else:
-				fill = self.get_openmc_material(m)
-			new_cell.temperature = fill.temperature
-			
+				if ring == 0:
+					# Inner ring
+					new_cell.region = -s
+					last_s = s
+				else:
+					# Then this OpenMC cell is outside the previous (last_s), inside the current
+					new_cell.region = -s & +last_s 
+					last_s = s
 				
-			# What I want to do instead is, somewhere else in the code, generate the corresponding
-			# openmc material for each objects.Material instance. Then, just look it up in that dictionary.
-			new_cell.fill = fill
-			openmc_cells.append(new_cell)
-		
-		# end of "for ring" loop
-		
-		# Then add the moderator outside the pincell
-		mod_cell = openmc.Cell(self.__counter(CELL), vera_cell.name + "-Mod")
-		mod_cell.fill = self.mod
-		mod_cell.region = +last_s
-		openmc_cells.append(mod_cell)
-		
-		# Create a new universe in which the pin cell exists 
-		pincell_universe = openmc.Universe(self.__counter(UNIVERSE), vera_cell.name + "-verse")
-		pincell_universe.add_cells(openmc_cells)
-		
-		return pincell_universe
+				# Fill the cell in with a material
+				m = vera_cell.mats[ring]
+				# First, check if this is a local, duplicate material
+				if vera_cell.asname + m in self.openmc_materials:
+					fill = self.openmc_materials[vera_cell.asname + m]
+					# This normally will not exist, so:
+				else:
+					fill = self.get_openmc_material(m)
+				new_cell.temperature = fill.temperature
+				
+					
+				# What I want to do instead is, somewhere else in the code, generate the corresponding
+				# openmc material for each objects.Material instance. Then, just look it up in that dictionary.
+				new_cell.fill = fill
+				openmc_cells.append(new_cell)
+			
+			# end of "for ring" loop
+			
+			# Then add the moderator outside the pincell
+			mod_cell = openmc.Cell(self.__counter(CELL), vera_cell.name + "-Mod")
+			mod_cell.fill = self.mod
+			mod_cell.region = +last_s
+			openmc_cells.append(mod_cell)
+			
+			# Create a new universe in which the pin cell exists 
+			pincell_universe = openmc.Universe(self.__counter(UNIVERSE), vera_cell.name + "-verse")
+			pincell_universe.add_cells(openmc_cells)
+			
+			
+			self.openmc_pincells[vera_cell.key] = pincell_universe
+			
+			return pincell_universe
 	
 	
 	
