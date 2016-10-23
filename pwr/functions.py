@@ -2,7 +2,7 @@
 #
 # Container for useful functions for the pwr module
 
-from settings import SURFACE, CELL, MATERIAL, UNIVERSE
+from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
 
 
 def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", name = "", eps = 5):
@@ -54,7 +54,5 @@ def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", n
 		surface_list.append(zplane)
 		return zplane
 
-print(globals())
-print(UNIVERSE)
 
 
