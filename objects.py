@@ -132,6 +132,54 @@ class State(object):
 		self.params = params
 
 
+class Insert(object):
+	'''Container for information about an assembly insertion
+	
+	An insert_map (attribute of class Core) is used to show where assembly
+	inserts are located within the core; for example, burnable poison assemblies
+	with different numbers of pyrex rods. It can also be used to place objects
+	such as thimble plugs. The description of such inserts is given
+	in the VERA input deck under the [INSERT] block
+	
+	Inputs:
+		key:			str; unique identifier of this insert
+		name:			str; more descriptive name of this insert
+						[Default: empty string]
+		npins:			int; number of pins across the assembly this insert is to be placed in.
+						Must be equal to assembly.npins.
+						[Defualt: 0]
+		cells:			list of instances of Cell
+		cellmaps:		list of instances of Cellmap
+		axial_elevs:	list of floats describing 
+	'''
+	
+	def __init__(self, key, name = "", npins = 0,
+				 cells = [], cellmaps = [], axial_elevs = [], axial_values = [],
+				 params = {}):
+		
+		
+		if axial_elevs or axial_values:
+			assert (len(axial_elevs) == len(axial_values)), \
+				"The number of axial elevations must be exactly one more than the number of axial labels."
+		
+		self.key = key
+		self.name = name
+		self.npins = npins
+		self.cells = cells
+		self.cellmaps = cellmaps
+		self.axial_elevs = axial_elevs
+		self.axial_values = axial_values
+		self.params = params
+		
+		
+	def __str__(self):
+		rep = self.key
+		rep += ": "
+		rep += self.name
+		return rep
+
+
+
 class Assembly(object):
 	'''VERA decks often contain descriptions of fuel assemblies.
 	Although I am not sure how to represent these in OpenMC/OpenCG yet,
@@ -275,10 +323,10 @@ class Core(object):
 		vessel_mats:	list of strings referring to Material keys for each layer of the
 						reactor vessel--must be same length as vessel_radii
 		baffle:			instance of class Baffle
-		control_bank,
+		control_bank,	\
 		control_map,	Not coded yet, but they will likely be lists of strings in the
 		insert_map,		style of asmbly_map
-		detector_map:	
+		detector_map:	/
 	'''
 
 	def __init__(self, pitch, size, height, shape, asmbly, params, #rpower, rflow,

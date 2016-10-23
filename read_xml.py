@@ -57,6 +57,7 @@ class Case(object):
 		self.materials = {}
 		self.assemblies = {}
 		self.states = []
+		self.inserts = [];	self.controls = [];	self.detectors = []
 		# and more to come... 
 		
 		
@@ -187,6 +188,9 @@ class Case(object):
 								core_size = int(v)
 							elif p == "height":
 								core_height = float(v)
+							elif p == "insert_map":
+								insert_map = clean(v, str)
+			
 							#FIXME: See if this is working or not
 							elif p[:3] == "bc_":
 								bcs[p[3:]] = v
@@ -249,7 +253,7 @@ class Case(object):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
 							self.errors += 1
 						self.core = objects.Core(pitch, core_size, core_height, shape, asmbly, core_params,
-												 bcs, lower_refl, upper_refl, radii, mats, baffle)
+												 bcs, lower_refl, upper_refl, radii, mats, baffle, insert_map = insert_map)
 						# TODO: Account for controls, detectors, etc.
 						
 								
@@ -346,7 +350,11 @@ class Case(object):
 					elif name == "DETECTORS":
 						do_detector_stuff = True
 					elif name == "INSERTS":
-						do_insert_stuff = True
+						for insert in child:
+							print(insert)
+							new_insert = self.__get_insert(insert)
+							print(new_insert)
+							self.inserts.append(new_insert)
 					else:
 						warn("Unexpected ParameterList " + name + " encountered; ignoring.")
 				
@@ -532,7 +540,6 @@ class Case(object):
 		b10 = 0.184309	# wt fraction
 		density = 0.0
 		bank_labels = (); bank_pos = ()
-		insert_map = ();
 		for prop in state:
 			p = prop.attrib["name"]
 			v = prop.attrib["value"]
@@ -564,8 +571,6 @@ class Case(object):
 				bank_labels = clean(v, str)
 			elif p == "bank_pos":
 				bank_pos = clean(v, int)
-			elif p == "insert_map":
-				insert_map = functions.clean(v, str)
 			else:
 				state_params[p] = v
 		
@@ -586,9 +591,47 @@ class Case(object):
 		
 		# Instantiate and return the State object
 		a_state = objects.State(key, tfuel, tinlet, mod, name, 
-								bank_labels, bank_pos, insert_map, state_params)
+								bank_labels, bank_pos, state_params)
 		return a_state
 	
+	
+	def __get_insert(self, insert):
+		'''Similar to the other __get_thing() methods
+		
+		Input:
+			insert:		The ParameterList object describing an assembly insert
+		Output:
+			an_insert:	instance of objects.Insert
+		'''
+		name = state.attrib["name"].lower()
+		# dictionary of all independent parameters for this assembly
+		key = name; title = name
+		cellmaps = ()
+		cells = ()
+		axial_elevs = ()
+		axial_labels = ()
+		npins = 0
+		insert_params = {}
+		for prop in state:
+			p = prop.attrib["name"]
+			v = prop.attrib["value"]
+			if p == "axial_elevations":
+				axial_elevs = clean(v, float)
+			elif p == "axial_labels":
+				axial_labels = clean(v, str)
+			elif p == "num_pins":
+				npins = int(v)
+			elif p == "label":
+				key = v
+			elif p == "title":
+				name += "-" + str(v)
+			else:
+				insert_params[p] = v
+				print(v)
+		
+		
+		an_insert = objects.Insert(key, name, npins, cells, cellmaps, axial_elevs, axial_values, insert_params)
+			
 	
 	
 	def __get_grid(self, grid):
