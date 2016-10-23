@@ -603,34 +603,55 @@ class Case(object):
 		Output:
 			an_insert:	instance of objects.Insert
 		'''
-		name = state.attrib["name"].lower()
+		in_name = insert.attrib["name"].lower()
 		# dictionary of all independent parameters for this assembly
-		key = name; title = name
-		cellmaps = ()
-		cells = ()
+		key = in_name; title = in_name
+		cellmaps = {}
+		cells = {}
 		axial_elevs = ()
 		axial_labels = ()
 		npins = 0
 		insert_params = {}
-		for prop in state:
+		for prop in insert:
 			p = prop.attrib["name"]
-			v = prop.attrib["value"]
-			if p == "axial_elevations":
-				axial_elevs = clean(v, float)
-			elif p == "axial_labels":
-				axial_labels = clean(v, str)
-			elif p == "num_pins":
-				npins = int(v)
-			elif p == "label":
-				key = v
-			elif p == "title":
-				name += "-" + str(v)
+			if prop.tag == "Parameter":
+				v = prop.attrib["value"]
+				if p == "axial_elevations":
+					axial_elevs = clean(v, float)
+				elif p == "axial_labels":
+					axial_labels = clean(v, str)
+				elif p == "num_pins":
+					npins = int(v)
+				elif p == "label":
+					key = v
+				elif p == "title":
+					title += "-" + str(v)
+				else:
+					insert_params[p] = v
+					print(v)
+					
+			elif prop.tag == "ParameterList":
+				if p == "Cells":
+					for cell in prop:
+						new_cell = self.__get_cell(cell, in_name)
+						cells[new_cell.label] = new_cell
+				elif p == "CellMaps":
+					for cellmap in prop:
+						new_cellmap = self.__get_map(cellmap)
+						cellmaps[new_cellmap.label] = new_cellmap
+				else:
+					errstr = "Error: Unexpected ParameterList " + p
+					warn(errstr)
+					self.errors += 1
+					
 			else:
-				insert_params[p] = v
-				print(v)
+				errstr = "Error: Unknown data structure " + p
+				warn(errstr)
+				self.errors += 1
 		
+				
 		
-		an_insert = objects.Insert(key, name, npins, cells, cellmaps, axial_elevs, axial_values, insert_params)
+		an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels, insert_params)
 			
 	
 	

@@ -948,9 +948,8 @@ if __name__ == "__main__":
 	
 	test_case.get_openmc_spacergrids(a.spacergrids, clean(a.params["grid_map"]), clean(a.params["grid_elev"]), 17, a.pitch)
 	
-	last_cell = list(mypin.cells)
 	last_cell = list(mypin.cells.values())[-1]
-	print(last_cell, last_cell.asname)
+	print(last_cell)
 	print()
 	#print(last_cell.region.surface())
 	

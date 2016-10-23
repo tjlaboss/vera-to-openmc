@@ -159,7 +159,7 @@ class Insert(object):
 		
 		
 		if axial_elevs or axial_values:
-			assert (len(axial_elevs) == len(axial_values)), \
+			assert (len(axial_elevs) == len(axial_values)+1), \
 				"The number of axial elevations must be exactly one more than the number of axial labels."
 		
 		self.key = key
