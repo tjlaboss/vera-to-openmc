@@ -49,6 +49,55 @@ def counter(count):
 		else:
 			raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
 
+
+def get_plane(surface_list, dim, val, boundary_type = "transmission", name = "", eps = 5):
+	'''Return an instance of openmc.(X/Y/Z)Plane. Check if it exists, within
+	a precision of 'eps'. If so, return it. Otherwise, create it.
+	
+	Inputs:
+		surface_list:	list of instances of openmc.Surface; the list to check for
+						surfaces in. WILL BE MODIFIED. 
+		dim:			str; 'x', 'y', or 'z'
+		val:			float; value for x0, y0, or z0
+		boundary_type:	"transmission", "vacuum", or "reflective".
+						[Default: "transmission"]
+		name:			str; creative name of surface
+						[Default: empty string]
+		eps:			int; number of decimal places after which two planes
+						are considered to be the same.
+						[Default: 5]	'''
+	dim = dim.lower()
+	valid = ("x", "xplane", "y", "yplane", "z", "zplane")
+	assert (dim in valid), "You must specify one of " + str(valid)
+	
+	if dim in ("x", "xplane"):
+		for xplane in surface_list:
+			if isinstance(xplane, openmc.XPlane):
+				if val == round(xplane.x0, eps):
+					return xplane
+		xplane =  openmc.XPlane(counter(SURFACE),
+					boundary_type = boundary_type, x0 = val, name = name)
+		surface_list.append(xplane)
+		return xplane
+	elif dim in ("y", "yplane"):
+		for yplane in surface_list:
+			if isinstance(yplane, openmc.YPlane):
+				if val == round(yplane.y0, eps):
+					return yplane
+		yplane =  openmc.YPlane(counter(SURFACE),
+					boundary_type = boundary_type, y0 = val, name = name)
+		surface_list.append(yplane)
+		return yplane
+	elif dim in ("z", "zplane"):
+		for zplane in surface_list:
+			if isinstance(zplane, openmc.ZPlane):
+				if val == round(zplane.z0, eps):
+					return zplane
+		zplane =  openmc.ZPlane(counter(SURFACE),
+					boundary_type = boundary_type, z0 = val, name = name)
+		surface_list.append(zplane)
+		return zplane
+
 """
 def duplicate(orig):
 	'''Copy an OpenMC object, except for a new id 
@@ -269,6 +318,9 @@ class Assembly(object):
 						[Default: 0.0]
 		npins:			int; number of pins across the assembly
 						[Default: 0]
+		walls:			list of instances of openmc.Surface: [min_x, max_x, min_y, max_y] 
+						Used to create the 2D region within the assembly.
+						[Will be generated automatically if not provided.]
 		lattices:		list of instances of openmc.RectLattice, in the axial order they appear in the assembly
 						(bottom -> top).
 						[Default: empty list]
@@ -296,7 +348,6 @@ class Assembly(object):
 		all_elevs:		list of all axial elevations, created when (lattice_elevs + spacer_elevs)
 						have been concatenated, sorted, and checked for duplicates
 		openmc_surfs:	list of instances of openmc.Surface used in the construction of this assembly
-		walls:			instance of openmc.Intersection; the 2D region within the assembly.
 		openmc_cells:	list of all instances of openmc.Cell used in the construction of this assembly
 		assembly:		instance of openmc.Universe.
 						the whole reason you instantiated THIS object.
@@ -304,7 +355,7 @@ class Assembly(object):
 	'''
 
 	def __init__(self, 	key = "", 		name = "", 			universe_id = None,
-						pitch = 0.0, 	npins = 0,
+						pitch = 0.0, 	npins = 0,			walls = [],
 						lattices = [], 	lattice_elevs = [],	spacers = [], 	spacer_mids = [],
 						lower_nozzle = None, 				upper_nozzle = None, 
 						mod = None):
@@ -370,61 +421,21 @@ class Assembly(object):
 		
 		# Finally, create the xy bounding planes
 		half = self.pitch*self.npins
-		min_x = self.__get_plane('x', -half, name = self.name + ' - min_x') 
-		max_x = self.__get_plane('x', +half, name = self.name + ' - max_x') 
-		min_y = self.__get_plane('y', -half, name = self.name + ' - min_y') 
-		max_y = self.__get_plane('y', +half, name = self.name + ' - max_y') 
+		
+		if self.walls:
+			[min_x, max_x, min_y, max_y] = self.walls
+		else:
+			min_x = get_plane(self.openmc_surfaces, 'x', -half, name = self.name + ' - min_x') 
+			max_x = get_plane(self.openmc_surfaces, 'x', +half, name = self.name + ' - max_x') 
+			min_y = get_plane(self.openmc_surfaces, 'y', -half, name = self.name + ' - min_y') 
+			max_y = get_plane(self.openmc_surfaces, 'y', +half, name = self.name + ' - max_y') 
 		
 		self.openmc_surfaces = [min_x, max_x, min_y, max_y]
-		self.walls = openmc.Intersection(+min_x & +min_y & -max_x & -max_y)
+		self.wall_region = openmc.Intersection(+min_x & +min_y & -max_x & -max_y)
 		self.openmc_cells = []
 	
 	
-	def __get_plane(self, dim, val, boundary_type = "transmission", name = "", eps = 5):
-		'''Return an instance of openmc.(X/Y/Z)Plane. Check if it exists, within
-		a precision of 'eps'. If so, return it. Otherwise, create it.
-		
-		Inputs:
-			dim:			str; 'x', 'y', or 'z'
-			val:			float; value for x0, y0, or z0
-			boundary_type:	"transmission", "vacuum", or "reflective".
-							[Default: "transmission"]
-			name:			str; creative name of surface
-							[Default: empty string]
-			eps:			int; number of decimal places after which two planes
-							are considered to be the same.
-							[Default: 5]	'''
-		dim = dim.lower()
-		valid = ("x", "xplane", "y", "yplane", "z", "zplane")
-		assert (dim in valid), "You must specify one of " + str(valid)
-		
-		if dim in ("x", "xplane"):
-			for xplane in self.openmc_surfaces:
-				if isinstance(xplane, openmc.XPlane):
-					if val == round(xplane.x0, eps):
-						return xplane
-			xplane =  openmc.XPlane(counter(SURFACE),
-						boundary_type = boundary_type, x0 = val, name = name)
-			self.openmc_surfaces.append(xplane)
-			return xplane
-		elif dim in ("y", "yplane"):
-			for yplane in self.openmc_surfaces:
-				if isinstance(yplane, openmc.YPlane):
-					if val == round(yplane.y0, eps):
-						return yplane
-			yplane =  openmc.YPlane(counter(SURFACE),
-						boundary_type = boundary_type, y0 = val, name = name)
-			self.openmc_surfaces.append(yplane)
-			return yplane
-		elif dim in ("z", "zplane"):
-			for zplane in self.openmc_surfaces:
-				if isinstance(zplane, openmc.ZPlane):
-					if val == round(zplane.z0, eps):
-						return zplane
-			zplane =  openmc.ZPlane(counter(SURFACE),
-						boundary_type = boundary_type, z0 = val, name = name)
-			self.openmc_surfaces.append(zplane)
-			return zplane
+	
 		
 	
 	def test_prebuild(self):
@@ -448,7 +459,7 @@ class Assembly(object):
 		if self.lower_nozzle:
 			lnoz = openmc.Cell(counter(CELL), "lower nozzle")
 			nozzle_top = self.__get_plane('z', self.lower_nozzle.height)
-			lnoz.region = (self.walls & +last_s & -nozzle_top)
+			lnoz.region = (self.wall_region & +last_s & -nozzle_top)
 			lnoz.fill = self.lower_nozzle.material
 			self.openmc_cells.append(lnoz)
 			last_s = nozzle_top
@@ -489,7 +500,7 @@ class Assembly(object):
 			# Now, we have the current lattice, for the correct level, with or with a spacer
 			# grid as appropriate. Time to make the layer.
 			layer = openmc.Cell(counter(CELL), name = lat.name)
-			layer.region = (self.walls & +last_s & -s)
+			layer.region = (self.wall_region & +last_s & -s)
 			layer.fill = lat
 			self.openmc_cells.append(layer)
 			
@@ -501,14 +512,14 @@ class Assembly(object):
 		if self.upper_nozzle:
 			unoz = openmc.Cell(counter(CELL), "upper nozzle")
 			nozzle_top = self.__get_plane('z', self.upper_nozzle.height)
-			unoz.region = (self.walls & +last_s & -nozzle_top)
+			unoz.region = (self.wall_region & +last_s & -nozzle_top)
 			unoz.fill = self.upper_nozzle.material
 			self.openmc_cells.append(lnoz)
 			last_s = nozzle_top
 		
 		# Finally, surround the whole assembly with moderator
 		mod_cell = openmc.Cell(counter(CELL), name = self.name + " mod")
-		mod_cell.region = (~self.walls | +last_s | -surf0)
+		mod_cell.region = (~self.wall_region | +last_s | -surf0)
 		mod_cell.fill = self.mod
 		self.openmc_cells.append(mod_cell)
 		
