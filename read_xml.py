@@ -532,6 +532,7 @@ class Case(object):
 		b10 = 0.184309	# wt fraction
 		density = 0.0
 		bank_labels = (); bank_pos = ()
+		insert_map = ();
 		for prop in state:
 			p = prop.attrib["name"]
 			v = prop.attrib["value"]
@@ -563,6 +564,8 @@ class Case(object):
 				bank_labels = clean(v, str)
 			elif p == "bank_pos":
 				bank_pos = clean(v, int)
+			elif p == "insert_map":
+				insert_map = functions.clean(v, str)
 			else:
 				state_params[p] = v
 		
@@ -582,7 +585,8 @@ class Case(object):
 		mod = objects.Material("mod", density, mod_isos, tinlet)
 		
 		# Instantiate and return the State object
-		a_state = objects.State(key, tfuel, tinlet, mod, name, bank_labels, bank_pos, state_params)
+		a_state = objects.State(key, tfuel, tinlet, mod, name, 
+								bank_labels, bank_pos, insert_map, state_params)
 		return a_state
 	
 	

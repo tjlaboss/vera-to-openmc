@@ -191,7 +191,7 @@ class SpacerGrid(object):
 		
 
 class CoreMap(object):
-	'''
+	'''A core mapping for assembly, control rod, and detector positions
 	Inputs: 
 		cell_map: 	List of integers describing the assembly layout
 	Optional:
@@ -277,13 +277,14 @@ class Core(object):
 		baffle:			instance of class Baffle
 		control_bank,
 		control_map,	Not coded yet, but they will likely be lists of strings in the
-		detector_map:	style of asmbly_map
+		insert_map,		style of asmbly_map
+		detector_map:	
 	'''
 
 	def __init__(self, pitch, size, height, shape, asmbly, params, #rpower, rflow,
 				 bc = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"},
 				 bot_refl = None, top_refl = None, vessel_radii = [], vessel_mats = [], 
-				 baffle = {}, control_bank = [], control_map = [], detector_map = []):
+				 baffle = {}, control_bank = [], control_map = [], insert_map = [], detector_map = []):
 		
 		self.pitch = pitch
 		self.size = size
@@ -316,6 +317,7 @@ class Core(object):
 		self.baffle = baffle
 		self.control_bank = control_bank
 		self.control_map = control_map
+		self.insert_map = insert_map
 		self.detector_map = detector_map
 	
 	

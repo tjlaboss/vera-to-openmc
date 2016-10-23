@@ -8,14 +8,13 @@ from functions import fill_lattice, clean
 from math import sqrt, copysign
 import objects
 import pwr
+from pwr import SURFACE, CELL, MATERIAL, UNIVERSE	# Global constants for counters
 
 try:
 	import openmc
 except ImportError:
 	raise SystemExit("Error: Cannot import openmc. You will not be able to generate OpenMC objects.")
 
-# Global constants for counters
-SURFACE, CELL, MATERIAL, UNIVERSE = range(-1,-5,-1)
 
 
 class MC_Case(Case):
@@ -882,7 +881,9 @@ class MC_Case(Case):
 			for i in range(n):
 				# Check if there is supposed to be an assembly in this position
 				if shape[j][i]:
-					c = asmap[j][i]
+					askey = asmap[j][i]
+					inkey = core.insert_map[j][k]
+					# TODO: add control_map, detector_map
 					# Then use the key to get the assembly
 					new_row[i] = 1 # REPLACE WITH: this assembly
 				else:
@@ -897,7 +898,7 @@ class MC_Case(Case):
 	
 
 if __name__ == "__main__":
-	# Instantiate a test case with a simple VERA XML.gold
+	# Instantiate a test case with a representative VERA XML.gold
 	filename = "gold/p7.xml.gold"
 	#filename = "gold/2a_dep.xml.gold"
 	#filename = "gold/2o.xml.gold"
@@ -930,17 +931,7 @@ if __name__ == "__main__":
 	
 	#print cm.square_map()
 	
-	#print test_case.mod
-	
-	
-	'''Note: Attempting to print an assembly in Python 2.7 doesn't work. Could be due to a bug in the
-	__repr__() method? Printing here yields an AttributeError: 'NoneType' object has no attribute '_id',
-	and printing the example assembly from the OpenMC Python API docs
-	<http://openmc.readthedocs.io/en/latest/pythonapi/examples/pandas-dataframes.html>
-	causes a TypeError: 'NoneType' object has no attribute '__getitem__'
 
-	Works in Python 3.5.'''
-	
 	test_asmblys = test_case.get_openmc_lattices(a)[0]
 	#print(test_asmbly)
 	
