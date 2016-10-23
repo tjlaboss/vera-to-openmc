@@ -56,8 +56,9 @@ class Case(object):
 		# Initialize some parameters with empty lists
 		self.materials = {}
 		self.assemblies = {}
+		self.inserts = {}
 		self.states = []
-		self.inserts = [];	self.controls = [];	self.detectors = []
+		self.controls = [];	self.detectors = []
 		# and more to come... 
 		
 		
@@ -174,6 +175,7 @@ class Case(object):
 						bcs = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"}
 						baffle = {}; lower = {}; upper = {}; lower_refl = None; upper_refl = None
 						radii = []; mats = [] 
+						insert_map = ()
 						# Unpack these variables from core_params
 						# Delete them from the dict, and pass the remaining params on to objects.Core
 						for p in core_params:
@@ -273,7 +275,7 @@ class Case(object):
 									if aname == "cells":
 										for cell in asmbly_child:
 											new_cell = self.__get_cell(cell, cname)
-											cells[new_cell.label] = new_cell
+											cells[new_cell.key] = new_cell
 									elif aname == "materials":
 										for mat in asmbly_child:
 											# Create a material object for each listed material
@@ -351,10 +353,9 @@ class Case(object):
 						do_detector_stuff = True
 					elif name == "INSERTS":
 						for insert in child:
-							print(insert)
 							new_insert = self.__get_insert(insert)
 							print(new_insert)
-							self.inserts.append(new_insert)
+							self.inserts[new_insert.key] = new_insert
 					else:
 						warn("Unexpected ParameterList " + name + " encountered; ignoring.")
 				
@@ -634,7 +635,7 @@ class Case(object):
 				if p == "Cells":
 					for cell in prop:
 						new_cell = self.__get_cell(cell, in_name)
-						cells[new_cell.label] = new_cell
+						cells[new_cell.key] = new_cell
 				elif p == "CellMaps":
 					for cellmap in prop:
 						new_cellmap = self.__get_map(cellmap)
@@ -652,6 +653,7 @@ class Case(object):
 				
 		
 		an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels, insert_params)
+		return an_insert
 			
 	
 	

@@ -760,7 +760,7 @@ class MC_Case(Case):
 			label = vera_asmbly.axial_labels[layer]
 			lat = lattices[layer]
 		
-		
+		#TODO: This will probably be much easier if I use pwr.Assembly.
 		
 		return None
 	
@@ -845,6 +845,34 @@ class MC_Case(Case):
 		return openmc_vessel, inside_cell, inside_fill, outer_surfs
 			
 	
+	def add_insert(self, base_lattice, insert):
+		'''Insert a burnable poision, thimble plug, or other arbitrary object to a lattice.
+		
+		Inputs:
+			base_lattice:		instance of openmc.RectLattice
+			insert:				instance of objects.Insert with the same
+								number of pins as base_lattice
+		
+		Outputs:
+			new_lattice:		instance of openmc.RectLattice with some cells replaced
+		'''	
+		n = insert.npins
+		x = base_lattice.size[0]
+		y = base_lattice.size[1]
+		assert(n == x and n == y), \
+			"'base_lattice' must be exactly " + str(n) + "x" + str(n) + " pins."
+		
+		
+		
+		
+		return None
+	
+	
+	
+	
+	
+	
+	
 	
 	def get_openmc_core(self):
 		'''Create the reactor core lattice. 
@@ -889,11 +917,15 @@ class MC_Case(Case):
 			for i in range(n):
 				# Check if there is supposed to be an assembly in this position
 				if shape[j][i]:
-					askey = asmap[j][i]
+					vera_asmbly = self.assemblies[asmap[j][i]]
 					inkey = core.insert_map[j][k]
+					if inkey != "-":
+						vera_insert = self.inserts[inkey]
+						vera_asmbly = copy(vera_asmbly)
+						vera_asmbly.add_insert(vera_insert)
 					# TODO: add control_map, detector_map
-					# Then use the key to get the assembly
-					new_row[i] = 1 # REPLACE WITH: this assembly
+					
+					new_row[i] = vera_asmbly # REPLACE WITH: this assembly
 				else:
 					# Then install the moderator universe instead
 					new_row[i] = 0 # REPLACE WITH: that universe

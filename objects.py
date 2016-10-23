@@ -3,7 +3,7 @@
 # Module containing useful objects for read_xml.py
 
 from math import sqrt
-from functions import clean
+from functions import clean, fill_lattice
 #from PWR_assembly import Nozzle
 import isotopes
 
@@ -187,7 +187,7 @@ class Assembly(object):
 	
 	Inputs:
 		name: 			String containing the unique Assembly name
-		cells:			Dictionary of Cell objects in this assembly {cell.label:cell}
+		cells:			Dictionary of Cell objects in this assembly {cell.key:cell}
 		params:			Dictionary of all the other parameters provided
 						in the Assembly block
 		cellmaps: 		Dictionary of CellMap objects
@@ -211,6 +211,21 @@ class Assembly(object):
 		
 	def __str__(self):
 		return self.name
+	
+	
+	def add_insert(self, insertion):
+		'''Input:
+			insertion:		instance of Insert'''
+		
+		for z in insertion.axial_elevations:
+			continue
+		
+		#cmap = insertion.cellmap
+		#fill_lattice(insertion.)
+		
+		
+		self.cells.update(insertion.cells)
+		
 	
 
 
