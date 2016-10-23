@@ -600,28 +600,14 @@ class MC_Case(Case):
 				
 			# What I want to do instead is, somewhere else in the code, generate the corresponding
 			# openmc material for each objects.Material instance. Then, just look it up in that dictionary.
-			
-			
-		
-			##TMP--debug this weird case
-			if "Cell_2" in name:
-				debug = True
-						
 			new_cell.fill = fill
 			openmc_cells.append(new_cell)
 		
 		# end of "for ring" loop
 		
 		# Then add the moderator outside the pincell
-		#FIXME: Check this for Cell2 in 2a_dep
-			
-
-		
 		mod_cell = openmc.Cell(self.__counter(CELL), vera_cell.name + "-Mod")
-		#FIXME: Remove next line, here for debugging purposes only
-		mod_cell.asname = vera_cell.asname
 		mod_cell.fill = self.mod
-		#mod_cell.region = +s
 		mod_cell.region = +last_s
 		openmc_cells.append(mod_cell)
 		
