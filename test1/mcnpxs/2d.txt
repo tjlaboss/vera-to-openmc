@@ -1,0 +1,12 @@
+2d
+ CASL AMA Benchmark Problem 2D - Fuel Lattice - Public
+
+ ============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  1.16608 +/-  0.00031
+ k-effective (Track-length)  =  1.16603 +/-  0.00037
+ k-effective (Absorption)    =  1.16596 +/-  0.00027
+ Combined k-effective        =  1.16600 +/-  0.00024
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
+
