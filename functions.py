@@ -76,11 +76,11 @@ def replace_lattice(new_keys, original, n=0, blank = "-"):
 	for i in range(n):
 		new_row = [None,]*n
 		for j in range(n):
-			c = new_keys[i][j]
-			if c == blank:
-				new_row[j] = new_keys[i][j]
-			else:
+			k = new_keys[i][j]
+			if k == blank:
 				new_row[j] = original[i][j]
+			else:
+				new_row[j] = new_keys[i][j]
 		lattice[i] = new_row
 	
 	return lattice
