@@ -742,7 +742,7 @@ class Case(object):
 		# a universe for the pin cell bounded by the outermost layer and defined by the materials.
 		
 		# Initialize the relevant variables:
-		name = cell.attrib["name"]
+		name = cell.attrib["name"] + '-' + asname
 		num_rings = 0; radii = []; mats = []; label = "" 
 
 		

@@ -133,51 +133,7 @@ class State(object):
 		self.params = params
 
 
-class Insert(object):
-	'''Container for information about an assembly insertion
-	
-	An insert_map (attribute of class Core) is used to show where assembly
-	inserts are located within the core; for example, burnable poison assemblies
-	with different numbers of pyrex rods. It can also be used to place objects
-	such as thimble plugs. The description of such inserts is given
-	in the VERA input deck under the [INSERT] block
-	
-	Inputs:
-		key:			str; unique identifier of this insert
-		name:			str; more descriptive name of this insert
-						[Default: empty string]
-		npins:			int; number of pins across the assembly this insert is to be placed in.
-						Must be equal to assembly.npins.
-						[Defualt: 0]
-		cells:			list of instances of Cell
-		cellmaps:		list of instances of Cellmap
-		axial_elevs:	list of floats describing 
-	'''
-	
-	def __init__(self, key, name = "", npins = 0,
-				 cells = [], cellmaps = [], axial_elevs = [], axial_labels = [],
-				 params = {}):
-		
-		
-		if axial_elevs or axial_labels:
-			assert (len(axial_elevs) == len(axial_labels)+1), \
-				"The number of axial elevations must be exactly one more than the number of axial labels."
-		
-		self.key = key
-		self.name = name
-		self.npins = npins
-		self.cells = cells
-		self.cellmaps = cellmaps
-		self.axial_elevations = axial_elevs
-		self.axial_labels = axial_labels
-		self.params = params
-		
-		
-	def __str__(self):
-		rep = self.key
-		rep += ": "
-		rep += self.name
-		return rep
+
 
 
 
@@ -209,9 +165,34 @@ class Assembly(object):
 		self.pitch = float(params["ppitch"])
 		self.npins = int(params["num_pins"])
 		
+		self.construct_maps()
+		
+		
+	def construct_maps(self):
+		
+		# Construct the cell dictionary and key map
+		self.celldict = {}
+		for cell in self.cells.values():
+			self.celldict[cell.label] = cell.key
+		
+		self.key_maps = {}
+		for cmap in self.cellmaps:
+			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap], name = self.name+'-'+cmap, label = cmap)
+			self.key_maps[cmap] = fill_lattice(self.cellmaps[cmap], self.lookup, self.npins)
+		
 		
 	def __str__(self):
-		return self.name
+		rep = self.key
+		rep += ": "
+		rep += self.name
+		return rep
+	
+	
+	def lookup(self, c, blank = "-"):
+		if c != blank:
+			return self.celldict[c]
+		else:
+			return blank
 	
 	
 	def add_insert(self, insertion):
@@ -227,6 +208,7 @@ class Assembly(object):
 		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
 		all_labels = [None,]*(len(all_elevs) - 1)
 		all_cellmaps = dict(self.cellmaps)	# A copy of this dictionary
+		all_key_maps = dict(self.cellmaps)
 		
 		
 		for kk in range(len(all_labels)):
@@ -238,16 +220,18 @@ class Assembly(object):
 				if z >= self.axial_elevations[k]:
 					a_label = self.axial_labels[k]
 					amap = self.cellmaps[a_label]
+					akeymap = fill_lattice(amap, self.lookup)
 					break
 			for k in range(ni_levels):
 				if z >= insertion.axial_elevations[k]:
 					i_label = insertion.axial_labels[k]
 					imap = insertion.cellmaps[i_label]
+					ikeymap = fill_lattice(imap, insertion.lookup)
 					break
 			# Now we know the label of this level in self (assembly) and insertion
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
-				new_lattice = replace_lattice(new_keys = imap.square_map(), original = amap.square_map())
+				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap)
 				new_label = a_label + '-' + i_label
 				new_map = CoreMap(new_lattice, label = new_label)
 			elif a_label:
@@ -260,6 +244,49 @@ class Assembly(object):
 		self.axial_labels = all_labels
 		self.cells.update(insertion.cells)
 		self.cellmaps.update(all_cellmaps)
+		self.key_maps.update(all_key_maps)
+		
+
+class Insert(Assembly):
+	'''Container for information about an assembly insertion
+	
+	An insert_map (attribute of class Core) is used to show where assembly
+	inserts are located within the core; for example, burnable poison assemblies
+	with different numbers of pyrex rods. It can also be used to place objects
+	such as thimble plugs. The description of such inserts is given
+	in the VERA input deck under the [INSERT] block
+	
+	Inputs:
+		key:			str; unique identifier of this insert
+		name:			str; more descriptive name of this insert
+						[Default: empty string]
+		npins:			int; number of pins across the assembly this insert is to be placed in.
+						Must be equal to assembly.npins.
+						[Defualt: 0]
+		cells:			list of instances of Cell
+		cellmaps:		list of instances of Cellmap
+		axial_elevs:	list of floats describing 
+	'''
+	
+	def __init__(self, key, name = "", npins = 0,
+				 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
+				 params = {}):
+		
+		
+		if axial_elevs or axial_labels:
+			assert (len(axial_elevs) == len(axial_labels)+1), \
+				"The number of axial elevations must be exactly one more than the number of axial labels."
+		
+		self.key = key
+		self.name = name
+		self.npins = npins
+		self.cells = cells
+		self.cellmaps = cellmaps
+		self.axial_elevations = axial_elevs
+		self.axial_labels = axial_labels
+		self.params = params
+		
+		self.construct_maps()
 		
 	
 
@@ -313,6 +340,16 @@ class CoreMap(object):
 	
 	def __len__(self):
 		return len(self.square_map())
+	
+	def __iter__(self):
+		for i in self.square_map():
+			yield i
+	
+	def __getitem__(self,i):
+		return self.square_map()[i]
+
+	#def __setitem__(self,index,value):
+	#	self.square_map()[index] = value
 	
 	
 	def square_map(self):

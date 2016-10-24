@@ -668,7 +668,7 @@ class MC_Case(Case):
 		cell_verses = {}
 		for vera_cell in vera_asmbly.cells.values():
 			c = self.get_openmc_pincell(vera_cell)
-			cell_verses[vera_cell.label] = c
+			cell_verses[vera_cell.key] = c
 		
 		
 		for latname in vera_asmbly.axial_labels:
