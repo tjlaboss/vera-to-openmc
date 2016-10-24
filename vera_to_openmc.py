@@ -3,9 +3,10 @@
 # Takes a VERA case and attempts to construct 
 # the required files for an OpenMC input.
 
+from math import sqrt, copysign
+from copy import copy
 from read_xml import Case
 from functions import fill_lattice, clean
-from math import sqrt, copysign
 import objects
 import pwr
 from pwr import SURFACE, CELL, MATERIAL, UNIVERSE	# Global constants for counters
@@ -24,7 +25,8 @@ class MC_Case(Case):
 	def __init__(self, source_file):
 		super(MC_Case, self).__init__(source_file)
 		
-		self.openmc_surfaces = {}; self.openmc_materials = {}
+		self.openmc_surfaces = []
+		self.openmc_materials = {}
 		self.openmc_pincells = {}
 		
 		# ID Counters
@@ -84,7 +86,7 @@ class MC_Case(Case):
 		zlist = [None,]*ny
 		
 		# Check if such a surface exists, and add it to the lists if so
-		for surf in self.openmc_surfaces.values():
+		for surf in self.openmc_surfaces:
 			if surf.type == 'x-plane':
 				for i in range(nx):
 					if round(surf.x0, rd) == round(x0s[i], rd):
@@ -102,17 +104,20 @@ class MC_Case(Case):
 		for i in range(nx):
 			if not xlist[i]:
 				xp = openmc.XPlane(self.__counter(SURFACE), x0 = x0s[i])
-				self.openmc_surfaces[xp.type + '-' + str(xp.id)] = xp
+				#self.openmc_surfaces[xp.type + '-' + str(xp.id)] = xp
+				self.openmc_surfaces.append(xp)
 				xlist[i] = xp 
 		for i in range(ny):
 			if not ylist[i]:
 				yp = openmc.YPlane(self.__counter(SURFACE), y0 = y0s[i])
-				self.openmc_surfaces[yp.type + '-' + str(yp.id)] = yp
+				#self.openmc_surfaces[yp.type + '-' + str(yp.id)] = yp
+				self.openmc_surfaces.append(yp)
 				ylist[i] = yp
 		for i in range(nz):
 			if not zlist[i]:
 				zp = openmc.ZPlane(self.__counter(SURFACE), z0 = z0s[i])
-				self.openmc_surfaces[zp.type + '-' + str(zp.id)] = zp 
+				#self.openmc_surfaces[zp.type + '-' + str(zp.id)] = zp 
+				self.openmc_surfaces.append(zp)
 				zlist[i] = zp
 		
 		return xlist, ylist, zlist
@@ -563,7 +568,7 @@ class MC_Case(Case):
 				name = vera_cell.name + "-ring" + str(ring)
 				# Check if the outer bounding surface exists
 				surf_id = None
-				for s in self.openmc_surfaces.values():
+				for s in self.openmc_surfaces:
 					if (s.type == "z-cylinder"):
 						if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
 							# Then the cylinder is the same
@@ -573,7 +578,8 @@ class MC_Case(Case):
 					# Generate new surface and get its surf_id
 					s = openmc.ZCylinder(self.__counter(SURFACE), "transmission", 0, 0, r)
 					# Add the new surfaces to the registry
-					self.openmc_surfaces[s.id] = s
+					#self.openmc_surfaces[s.id] = s
+					self.openmc_surfaces.append(s)
 					
 				# Otherwise, the surface s already exists
 				# Proceed to define the cell inside that surface:
@@ -905,8 +911,12 @@ class MC_Case(Case):
 		
 		
 		openmc_core = openmc.RectLattice(self.__counter(UNIVERSE), "Core Lattice")
-		openmc_core.pitch = (core.pitch, core.pitch)
+		openmc_core.pitch = (self.core.pitch, self.core.pitch)
 		openmc_core.lower_left = [-halfwidth * n / 2.0] * 2
+		
+		# BAD PROBLEM:
+		# FIXME: the insert_map isn't the same size as the shape map!!
+		
 		
 		
 		lattice = [[None,]*n]*n
@@ -918,7 +928,9 @@ class MC_Case(Case):
 				# Check if there is supposed to be an assembly in this position
 				if shape[j][i]:
 					vera_asmbly = self.assemblies[asmap[j][i]]
-					inkey = core.insert_map[j][k]
+					print(self.core.insert_map.str_map())
+					print(len(self.core.insert_map), j, i)
+					inkey = self.core.insert_map.square_map()[j][i]
 					if inkey != "-":
 						vera_insert = self.inserts[inkey]
 						vera_asmbly = copy(vera_asmbly)
@@ -931,7 +943,7 @@ class MC_Case(Case):
 					new_row[i] = 0 # REPLACE WITH: that universe
 			lattice[j] = new_row
 			
-	
+		return lattice
 	
 	
 	
@@ -992,6 +1004,9 @@ if __name__ == "__main__":
 	print(last_cell)
 	print()
 	#print(last_cell.region.surface())
+	
+	
+	core_lattice = test_case.get_openmc_core()
 	
 	
 	

@@ -3,6 +3,7 @@
 # Container for useful functions for the pwr module
 
 from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
+import openmc
 
 
 def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", name = "", eps = 5):

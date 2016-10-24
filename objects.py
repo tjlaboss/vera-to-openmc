@@ -3,9 +3,10 @@
 # Module containing useful objects for read_xml.py
 
 from math import sqrt
-from functions import clean, fill_lattice
+from functions import *
 #from PWR_assembly import Nozzle
 import isotopes
+from copy import copy
 
 FUELTEMP = -1; MODTEMP = -2
 
@@ -154,12 +155,12 @@ class Insert(object):
 	'''
 	
 	def __init__(self, key, name = "", npins = 0,
-				 cells = [], cellmaps = [], axial_elevs = [], axial_values = [],
+				 cells = [], cellmaps = [], axial_elevs = [], axial_labels = [],
 				 params = {}):
 		
 		
-		if axial_elevs or axial_values:
-			assert (len(axial_elevs) == len(axial_values)+1), \
+		if axial_elevs or axial_labels:
+			assert (len(axial_elevs) == len(axial_labels)+1), \
 				"The number of axial elevations must be exactly one more than the number of axial labels."
 		
 		self.key = key
@@ -167,8 +168,8 @@ class Insert(object):
 		self.npins = npins
 		self.cells = cells
 		self.cellmaps = cellmaps
-		self.axial_elevs = axial_elevs
-		self.axial_values = axial_values
+		self.axial_elevations = axial_elevs
+		self.axial_labels = axial_labels
 		self.params = params
 		
 		
@@ -214,17 +215,51 @@ class Assembly(object):
 	
 	
 	def add_insert(self, insertion):
-		'''Input:
+		'''Merge levels
+		
+		Input:
 			insertion:		instance of Insert'''
 		
-		for z in insertion.axial_elevations:
-			continue
 		
-		#cmap = insertion.cellmap
-		#fill_lattice(insertion.)
+		na_levels = len(self.axial_labels) 
+		ni_levels = len(insertion.axial_labels)
+		# Merge and remove the duplicates
+		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
+		all_labels = [None,]*(len(all_elevs) - 1)
+		all_cellmaps = dict(self.cellmaps)	# A copy of this dictionary
 		
 		
+		for kk in range(len(all_labels)):
+			z = all_elevs[kk]
+			a_label = None
+			i_label = None
+			# See where we are
+			for k in range(na_levels):
+				if z >= self.axial_elevations[k]:
+					a_label = self.axial_labels[k]
+					amap = self.cellmaps[a_label]
+					break
+			for k in range(ni_levels):
+				if z >= insertion.axial_elevations[k]:
+					i_label = insertion.axial_labels[k]
+					imap = insertion.cellmaps[i_label]
+					break
+			# Now we know the label of this level in self (assembly) and insertion
+			if a_label and i_label:
+				# Then we've got an insertion acting here.
+				new_lattice = replace_lattice(new_keys = imap.square_map(), original = amap.square_map())
+				new_label = a_label + '-' + i_label
+				new_map = CoreMap(new_lattice, label = new_label)
+			elif a_label:
+				# No insertion
+				new_map = amap
+			all_labels[kk] = new_map.label
+			all_cellmaps[new_map.label] = new_map
+		
+		self.axial_elevations = all_elevs
+		self.axial_labels = all_labels
 		self.cells.update(insertion.cells)
+		self.cellmaps.update(all_cellmaps)
 		
 	
 
@@ -269,6 +304,10 @@ class CoreMap(object):
 	def __str__(self):
 		return self.name
 	
+	def __len__(self):
+		return len(self.square_map())
+	
+	
 	def square_map(self):
 		'''Return the cell map as a square array'''
 		n = int(sqrt(len(self.cell_map)))
@@ -280,10 +319,11 @@ class CoreMap(object):
 	def str_map(self):
 		'''Return a string of the square map nicely.'''
 		smap = self.square_map()
+		ml = len( max(map(str, self.cell_map), key=len) )	#max length of a key
 		printable = ""
 		for row in smap:
 			for col in row:
-				printable += str(col) + ' '
+				printable += str(col).rjust(ml) + ' '
 			printable += '\n'
 		return printable
 

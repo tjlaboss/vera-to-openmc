@@ -191,7 +191,7 @@ class Case(object):
 							elif p == "height":
 								core_height = float(v)
 							elif p == "insert_map":
-								insert_map = clean(v, str)
+								insert_cellmap = clean(v, str)
 			
 							#FIXME: See if this is working or not
 							elif p[:3] == "bc_":
@@ -250,6 +250,7 @@ class Case(object):
 							#del core_params[p]
 						
 						
+						insert_map = objects.CoreMap(insert_cellmap, "Core insert map")
 						# Check that each pressure vessel radius has a corresponding material
 						if len(radii) != len(mats):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
