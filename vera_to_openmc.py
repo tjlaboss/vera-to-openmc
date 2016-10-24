@@ -527,13 +527,19 @@ class MC_Case(Case):
 			openmc_material = openmc.Material(self.__counter(MATERIAL), material)
 			openmc_material.set_density("g/cc", vera_mat.density)
 			openmc_material.temperature = vera_mat.temperature
-			for i in sorted(vera_mat.isotopes):
-				nuclide = i
-				frac = vera_mat.isotopes[i]
-				if frac < 0:
-					openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
+			for nuclide in sorted(vera_mat.isotopes):
+				frac = vera_mat.isotopes[nuclide]
+				if nuclide[-2:] == "00":
+					# Natural abundance
+					elem = openmc.Element(nuclide[:-2])
+					for n, w in elem.expand():
+						openmc_material.add_nuclide(n, frac*w, 'wo')
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
+				# Shouldn't be needed: the parsed XML should already be in weight frac
+				#if frac < 0:
+				#	openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
+					
 			self.openmc_materials[material] = openmc_material
 		
 		return openmc_material
