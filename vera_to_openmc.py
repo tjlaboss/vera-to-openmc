@@ -665,6 +665,7 @@ class MC_Case(Case):
 			openmc_asmbly.lower_left = [-pitch * float(npins) / 2.0] * 2
 			# And populate with universes from cell_verses
 			asmap = vera_asmbly.cellmaps[latname].square_map()
+			print(latname, asmap)
 				
 			openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
 			openmc_asmblies.append(openmc_asmbly)
@@ -927,7 +928,8 @@ class MC_Case(Case):
 			for i in range(n):
 				# Check if there is supposed to be an assembly in this position
 				if shape[j][i]:
-					vera_asmbly = self.assemblies[asmap[j][i]]
+					askey = asmap[j][i].lower()
+					vera_asmbly = self.assemblies[askey]
 					print(self.core.insert_map.str_map())
 					print(len(self.core.insert_map), j, i)
 					inkey = self.core.insert_map.square_map()[j][i]
@@ -951,9 +953,9 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a test case with a representative VERA XML.gold
-	filename = "gold/p7.xml.gold"
+	#filename = "gold/p7.xml.gold"
 	#filename = "gold/2a_dep.xml.gold"
-	#filename = "gold/2o.xml.gold"
+	filename = "gold/2e.xml.gold"
 	test_case = MC_Case(filename)
 	#print "Testing:",  test_case
 	

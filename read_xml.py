@@ -355,7 +355,6 @@ class Case(object):
 					elif name == "INSERTS":
 						for insert in child:
 							new_insert = self.__get_insert(insert)
-							print(new_insert)
 							self.inserts[new_insert.key] = new_insert
 					else:
 						warn("Unexpected ParameterList " + name + " encountered; ignoring.")

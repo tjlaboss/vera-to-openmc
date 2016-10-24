@@ -291,7 +291,8 @@ class SpacerGrid(object):
 class CoreMap(object):
 	'''A core mapping for assembly, control rod, and detector positions
 	Inputs: 
-		cell_map: 	List of integers describing the assembly layout
+		cell_map: 	List of integers or strings describing the assembly layout
+					You can also give it a square_map, and it will process it appropriately
 	Optional:
 		name: 		String containing the descriptive Assembly name
 		label:		string containing the unique Assembly identifier
@@ -299,7 +300,13 @@ class CoreMap(object):
 	def __init__(self, cell_map, name = "", label = ""):
 		self.name = name 
 		self.label = label
-		self.cell_map = cell_map
+		if isinstance(cell_map[0], list):
+			# If you feed it a square map:
+			self.cell_map = []
+			for row in cell_map:
+				self.cell_map += row
+		else:
+			self.cell_map = cell_map
 	
 	def __str__(self):
 		return self.name
