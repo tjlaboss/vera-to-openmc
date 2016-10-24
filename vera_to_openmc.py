@@ -530,10 +530,16 @@ class MC_Case(Case):
 			for nuclide in sorted(vera_mat.isotopes):
 				frac = vera_mat.isotopes[nuclide]
 				if nuclide[-2:] == "00":
-					# Natural abundance
-					elem = openmc.Element(nuclide[:-2])
-					for n, w in elem.expand():
-						openmc_material.add_nuclide(n, frac*w, 'wo')
+					# Natural abundance-expand except for Carbon
+					ename = nuclide[:-2]
+					if ename == "C":
+						# Correct for OpenMC syntax
+						openmc_material.add_nuclide("C0", frac, 'wo')
+					else:
+						# Element.expand() breaks an element into its constituent nuclides
+						elem = openmc.Element(ename)
+						for n, w in elem.expand():
+							openmc_material.add_nuclide(n, frac*w, 'wo')
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
 				# Shouldn't be needed: the parsed XML should already be in weight frac
