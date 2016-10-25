@@ -280,7 +280,7 @@ class Case(object):
 									elif aname == "materials":
 										for mat in asmbly_child:
 											# Create a material object for each listed material
-											new_material = self.__get_material(mat)
+											new_material = self.__get_material(mat, cname)
 											newname = new_material.name
 											# Check if a material with this name already exists
 											if newname in self.materials:
@@ -373,12 +373,14 @@ class Case(object):
 		# note; end of the giant for loop
 	
 	
-	def __get_material(self, mat):
+	def __get_material(self, mat, asname = ""):
 		'''When a material or fuel block is encountered in the XML,
 		extract the useful information.
 		
 		Inputs:Pass on the assembly Parameters to the instance
-			mat: The ParameterList object describing a VERA material
+			mat: 	The ParameterList object describing a VERA material
+			asname:	Assembly or Insert name in which the material is defined.
+					Cells made will check for materials suffixed with this first.
 		
 		Outputs:
 			a_material: Instance of the Material object populated with the properties from the XML.'''
@@ -414,17 +416,18 @@ class Case(object):
 			isos[miso_names[i]] = mfracs[i]
 		
 		# Instantiate a new material return it
-		a_material = objects.Material(mname, mdens, isos, MODTEMP)
+		a_material = objects.Material(mname + asname, mdens, isos, MODTEMP)
 		return a_material
 	
 	
 	
-	def __get_fuel(self, fuel):
+	def __get_fuel(self, fuel, asname = ""):
 		'''When a fuel block is encountered in the XML, extract the useful information
 		and do the math to create a Material instance.
 		
 		Inputs:
-			fuel: The ParameterList object describing a VERA fuel
+			fuel: 	The ParameterList object describing a VERA fuel
+			asname:	The assembly in which this fuel appears
 		
 		Outputs:
 			a_material: Instance of the Material object. Should be indistinguishable from
@@ -522,7 +525,7 @@ class Case(object):
 		
 		
 		# Instantiate a new material and add it to the dictionary
-		a_material = objects.Material(mname, mdens, isos, FUELTEMP)
+		a_material = objects.Material(mname + asname, mdens, isos, FUELTEMP)
 		return a_material
 	
 	
@@ -640,6 +643,10 @@ class Case(object):
 					for cellmap in prop:
 						new_cellmap = self.__get_map(cellmap)
 						cellmaps[new_cellmap.label] = new_cellmap
+				elif p == "Materials":
+					for mat in prop:
+						new_material = self.__get_material(mat, asname = in_name)
+						self.materials[new_material.name] = new_material
 				else:
 					errstr = "Error: Unexpected ParameterList " + p
 					warn(errstr)

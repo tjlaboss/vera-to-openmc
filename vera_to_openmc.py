@@ -502,13 +502,16 @@ class MC_Case(Case):
 	
 	
 		
-	def get_openmc_material(self, material):
+	def get_openmc_material(self, material, suffix = ""):
 		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
 		return an instance of openmc.Material. If the OpenMC Material exists, look it
 		up in the dictionary. Otherwise, create it anew.
 		
 		Inputs:
 			material:			string; key of the material in self.materials
+			suffix:				string; Assembly or Insert name in which a pin cell is present.
+								VERA pin cells may have different materials sharing the same name.
+								[Default: empty string]
 		
 		Outputs:
 			openmc_material:	instance of openmc.Material
@@ -516,7 +519,7 @@ class MC_Case(Case):
 		All of the material fractions sum to either +1.0 or -1.0. If positive fractions are used, they
 		refer to weight fractions. If negative fractions are used, they refer to atomic	fractions.
 		'''
-		
+		material += suffix
 		if material in self.openmc_materials:
 			# Look it up as normal
 			openmc_material = self.openmc_materials[material]
@@ -608,13 +611,11 @@ class MC_Case(Case):
 				
 				# Fill the cell in with a material
 				m = vera_cell.mats[ring]
-				# First, check if this is a local, duplicate material
-				if vera_cell.asname + m in self.openmc_materials:
-					fill = self.openmc_materials[vera_cell.asname + m]
-					# This normally will not exist, so:
+				if m + vera_cell.asname in self.materials:
+					fill = self.get_openmc_material(m, suffix = vera_cell.asname)
 				else:
 					fill = self.get_openmc_material(m)
-				new_cell.temperature = fill.temperature
+				#new_cell.temperature = fill.temperature
 				
 					
 				# What I want to do instead is, somewhere else in the code, generate the corresponding
