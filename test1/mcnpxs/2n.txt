@@ -1,0 +1,19 @@
+2n
+104 IFPBA + 20 WABA
+ CASL AMA Benchmark Problem 2N - Fuel Lattice - Public
+
+
+old waba:
+ ============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  0.86720 +/-  0.00026
+ k-effective (Track-length)  =  0.86709 +/-  0.00027
+ k-effective (Absorption)    =  0.86765 +/-  0.00026
+ Combined k-effective        =  0.86738 +/-  0.00021
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
+
+new waba:
+============================>     RESULTS     <============================
+
+
