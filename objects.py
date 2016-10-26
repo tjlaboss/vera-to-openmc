@@ -231,8 +231,13 @@ class Assembly(object):
 			# Now we know the label of this level in self (assembly) and insertion
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
-				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap)
 				new_label = a_label + '-' + i_label
+				# call the new function I'm about to write
+				self.__add_cell_insert(insertion, i_label, a_label)
+				
+				# change this next line to account for the new cells
+				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap)
+				
 				new_map = CoreMap(new_lattice, label = new_label)
 			elif a_label:
 				# No insertion
@@ -245,6 +250,31 @@ class Assembly(object):
 		self.cells.update(insertion.cells)
 		self.cellmaps.update(all_cellmaps)
 		self.key_maps.update(all_key_maps)
+		
+		
+	def __add_cell_insert(self, insertion, i_label, a_label):
+		'''Input:
+			a_label:	string; key of the current lattice layer
+			i_label:	string; key of the Insert's lattice'''
+		
+		"""
+		Not quite written yet.
+		I want to pass this function on to fill_lattice or replace_lattice,
+		so that
+		
+		for every insertion in 'imap',
+			guide_tube.insert(insertion)
+		"""
+		
+		
+		print(self.cells.keys())
+		new_label = a_label + '-' + i_label
+		if new_label not in self.cells:
+			cell_w_insert = copy(self.cells[a_label])
+			cell_w_insert.insert(insertion.cells[i_label])
+			self.cells[new_label] = cell_w_insert
+			print(cell_w_insert)
+		
 		
 
 class Insert(Assembly):
@@ -397,6 +427,24 @@ class Cell(object):
 	def __str__(self):
 		rep = self.key + " (radius = " + str(max(self.radii)) + ')'
 		return rep
+	
+	
+	def insert(self, insert_cell):
+		'''I heard you like cells, so I put a cell in your cell.
+		This method allows the insertion of 'insert_cell' into the innermost
+		radius of self. 
+		
+		Input:
+			insert_cell:		instance of Cell (same as self)
+		'''
+		
+		assert isinstance(insert_cell, Cell), "'insert_cell' must be a VERA pin cell (objects.Cell)."
+		assert (insert_cell.radii[-1] <= self.radii[0]), \
+			"The outer radius of the insertion must be less than the innermost radius of the guide tube."
+		
+		self.radii = insert_cell.radii + self.radii
+		self.mats = insert_cell.mats + self.mats
+		
 
 
 class Core(object):
