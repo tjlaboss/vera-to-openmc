@@ -88,8 +88,9 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	# Add insertions as necessary
 	if ascase.core.insert_map:
 		insert_key = ascase.core.insert_map[0][0]
-		insertion = ascase.inserts[insert_key]
-		as2.add_insert(insertion)
+		if insert_key != "-":
+			insertion = ascase.inserts[insert_key]
+			as2.add_insert(insertion)
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
 	some_asmbly = openmc_as2_layers[0]
@@ -203,7 +204,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2e.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2n.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
