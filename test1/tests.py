@@ -52,7 +52,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	plot_file = openmc.Plots([plot])
 	plot_file.export_to_xml()'''
 	
-	bounds = set_cubic_boundaries(assembly1.pitch, 1, ("reflective",)*6)
+	bounds = set_cubic_boundaries(assembly1.pitch, ("reflective",)*6)
 
 	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds
 
@@ -86,9 +86,10 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	apitch = ascase.core.pitch
 	
 	# Add insertions as necessary
-	insert_key = ascase.core.insert_map[0][0]
-	insertion = ascase.inserts[insert_key]
-	as2.add_insert(insertion)
+	if ascase.core.insert_map:
+		insert_key = ascase.core.insert_map[0][0]
+		insertion = ascase.inserts[insert_key]
+		as2.add_insert(insertion)
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
 	some_asmbly = openmc_as2_layers[0]
@@ -96,13 +97,13 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	
 	
 	plot_assembly(apitch, as2.npins)
-	bounds = set_cubic_boundaries(as2.npins, as2.pitch)
+	bounds = set_cubic_boundaries(apitch)
 	
 	return ascase, some_asmbly, apitch, as2.npins, bounds
 
 
 
-def set_cubic_boundaries(pitch, n, bounds=('reflective',)*6):
+def set_cubic_boundaries(pitch, bounds=('reflective',)*6):
 	'''Inputs:
 		pitch:		float; pitch between fuel pins 
 		n:			int; number of fuel pins in an assembly (usually 1 or 17)
@@ -113,12 +114,12 @@ def set_cubic_boundaries(pitch, n, bounds=('reflective',)*6):
 		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
 	'''
 	
-	min_x = openmc.XPlane(x0=-n*pitch/2.0, boundary_type=bounds[0])
-	max_x = openmc.XPlane(x0=+n*pitch/2.0, boundary_type=bounds[1])
-	min_y = openmc.YPlane(y0=-n*pitch/2.0, boundary_type=bounds[2])
-	max_y = openmc.YPlane(y0=+n*pitch/2.0, boundary_type=bounds[3])
-	min_z = openmc.ZPlane(z0=-n*pitch/2.0, boundary_type=bounds[4])
-	max_z = openmc.ZPlane(z0=+n*pitch/2.0, boundary_type=bounds[5])
+	min_x = openmc.XPlane(x0=-pitch/2.0, boundary_type=bounds[0])
+	max_x = openmc.XPlane(x0=+pitch/2.0, boundary_type=bounds[1])
+	min_y = openmc.YPlane(y0=-pitch/2.0, boundary_type=bounds[2])
+	max_y = openmc.YPlane(y0=+pitch/2.0, boundary_type=bounds[3])
+	min_z = openmc.ZPlane(z0=-pitch/2.0, boundary_type=bounds[4])
+	max_z = openmc.ZPlane(z0=+pitch/2.0, boundary_type=bounds[5])
 	
 	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
@@ -138,7 +139,9 @@ def plot_assembly(pitch, npins = 1, width=1250, height=1250):
 
 
 def test_core(case_file = "../gold/2o.xml.gold"):
-	'''Create a full core geometry'''
+	'''Create a full core geometry
+	
+	THIS DOES NOT WORK AT THIS TIME.'''
 	core_case = vera_to_openmc.MC_Case(case_file)
 	c = core_case.core
 	n = None; pitch = None
@@ -176,7 +179,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 	Inputs:
 		npins:		int; number of pins across an assembly. Use 1 for a pin cell,
 					and the lattice size for an assembly (usually 17).
-		pitch:		float; distance in cm between two pin cells.
+		pitch:		float; distance in cm between two PIN CELLS (not assemblies).
 					Used for detecting fissionable zones.
 		bounds:		iterable (tuple, list, etc.) of the X, Y, and Z bounding Planes:
 					 (min_x, max_x, min_y, max_y, min_z, max_z)
@@ -190,7 +193,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 	settings_file.trigger_active = True
 	settings_file.trigger_max_batches = max_batches
 	# Create an initial uniform spatial source distribution over fissionable zones
-	bounds = (-pitch/2.0,)*3 + (pitch/2.0,)*3
+	bounds = (-npins*pitch/2.0,)*3 + (npins*pitch/2.0,)*3
 	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
@@ -200,7 +203,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, pitch, n, bounds = test_assembly("../gold/2k.xml.gold")
+	case, fillcell, pitch, n, bounds = test_assembly("../gold/2e.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
@@ -239,10 +242,10 @@ if __name__ == "__main__":
 
 	
 	# OpenMC simulation parameters
-	min_batches = 200
-	max_batches = 200	*10
-	inactive 	= 50
-	particles 	= 150000
+	min_batches = 275
+	max_batches = min_batches*10
+	inactive 	= 75
+	particles 	= 200000
 	set_settings(n, pitch, bounds, min_batches, max_batches, inactive, particles)
 	
 	

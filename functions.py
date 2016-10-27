@@ -65,7 +65,6 @@ def fill_lattice(keys, lam, n=0):
 	return lattice
 
 
-
 def replace_lattice(new_keys, original, lam = None, n=0, blank = "-"):
 	'''Same as fill_lattice, but instead of performing a function on the key,
 	substitutes the key from 'new_keys' into 'original' unless the key=='blank'. '''

@@ -175,7 +175,7 @@ class Case(object):
 						bcs = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"}
 						baffle = {}; lower = {}; upper = {}; lower_refl = None; upper_refl = None
 						radii = []; mats = [] 
-						insert_map = ()
+						insert_cellmap = ()
 						# Unpack these variables from core_params
 						# Delete them from the dict, and pass the remaining params on to objects.Core
 						for p in core_params:
@@ -250,7 +250,10 @@ class Case(object):
 							#del core_params[p]
 						
 						
-						insert_map = objects.CoreMap(insert_cellmap, "Core insert map")
+						if insert_cellmap:
+							insert_map = objects.CoreMap(insert_cellmap, "Core insert map")
+						else:
+							insert_map = None
 						# Check that each pressure vessel radius has a corresponding material
 						if len(radii) != len(mats):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")

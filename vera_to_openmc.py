@@ -40,6 +40,10 @@ class MC_Case(Case):
 		self.mod = self.get_openmc_material("mod")
 		self.mod.add_s_alpha_beta("c_H_in_H2O")
 		
+		# Create an infinite cell/universe of moderator
+		self.mod_cell = openmc.Cell(self.__counter(CELL), name = "Infinite Mod Cell", fill = self.mod)
+		self.mod_verse = openmc.Universe(self.__counter(UNIVERSE), name = "Infinite Mod Universe", cells = (self.mod_cell,))
+		
 	
 	def __counter(self, count):
 		'''Get the next cell/surface/material/universe number, and update the counter.
@@ -679,8 +683,9 @@ class MC_Case(Case):
 			# And populate with universes from cell_verses
 			asmap = vera_asmbly.cellmaps[latname]
 			#print(latname, asmap)
-				
+			
 			openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
+			openmc_asmbly.outer = self.mod_verse	# To account for the assembly gap
 			openmc_asmblies.append(openmc_asmbly)
 		
 		return openmc_asmblies

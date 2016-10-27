@@ -435,7 +435,7 @@ class Cell(object):
 		self.label = label
 		self.asname = asname
 		
-		self.key = name + asname
+		self.key = name #+ asname
 	
 	def __str__(self):
 		rep = self.key + " (radius = " + str(max(self.radii)) + ')'
@@ -458,6 +458,7 @@ class Cell(object):
 		self.radii = insert_cell.radii + self.radii
 		self.mats = insert_cell.mats + self.mats
 		self.num_rings += len(insert_cell.radii)
+		self.name += "+" + insert_cell.asname
 		
 
 
