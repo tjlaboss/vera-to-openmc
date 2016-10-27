@@ -233,10 +233,11 @@ class Assembly(object):
 				# Then we've got an insertion acting here.
 				new_label = a_label + '-' + i_label
 				# call the new function I'm about to write
-				self.__add_cell_insert(insertion, i_label, a_label)
+				lamij = lambda i,j: self.get_cell_insert(insertion, imap, amap, i, j)
+				#self.__add_cell_insert(insertion, imap, amap)
 				
 				# change this next line to account for the new cells
-				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap)
+				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij)
 				
 				new_map = CoreMap(new_lattice, label = new_label)
 			elif a_label:
@@ -252,28 +253,40 @@ class Assembly(object):
 		self.key_maps.update(all_key_maps)
 		
 		
-	def __add_cell_insert(self, insertion, i_label, a_label):
-		'''Input:
-			a_label:	string; key of the current lattice layer
-			i_label:	string; key of the Insert's lattice'''
+	def get_cell_insert(self, insertion, imap, amap, i, j, blank = "-"):
+		'''For a cell within a lattice, check if an insertion goes here.
+		If so, see if it exists. If it does, look it up in self.cells.
+		If it doesn't, make a copy of the original and modify it with
+		cell.insert(the insertion cell). Return the key of whichever cell
+		belongs at this position.
 		
-		"""
-		Not quite written yet.
-		I want to pass this function on to fill_lattice or replace_lattice,
-		so that
+		Input:
+			insertion:		Insert instance
+			amap:			CoreMap instance of the assembly pre-insertion
+			imap:			CoreMap instance of the insertion locations
+			i,j:			int; indices marking the location in imap and amap
+			new_label:		str; what to call the new cell+insert --> this may be unnecessary
+		Output:
+			akey:			If there is no insertion here, the original amap[i][j]
+			new_key			If there is an insertion here, key of the new cell
+		'''
 		
-		for every insertion in 'imap',
-			guide_tube.insert(insertion)
-		"""
+		akey = amap[i][j]		# key of the original pin cell
+		ikey = imap[i][j]		# key of the Insert cell
 		
 		
-		print(self.cells.keys())
-		new_label = a_label + '-' + i_label
-		if new_label not in self.cells:
-			cell_w_insert = copy(self.cells[a_label])
-			cell_w_insert.insert(insertion.cells[i_label])
-			self.cells[new_label] = cell_w_insert
-			print(cell_w_insert)
+		if ikey == blank:
+			return akey
+		else:
+			acell_key = self.celldict[akey]
+			icell_key = insertion.celldict[ikey]
+			new_key = acell_key + "+" + icell_key
+			if new_key not in self.cells:
+				cell_w_insert = copy(self.cells[acell_key])
+				cell_w_insert.insert(insertion.cells[icell_key])
+				cell_w_insert.key = new_key
+				self.cells[new_key] = cell_w_insert
+			return new_key
 		
 		
 
@@ -444,6 +457,7 @@ class Cell(object):
 		
 		self.radii = insert_cell.radii + self.radii
 		self.mats = insert_cell.mats + self.mats
+		self.num_rings += len(insert_cell.radii)
 		
 
 

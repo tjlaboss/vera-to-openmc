@@ -677,7 +677,7 @@ class MC_Case(Case):
 			openmc_asmbly.pitch = (pitch, pitch)
 			openmc_asmbly.lower_left = [-pitch * float(npins) / 2.0] * 2
 			# And populate with universes from cell_verses
-			asmap = vera_asmbly.cellmaps[latname].square_map()
+			asmap = vera_asmbly.cellmaps[latname]
 			#print(latname, asmap)
 				
 			openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)

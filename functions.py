@@ -66,11 +66,13 @@ def fill_lattice(keys, lam, n=0):
 
 
 
-def replace_lattice(new_keys, original, n=0, blank = "-"):
+def replace_lattice(new_keys, original, lam = None, n=0, blank = "-"):
 	'''Same as fill_lattice, but instead of performing a function on the key,
 	substitutes the key from 'new_keys' into 'original' unless the key=='blank'. '''
 	if not n:
 		n = len(original)
+	if not lam:
+		lam = lambda i,j: new_keys[i][j]
 	
 	lattice = [[None,]*n]*n
 	for i in range(n):
@@ -80,7 +82,7 @@ def replace_lattice(new_keys, original, n=0, blank = "-"):
 			if k == blank:
 				new_row[j] = original[i][j]
 			else:
-				new_row[j] = new_keys[i][j]
+				new_row[j] = lam(i,j)
 		lattice[i] = new_row
 	
 	return lattice
