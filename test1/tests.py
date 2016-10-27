@@ -99,7 +99,7 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	plot_assembly(apitch, as2.npins)
 	bounds = set_cubic_boundaries(apitch)
 	
-	return ascase, some_asmbly, apitch, as2.npins, bounds
+	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds
 
 
 
@@ -203,7 +203,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, pitch, n, bounds = test_assembly("../gold/2e.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2e.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
@@ -246,7 +246,7 @@ if __name__ == "__main__":
 	max_batches = min_batches*10
 	inactive 	= 75
 	particles 	= 200000
-	set_settings(n, pitch, bounds, min_batches, max_batches, inactive, particles)
+	set_settings(n, ppitch, bounds, min_batches, max_batches, inactive, particles)
 	
 	
 	

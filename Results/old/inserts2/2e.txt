@@ -1,0 +1,31 @@
+2e
+ CASL AMA Benchmark Problem 2E - Fuel Lattice - Public
+
+Fixed the guide tubes
+
+	# OpenMC simulation parameters
+	min_batches = 200
+	max_batches = min_batches*10
+	inactive 	= 50
+	particles 	= 150000
+	set_settings(n, pitch, bounds, min_batches, max_batches, inactive, particles)
+
+
+________________________________________________________________________________________
+Laptop:
+
+
+
+
+
+________________________________________________________________________________________
+Kilkenny:
+
+============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  1.06851 +/-  0.00025
+ k-effective (Track-length)  =  1.06838 +/-  0.00028
+ k-effective (Absorption)    =  1.06861 +/-  0.00024
+ Combined k-effective        =  1.06855 +/-  0.00020
+ Leakage Fraction            =  0.00000 +/-  0.00000
+

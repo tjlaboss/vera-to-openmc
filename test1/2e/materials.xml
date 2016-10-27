@@ -9,21 +9,7 @@
         <nuclide name="O16" wo="0.8869306160464936" />
         <sab name="c_H_in_H2O" />
     </material>
-    <material id="2" name="U31">
-        <temperature>600.0</temperature>
-        <density units="g/cc" value="10.257" />
-        <nuclide name="O16" wo="0.11850452244729154" />
-        <nuclide name="U234" wo="0.0002322476134708121" />
-        <nuclide name="U235" wo="0.027326359804133966" />
-        <nuclide name="U236" wo="0.00012570125509901625" />
-        <nuclide name="U238" wo="0.8538111688800047" />
-    </material>
-    <material id="3" name="he">
-        <temperature>600.0</temperature>
-        <density units="g/cc" value="0.0001786" />
-        <nuclide name="He4" wo="1.0" />
-    </material>
-    <material id="4" name="zirc4">
+    <material id="2" name="zirc4">
         <temperature>600.0</temperature>
         <density units="g/cc" value="6.56" />
         <nuclide name="Cr50" wo="4.17369e-05" />
@@ -55,6 +41,20 @@
         <nuclide name="Zr92" wo="0.169723" />
         <nuclide name="Zr94" wo="0.175744" />
         <nuclide name="Zr96" wo="0.0289168" />
+    </material>
+    <material id="3" name="U31">
+        <temperature>600.0</temperature>
+        <density units="g/cc" value="10.257" />
+        <nuclide name="O16" wo="0.11850452244729154" />
+        <nuclide name="U234" wo="0.0002322476134708121" />
+        <nuclide name="U235" wo="0.027326359804133966" />
+        <nuclide name="U236" wo="0.00012570125509901625" />
+        <nuclide name="U238" wo="0.8538111688800047" />
+    </material>
+    <material id="4" name="he">
+        <temperature>600.0</temperature>
+        <density units="g/cc" value="0.0001786" />
+        <nuclide name="He4" wo="1.0" />
     </material>
     <material id="5" name="ss">
         <temperature>600.0</temperature>

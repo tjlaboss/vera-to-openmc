@@ -1,0 +1,13 @@
+2e
+CASL AMA Benchmark Problem 2E - Fuel Lattice - Public
+
+endf7.1 cross sections
+s(a,b) = c_H_in_H2O
+
+	# OpenMC simulation parameters
+	min_batches = 275
+	max_batches = min_batches*10
+	inactive 	= 75
+	particles 	= 200000
+	set_settings(n, ppitch, bounds, min_batches, max_batches, inactive, particles)
+
