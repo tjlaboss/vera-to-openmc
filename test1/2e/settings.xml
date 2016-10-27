@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<settings>
+    <eigenvalue>
+        <particles>200000</particles>
+        <batches>275</batches>
+        <inactive>75</inactive>
+    </eigenvalue>
+    <source strength="1.0">
+        <space type="fission">
+            <parameters>-182.75 -182.75 -182.75 182.75 182.75 182.75</parameters>
+        </space>
+    </source>
+    <output>
+        <tallies>false</tallies>
+    </output>
+    <trigger>
+        <active>true</active>
+        <max_batches>2750</max_batches>
+    </trigger>
+</settings>
