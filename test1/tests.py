@@ -83,9 +83,10 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 			print("Key", e, "not found; autodetecting.")
 			print("Using Assembly:", as2.name)
 	
+	apitch = ascase.core.pitch
 	
 	# Add insertions as necessary
-	insert_key = ascase.core.insert_map.square_map()[0][0]
+	insert_key = ascase.core.insert_map[0][0]
 	insertion = ascase.inserts[insert_key]
 	as2.add_insert(insertion)
 		
@@ -94,10 +95,10 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	
 	
 	
-	plot_assembly(as2.pitch, as2.npins)
+	plot_assembly(apitch, as2.npins)
 	bounds = set_cubic_boundaries(as2.npins, as2.pitch)
 	
-	return ascase, some_asmbly, as2.pitch, as2.npins, bounds
+	return ascase, some_asmbly, apitch, as2.npins, bounds
 
 
 
@@ -122,12 +123,12 @@ def set_cubic_boundaries(pitch, n, bounds=('reflective',)*6):
 	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
 	
-def plot_assembly(pitch, npins, width=1250, height=1250):
+def plot_assembly(pitch, npins = 1, width=1250, height=1250):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'plot-materials-xy'
 	plot.origin = [0, 0, 0]
-	plot.width = [npins*pitch - .01, npins*pitch - .01]
+	plot.width = [pitch - .01, pitch - .01]
 	plot.pixels = [width, height]
 	plot.color = 'mat'
 	# Instantiate a Plots collection and export to "plots.xml"
@@ -189,7 +190,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 	settings_file.trigger_active = True
 	settings_file.trigger_max_batches = max_batches
 	# Create an initial uniform spatial source distribution over fissionable zones
-	bounds = (-npins*pitch/2.0,)*3 + (npins*pitch/2.0,)*3
+	bounds = (-pitch/2.0,)*3 + (pitch/2.0,)*3
 	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
@@ -199,7 +200,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, pitch, n, bounds = test_assembly("../gold/2n.xml.gold") #, "assy")
+	case, fillcell, pitch, n, bounds = test_assembly("../gold/2k.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
