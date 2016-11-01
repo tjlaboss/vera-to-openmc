@@ -85,8 +85,6 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	
 	apitch = ascase.core.pitch
 	
-	#debug
-	print(ascase.core)
 	
 	# Add insertions as necessary
 	#insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
@@ -103,9 +101,9 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 			as2.add_insert(control_rod)
 	if ascase.core.detector_map:
 		detector_key = ascase.core.detector_map[0][0]
-		# TODO: Code this!
 		if detector_key != "-":
-			print("Do something involving", detector_key)
+			detector = ascase.inserts[detector_key]
+			as2.add_insert(detector)
 	
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
@@ -220,7 +218,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2h.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2i.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	

@@ -377,7 +377,9 @@ class Case(object):
 							# TODO: Figure out whether to keep inserts and controls separate
 							self.inserts[new_control.key] = new_control
 					elif name == "DETECTORS":
-						do_detector_stuff = True
+						for detector in child:
+							new_detector = self.__get_insert(detector)
+							self.inserts[new_detector.key] = new_detector
 					elif name == "INSERTS":
 						for insert in child:
 							new_insert = self.__get_insert(insert)
