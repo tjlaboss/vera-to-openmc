@@ -615,11 +615,10 @@ class Case(object):
 		in_name = insert.attrib["name"].lower()
 		# dictionary of all independent parameters for this assembly
 		key = in_name; title = in_name
-		cellmaps = {}
-		cells = {}
-		axial_elevs = ()
-		axial_labels = ()
+		cellmaps = {};		cells = {}
+		axial_elevs = ();	axial_labels = ()
 		npins = 0
+		max_step = 0;		stroke = 0.0			
 		insert_params = {}
 		for prop in insert:
 			p = prop.attrib["name"]
@@ -635,9 +634,12 @@ class Case(object):
 					key = v
 				elif p == "title":
 					title += "-" + str(v)
+				elif p == "maxstep":
+					max_step = int(v)
+				elif p == "stroke":
+					stroke = float(v)
 				else:
 					insert_params[p] = v
-					print("DEBUG: Storing parameter", p, "=", v)
 					
 			elif prop.tag == "ParameterList":
 				if p == "Cells":
@@ -664,7 +666,8 @@ class Case(object):
 		
 				
 		
-		an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels, insert_params)
+		an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
+									insert_params, stroke, max_step)
 		return an_insert
 			
 	

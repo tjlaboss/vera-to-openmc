@@ -305,15 +305,20 @@ class Insert(Assembly):
 						[Default: empty string]
 		npins:			int; number of pins across the assembly this insert is to be placed in.
 						Must be equal to assembly.npins.
-						[Defualt: 0]
+						[Default: 0]
 		cells:			list of instances of Cell
 		cellmaps:		list of instances of Cellmap
-		axial_elevs:	list of floats describing 
+		axial_elevs:	list of floats describing
+		stroke:			float; Control rod stroke. Distance (cm) between
+						full-insertion and full-withdrawal
+						[Only used for CONTROL inserts]  [Default: 0]
+		maxstep:		int; Total number of steps between full-insertion and full-withdrawal
+						[Only used for CONTROL inserts] [Default: 0]
 	'''
 	
 	def __init__(self, key, name = "", npins = 0,
 				 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
-				 params = {}):
+				 params = {}, stroke = 0.0, maxstep = 0):
 		
 		
 		if axial_elevs or axial_labels:
@@ -328,6 +333,8 @@ class Insert(Assembly):
 		self.axial_elevations = axial_elevs
 		self.axial_labels = axial_labels
 		self.params = params
+		self.stroke = stroke
+		self.maxstep = maxstep
 		
 		self.construct_maps()
 		
