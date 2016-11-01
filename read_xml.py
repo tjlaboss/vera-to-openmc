@@ -259,7 +259,7 @@ class Case(object):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
 							self.errors += 1
 						self.core = objects.Core(pitch, core_size, core_height, shape, asmbly, core_params,
-												 bcs, lower_refl, upper_refl, radii, mats, baffle, insert_map = insert_map)
+												 bcs, lower_refl, upper_refl, radii, mats, baffle, insert_map)
 						# TODO: Account for controls, detectors, etc.
 						
 								
@@ -352,7 +352,9 @@ class Case(object):
 							self.states.append(new_state)
 							
 					elif name == "CONTROLS":
-						do_control_stuff = True
+						for control in child:
+							new_control = self.__get_insert(control)
+							self.inserts[new_control.key] = new_control
 					elif name == "DETECTORS":
 						do_detector_stuff = True
 					elif name == "INSERTS":
@@ -635,7 +637,7 @@ class Case(object):
 					title += "-" + str(v)
 				else:
 					insert_params[p] = v
-					print(v)
+					print("DEBUG: Storing parameter", p, "=", v)
 					
 			elif prop.tag == "ParameterList":
 				if p == "Cells":
