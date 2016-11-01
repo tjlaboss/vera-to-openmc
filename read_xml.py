@@ -371,14 +371,7 @@ class Case(object):
 							new_state = self.__get_state(stat)
 							self.states.append(new_state)
 							
-					elif name == "CONTROLS":
-						for control in child:
-							new_control = self.__get_insert(control)
-							# TODO: Figure out whether to keep inserts and controls separate
-							self.inserts[new_control.key] = new_control
-					elif name == "DETECTORS":
-						do_detector_stuff = True
-					elif name == "INSERTS":
+					elif name in ("INSERTS", "CONTROLS", "DETECTORS"):
 						for insert in child:
 							new_insert = self.__get_insert(insert)
 							self.inserts[new_insert.key] = new_insert

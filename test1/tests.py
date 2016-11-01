@@ -85,28 +85,18 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	
 	apitch = ascase.core.pitch
 	
-	#debug
-	print(ascase.core)
 	
 	# Add insertions as necessary
-	#insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
-	if ascase.core.insert_map:
-		insert_key = ascase.core.insert_map[0][0]
-		if insert_key != "-":
-			insertion = ascase.inserts[insert_key]
-			as2.add_insert(insertion)
-	if ascase.core.control_map:
-		control_key = ascase.core.control_map[0][0]
-		# TODO: handle stroke, maxsteps!!
-		if control_key != "-":
-			control_rod = ascase.inserts[control_key]
-			as2.add_insert(control_rod)
-	if ascase.core.detector_map:
-		detector_key = ascase.core.detector_map[0][0]
-		# TODO: Code this!
-		if detector_key != "-":
-			print("Do something involving", detector_key)
-	
+	insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
+	for coremap in insertion_maps:
+		if coremap:
+			print(coremap)
+			insert_key = coremap[0][0]
+			if insert_key != "-":		# indicates no insertion in VERA
+				insertion = ascase.inserts[insert_key]
+				as2.add_insert(insertion)
+		# TODO: For [CONTROL] case, handle stroke, maxsteps
+		# Doesn't matter for assembly benchmarks, but does for full core
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
 	some_asmbly = openmc_as2_layers[0]
@@ -220,7 +210,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2h.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2k.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
