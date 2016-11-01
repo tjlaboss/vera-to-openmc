@@ -89,11 +89,24 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	print(ascase.core)
 	
 	# Add insertions as necessary
+	#insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
 	if ascase.core.insert_map:
 		insert_key = ascase.core.insert_map[0][0]
 		if insert_key != "-":
 			insertion = ascase.inserts[insert_key]
 			as2.add_insert(insertion)
+	if ascase.core.control_map:
+		control_key = ascase.core.control_map[0][0]
+		# TODO: handle stroke, maxsteps!!
+		if control_key != "-":
+			control_rod = ascase.inserts[control_key]
+			as2.add_insert(control_rod)
+	if ascase.core.detector_map:
+		detector_key = ascase.core.detector_map[0][0]
+		# TODO: Code this!
+		if detector_key != "-":
+			print("Do something involving", detector_key)
+	
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
 	some_asmbly = openmc_as2_layers[0]

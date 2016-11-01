@@ -519,6 +519,7 @@ class Core(object):
 			self.asmbly = CoreMap(asmbly, "Fuel assembly map")
 		else:
 			self.asmbly = asmbly
+		#if not isinstance(control, class_or_tuple)
 		
 		self.bc = {}
 		# Correct for OpenMC syntax

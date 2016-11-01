@@ -175,7 +175,10 @@ class Case(object):
 						bcs = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"}
 						baffle = {}; lower = {}; upper = {}; lower_refl = None; upper_refl = None
 						radii = []; mats = [] 
-						insert_cellmap = ()
+						insert_cellmap = [];	detector_cellmap = []
+						# NOTE: the bank_cellmap can probably be safely removed.
+						control_cellmap = [];	control_bank_cellmap = []  
+						
 						# Unpack these variables from core_params
 						# Delete them from the dict, and pass the remaining params on to objects.Core
 						for p in core_params:
@@ -192,8 +195,13 @@ class Case(object):
 								core_height = float(v)
 							elif p == "insert_map":
 								insert_cellmap = clean(v, str)
+							elif p == "crd_bank":
+								control_bank_cellmap = clean(v, str)
+							elif p == "crd_map":
+								control_cellmap = clean(v, str)
+							elif p == "det_map":
+								detector_cellmap = clean(v, str)
 			
-							#FIXME: See if this is working or not
 							elif p[:3] == "bc_":
 								bcs[p[3:]] = v
 								if len(bcs) < 3:
@@ -250,16 +258,28 @@ class Case(object):
 							#del core_params[p]
 						
 						
+						# Generate some core maps from the ugly cellmaps
 						if insert_cellmap:
-							insert_map = objects.CoreMap(insert_cellmap, "Core insert map")
-						else:
-							insert_map = None
+							insert_map = objects.CoreMap(insert_cellmap, "Core insertion map")
+						else:	insert_map = None
+						if control_bank_cellmap:
+							control_bank = objects.CoreMap(control_bank_cellmap, "Control rod location map")
+						else:	control_bank = None
+						if control_cellmap:
+							control_map = objects.CoreMap(control_cellmap, "Control rod insertion map")
+						else:	control_map = None
+						if detector_cellmap:
+							detector_map = objects.CoreMap(detector_cellmap, "Detector location map")
+						else:	detector_map = None
+							
+							
 						# Check that each pressure vessel radius has a corresponding material
 						if len(radii) != len(mats):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
 							self.errors += 1
 						self.core = objects.Core(pitch, core_size, core_height, shape, asmbly, core_params,
-												 bcs, lower_refl, upper_refl, radii, mats, baffle, insert_map)
+												 bcs, lower_refl, upper_refl, radii, mats, baffle,
+												 control_bank, control_map, insert_map, detector_map)
 						# TODO: Account for controls, detectors, etc.
 						
 								
@@ -354,6 +374,7 @@ class Case(object):
 					elif name == "CONTROLS":
 						for control in child:
 							new_control = self.__get_insert(control)
+							# TODO: Figure out whether to keep inserts and controls separate
 							self.inserts[new_control.key] = new_control
 					elif name == "DETECTORS":
 						do_detector_stuff = True

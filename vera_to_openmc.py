@@ -684,8 +684,8 @@ class MC_Case(Case):
 			asmap = vera_asmbly.cellmaps[latname]
 			#print(latname, asmap)
 			
-			#openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
-			openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[vera_asmbly.celldict[c]], npins)
+			openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
+			#openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[vera_asmbly.celldict[c]], npins)
 			openmc_asmbly.outer = self.mod_verse	# To account for the assembly gap
 			openmc_asmblies.append(openmc_asmbly)
 		
