@@ -190,7 +190,11 @@ class Assembly(object):
 	
 	def lookup(self, c, blank = "-"):
 		if c != blank:
-			return self.celldict[c]
+			# NASTY HACK, NEED TO REMOVE
+			if c in self.celldict:
+				return self.celldict[c]
+			else:
+				return self.cells[c].key
 		else:
 			return blank
 	
@@ -278,7 +282,7 @@ class Assembly(object):
 		if ikey == blank:
 			return akey
 		else:
-			acell_key = self.celldict[akey]
+			acell_key = self.lookup(akey)
 			icell_key = insertion.celldict[ikey]
 			new_key = acell_key + "+" + icell_key
 			if new_key not in self.cells:

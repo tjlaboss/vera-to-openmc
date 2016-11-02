@@ -210,7 +210,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, pitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2k.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2j.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
