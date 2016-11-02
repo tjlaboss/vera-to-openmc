@@ -13,7 +13,6 @@ from math import sqrt
 
 
 # Global variables for counters
-global openmc_surface_count, openmc_cell_count, openmc_material_cuont, openmc_universe_count
 openmc_surface_count	= openmc.AUTO_SURFACE_ID + 1
 openmc_cell_count 		= openmc.AUTO_CELL_ID + 1
 openmc_material_count	= openmc.AUTO_MATERIAL_ID + 1
@@ -29,6 +28,8 @@ def counter(count):
 			count:		CELL, SURFACE, MATERIAL, or UNIVERSE
 		Output:
 			integer representing the next cell/surface/material/universe ID'''
+		global openmc_surface_count, openmc_cell_count, openmc_material_cuont, openmc_universe_count
+
 		if count == SURFACE:
 			openmc_surface_count += 1
 			return openmc_surface_count
@@ -150,7 +151,7 @@ class SpacerGrid(object):
 				          [             (          npins^2   ) ]
         '''
 		
-		A = self.mass / self.materials[self.material].density / self.height
+		A = self.mass / self.material.density / self.height
 		t = 0.5*(pitch - sqrt(pitch**2 - A/npins**2))
 		return t
 		
@@ -243,7 +244,7 @@ def add_grid_to(lattice, pitch, npins, spacergrid):
 			row[i] = new_cell
 		new_universes[j] = row
 	
-	new_name = lattice.id + "-gridded"
+	new_name = str(lattice.id) + "-gridded"
 	gridded = openmc.RectLattice(counter(UNIVERSE), name = new_name)
 	gridded.pitch = (pitch, pitch)
 	gridded.lower_left = [-pitch * npins / 2.0] * 2
