@@ -1,0 +1,21 @@
+2g
+CASL AMA Benchmark Problem 2G - Fuel Lattice - Public
+
+mcnp endf7.1 xs
+c_H_in_H2O
+
+# OpenMC simulation parameters
+	min_batches = 275
+	max_batches = min_batches*10
+	inactive 	= 75
+	particles 	= 200000
+	
+ ============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  0.84745 +/-  0.00016
+ k-effective (Track-length)  =  0.84733 +/-  0.00017
+ k-effective (Absorption)    =  0.84781 +/-  0.00016
+ Combined k-effective        =  0.84759 +/-  0.00013
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
+
