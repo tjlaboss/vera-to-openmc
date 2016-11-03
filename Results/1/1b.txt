@@ -1,0 +1,12 @@
+1b
+
+
+============================>     RESULTS     <============================
+
+ k-effective (Collision)     =  1.18174 +/-  0.00018
+ k-effective (Track-length)  =  1.18164 +/-  0.00022
+ k-effective (Absorption)    =  1.18191 +/-  0.00016
+ Combined k-effective        =  1.18183 +/-  0.00014
+ Leakage Fraction            =  0.00000 +/-  0.00000
+
+           
