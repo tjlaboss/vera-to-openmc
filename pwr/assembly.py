@@ -404,7 +404,7 @@ class Assembly(object):
 		self.__prebuild()
 		
 		# Start at the bottom
-		surf0 = openmc.ZPlane(counter(SURFACE), z0 = 0)
+		surf0 = openmc.ZPlane(counter(SURFACE), name="bottom", z0 = 0)
 		last_s = surf0
 		self.openmc_surfaces.append(surf0)
 		
@@ -420,7 +420,7 @@ class Assembly(object):
 		# When a grid is added by calling add_grid_to(), the lattice's name becomes "oldname-gridded".
 		gridded_lattices = {}
 		
-		for z in self.all_elevs:
+		for z in self.all_elevs[1:]:
 			s = get_plane(self.openmc_surfaces, counter, 'z', z)
 			# See what lattice we are in
 			for i in range(len(self.lattices)):

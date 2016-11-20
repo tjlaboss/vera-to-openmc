@@ -66,7 +66,7 @@ moderator_cell.temperature = 600.0
 pin_cell_universe.add_cell(moderator_cell)
 #Using the pin cell universe, we can construct a 17x17 rectangular lattice with a 1.26 cm pitch.
 # Create fuel assembly Lattice
-as1 = openmc.RectLattice(33, name='1.6% Fuel - 0BA')
+as1 = openmc.RectLattice(33, name='1.6% Fuel RectLattice')
 as1.pitch = (1.26, 1.26)
 as1.lower_left = [-1.26 * 17. / 2.0] * 2
 as1.universes = [[pin_cell_universe] * 17] * 17
