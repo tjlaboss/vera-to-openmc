@@ -325,6 +325,16 @@ class Assembly(object):
 		return self.name
 	
 	
+	def __get_plane(self, dim, plane, boundary_type = None, name = "", eps = None):
+		'''Shorthand for pwr.functions.get_plane() specific to this assembly'''
+		if not boundary_type:
+			boundary_type = "transmission"
+		if not eps:
+			eps = 5
+		return get_plane(self.openmc_surfaces, counter, dim, plane, boundary_type, name, eps)
+		
+	
+	
 	def __prebuild(self):
 		'''Check that all the required properties are there.
 		If not, error out. Otherwise, do a few operations prior to build().'''
@@ -364,7 +374,7 @@ class Assembly(object):
 				mid = self.spacer_mids[i]
 				s_bot = mid - spacer.height / 2.0
 				s_top = mid + spacer.height / 2.0
-				spacer_elevs.append((s_bot, s_top))
+				spacer_elevs += (s_bot, s_top)
 			elevs = spacer_elevs + self.lattice_elevs
 			elevs.sort()
 			self.all_elevs = list(set(elevs))	# Remove the duplicates
@@ -377,10 +387,10 @@ class Assembly(object):
 		if self.walls:
 			[min_x, max_x, min_y, max_y] = self.walls
 		else:
-			min_x = get_plane(self.openmc_surfaces, counter, 'x', -half, name = self.name + ' - min_x') 
-			max_x = get_plane(self.openmc_surfaces, counter, 'x', +half, name = self.name + ' - max_x') 
-			min_y = get_plane(self.openmc_surfaces, counter, 'y', -half, name = self.name + ' - min_y') 
-			max_y = get_plane(self.openmc_surfaces, counter, 'y', +half, name = self.name + ' - max_y') 
+			min_x = self.__get_plane('x', -half, name = self.name + ' - min_x') 
+			max_x = self.__get_plane('x', +half, name = self.name + ' - max_x') 
+			min_y = self.__get_plane('y', -half, name = self.name + ' - min_y') 
+			max_y = self.__get_plane('y', +half, name = self.name + ' - max_y') 
 			self.walls = [min_x, max_x, min_y, max_y]
 		
 		self.openmc_surfaces = [min_x, max_x, min_y, max_y]
@@ -411,7 +421,7 @@ class Assembly(object):
 		
 		if self.lower_nozzle:
 			lnoz = openmc.Cell(counter(CELL), "lower nozzle")
-			nozzle_top = get_plane(self.openmc_surfaces, counter, 'z', self.lower_nozzle.height)
+			nozzle_top = self.__get_plane('z', self.lower_nozzle.height)
 			lnoz.region = (self.wall_region & +last_s & -nozzle_top)
 			lnoz.fill = self.lower_nozzle.material
 			self.openmc_cells.append(lnoz)
@@ -422,7 +432,7 @@ class Assembly(object):
 		gridded_lattices = {}
 		
 		for z in self.all_elevs[1:]:
-			s = get_plane(self.openmc_surfaces, counter, 'z', z)
+			s = self.__get_plane('z', z)
 			# See what lattice we are in
 			for i in range(len(self.lattices)):
 				if z > self.lattice_elevs[i]:

@@ -16,7 +16,7 @@ class Nozzle(object):
 		mod_mat:	instance of openmc.Material; composition of the moderator
 		npins:		integer; number of pins in a row. Used to calculate Nozzle area
 		pitch:		float; pitch in cm between pins.  Used to calculate Nozzle area
-		[name:		string; optional name for the nozzle. Default is "nozzle-material".]
+		[name:		string; optional name for the nozzle material. Default is "nozzle-material".]
 	
 	Attributes:
 		height:		[same as above]

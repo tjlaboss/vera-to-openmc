@@ -57,14 +57,14 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds
 
 
-def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
-	'''Create and run a more complicated assembly
+def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
+	'''Create and run a more complicated lattice
 	
 	Plain lattice cases (those starting with a '2') are composed of a 2D lattice extended 1 cm
 	in the Z axis. In this case, just take the first (and only) entry in case.assemblies.
 	
 	This function may also be used to run individual pin cells that are parts of larger cases.
-	In this event, the user must specify the assembly name 'aname'.
+	In this event, the user must specify the lattice/assembly name 'aname'.
 	
 	!! TODO !! 
 	Edit this method to actually be able to run arbitrary assemblies from full-core cases. 
@@ -114,6 +114,56 @@ def test_assembly(case_file = "../gold/p7.xml.gold", aname=''):
 	bounds = set_cubic_boundaries(apitch)
 	
 	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds
+
+
+
+def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
+	'''Create and run a single 3D assembly case
+	
+	
+	TODO: Allow the user to test any assembly from full-core cases as well. 
+	
+	Inputs:
+		case_file: 		string of the location on the filesystem of the XML.GOLD input
+		aname:			string; unique key of the Assembly to run.
+	'''
+	ascase = vera_to_openmc.MC_Case(case_file)
+	as3 = list(ascase.assemblies.values())[0]
+	if aname:
+		try:
+			as3 = ascase.assemblies[aname.lower()]
+		except KeyError as e:
+			print("Key", e, "not found; autodetecting.")
+			print("Using Assembly:", as3.name)
+	
+	apitch = ascase.core.pitch
+	
+	# Add insertions as necessary
+	insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
+	for coremap in insertion_maps:
+		if coremap:
+			print(coremap)
+			insert_key = coremap[0][0]
+			if insert_key != "-":		# indicates no insertion in VERA
+				insertion = ascase.inserts[insert_key]
+				as3.add_insert(insertion)
+		# TODO: For [CONTROL] case, handle stroke, maxsteps
+		# Doesn't matter for assembly benchmarks, but does for full core
+	
+		
+	#openmc_as3_layers = ascase.get_openmc_lattices(as3) 
+	some_asmbly = ascase.get_openmc_assembly(as3)
+	
+	'''
+	# Spacer test; doesn't work
+	import pwr
+	print(ascase.openmc_materials.keys())
+	spacergrid = pwr.SpacerGrid("key", 3.81, 875, ascase.get_openmc_material("ss"), 1.26, 17)
+	some_asmbly = pwr.assembly.add_grid_to(some_asmbly, 1.26, 17, spacergrid)
+	'''
+	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds
+	
+
 
 
 
@@ -217,8 +267,8 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/2j.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/p7.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds = test_lattice("../gold/2j.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/3a.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]

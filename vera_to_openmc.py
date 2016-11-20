@@ -780,8 +780,44 @@ class MC_Case(Case):
 		pitch = vera_asmbly.pitch
 		npins = vera_asmbly.npins
 		
+		# Initiate and describe the Assembly
+		pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.__counter(UNIVERSE), pitch, npins)
+		pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
+		pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
+		pwr_asmbly.mod = self.mod
+		
+		# Handle spacer grids
+		if vera_asmbly.spacergrids:
+			pwr_spacergrids = {}
+			# Translate from VERA to pwr 
+			for gkey in vera_asmbly.spacergrids:
+				g = vera_asmbly.spacergrids[gkey]
+				mat = self.get_openmc_material(g.material)
+				grid = pwr.SpacerGrid(gkey, g.height, g.mass, mat, pitch, npins)
+				pwr_spacergrids[gkey] = grid
+			
+			pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: pwr_spacergrids[key] )
+			pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
+		
+		# Handle nozzles
+		if "lower_nozzle_comp" in ps:
+			nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
+			mass = float(ps["lower_nozzle_mass"])
+			height = float(ps["lower_nozzle_height"])
+			pwr_asmbly.lower_nozzle = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch, "Lower Nozzle")
+		if "upper_nozzle_comp" in ps:
+			nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
+			mass = float(ps["upper_nozzle_mass"])
+			height = float(ps["upper_nozzle_height"])
+			pwr_asmbly.upper_nozzle = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch, "Upper Nozzle")
+		
+		
+		# Where the magic happens
+		openmc_asmbly = pwr_asmbly.build()
+		
+		
+		'''
 		# Start by getting the lattices and layers
-		#lattices = self.get_openmc_assemblies(vera_asmbly)
 		lattices = self.get_openmc_lattices(vera_asmbly)
 		nlats = len(lattices)
 		
@@ -791,8 +827,9 @@ class MC_Case(Case):
 			lat = lattices[layer]
 		
 		#TODO: This will probably be much easier if I use pwr.Assembly.
+		'''
 		
-		return None
+		return openmc_asmbly
 	
 	
 	def get_openmc_reactor_vessel(self):
