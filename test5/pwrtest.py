@@ -88,7 +88,7 @@ for surf in mypwr.openmc_surfaces:
 root_cell = openmc.Cell(name='root cell')
 root_cell.fill = pwrverse
 # Add boundary planes
-root_cell.region = mypwr.walls & +min_z & -max_z
+root_cell.region = mypwr.wall_region & +min_z & -max_z
 root_universe = openmc.Universe(universe_id=0, name='root universe')
 root_universe.add_cell(root_cell)
 # Create Geometry and set root Universe

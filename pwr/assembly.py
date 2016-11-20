@@ -254,8 +254,10 @@ def add_grid_to(lattice, pitch, npins, spacergrid):
 
 
 class Assembly(object):
-	'''An OpenMC Universe containing cells for the upper/lower nozzles,
-	lattices (with and without spacer grids), and surrounding moderator.
+	'''Constructor for an OpenMC Universe containing:
+		cells for the upper/lower nozzles,
+		lattices (with and without spacer grids),
+		and the surrounding moderator.
 	
 	Parameters (all optional except "key"):
 		key:			str; short, unique name of this Assembly as will appear in the core lattice.
@@ -315,6 +317,7 @@ class Assembly(object):
 		self.lattices = lattices;			self.lattice_elevs = lattice_elevs
 		self.spacers = spacers;				self.spacer_mids = spacer_mids
 		self.lower_nozzle = lower_nozzle;	self.upper_nozzle = upper_nozzle
+		self.walls = walls;
 		self.mod = mod
 	
 	
@@ -328,7 +331,7 @@ class Assembly(object):
 		
 		if not self.name:
 			self.name = self.key
-		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle']
+		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle', 'walls']
 		if min(self.lattice_elevs) == 0:
 			blank_allowable.append('lower_nozzle')
 		
@@ -407,7 +410,7 @@ class Assembly(object):
 		
 		if self.lower_nozzle:
 			lnoz = openmc.Cell(counter(CELL), "lower nozzle")
-			nozzle_top = self.__get_plane('z', self.lower_nozzle.height)
+			nozzle_top = get_plane(self.openmc_surfaces, counter, 'z', self.lower_nozzle.height)
 			lnoz.region = (self.wall_region & +last_s & -nozzle_top)
 			lnoz.fill = self.lower_nozzle.material
 			self.openmc_cells.append(lnoz)
@@ -418,7 +421,7 @@ class Assembly(object):
 		gridded_lattices = {}
 		
 		for z in self.all_elevs:
-			s = self.__get_plane('z', z)
+			s = get_plane(self.openmc_surfaces, counter, 'z', z)
 			# See what lattice we are in
 			for i in range(len(self.lattices)):
 				if z > self.lattice_elevs[i]:
