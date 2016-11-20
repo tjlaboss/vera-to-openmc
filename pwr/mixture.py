@@ -59,7 +59,7 @@ class Mixture(Material):
 			mat = materials[i]
 			#mat.convert_ao_to_wo() --> Exists in VERA-to-OpenMC, but not here
 			wtf = vfracs[i]*mat.density 	# weight fraction of entire material
-			for iso in mat.get_all_nuclides().values():
+			for iso in mat.nuclides:
 				nuclide = iso[0]
 				new_wt = wtf*iso[1] / density
 				if iso in mix_isos:

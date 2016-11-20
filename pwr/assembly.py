@@ -23,27 +23,27 @@ openmc_universe_count	= openmc.AUTO_UNIVERSE_ID + 1
 
 
 def counter(count):
-		'''Get the next cell/surface/material/universe number, and update the counter.
-		Input:
-			count:		CELL, SURFACE, MATERIAL, or UNIVERSE
-		Output:
-			integer representing the next cell/surface/material/universe ID'''
-		global openmc_surface_count, openmc_cell_count, openmc_material_cuont, openmc_universe_count
+	'''Get the next cell/surface/material/universe number, and update the counter.
+	Input:
+		count:		CELL, SURFACE, MATERIAL, or UNIVERSE
+	Output:
+		integer representing the next cell/surface/material/universe ID'''
+	global openmc_surface_count, openmc_cell_count, openmc_material_cuont, openmc_universe_count
 
-		if count == SURFACE:
-			openmc_surface_count += 1
-			return openmc_surface_count
-		elif count == CELL:
-			openmc_cell_count += 1
-			return openmc_cell_count
-		elif count == MATERIAL:
-			openmc_material_count += 1
-			return openmc_material_count
-		elif count == UNIVERSE:
-			openmc_universe_count += 1
-			return openmc_universe_count
-		else:
-			raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
+	if count == SURFACE:
+		openmc_surface_count += 1
+		return openmc_surface_count
+	elif count == CELL:
+		openmc_cell_count += 1
+		return openmc_cell_count
+	elif count == MATERIAL:
+		openmc_material_count += 1
+		return openmc_material_count
+	elif count == UNIVERSE:
+		openmc_universe_count += 1
+		return openmc_universe_count
+	else:
+		raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
 
 
 
@@ -487,12 +487,12 @@ class Assembly(object):
 
 # Test
 if __name__ == '__main__':
-	from mixture import Mixture
+	from pwr.mixture import Mixture
 	# Define a global test moderator
 	mod = openmc.Material(1, "mod")
 	mod.set_density("g/cc", 1.0)
-	mod.add_nuclide("h-1", 2.0/3, 'ao')
-	mod.add_nuclide("o-16", 1.0/3, 'ao')
+	mod.add_nuclide("h1", 2.0/3, 'ao')
+	mod.add_nuclide("o16", 1.0/3, 'ao')
 	
 	# Define a simple test material
 	iron = openmc.Material(2, "iron")
