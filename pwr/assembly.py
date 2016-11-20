@@ -372,7 +372,7 @@ class Assembly(object):
 			self.all_elevs = self.lattice_elevs
 		
 		# Finally, create the xy bounding planes
-		half = self.pitch*self.npins
+		half = self.pitch*self.npins/2.0
 		
 		if self.walls:
 			[min_x, max_x, min_y, max_y] = self.walls
@@ -381,6 +381,7 @@ class Assembly(object):
 			max_x = get_plane(self.openmc_surfaces, counter, 'x', +half, name = self.name + ' - max_x') 
 			min_y = get_plane(self.openmc_surfaces, counter, 'y', -half, name = self.name + ' - min_y') 
 			max_y = get_plane(self.openmc_surfaces, counter, 'y', +half, name = self.name + ' - max_y') 
+			self.walls = [min_x, max_x, min_y, max_y]
 		
 		self.openmc_surfaces = [min_x, max_x, min_y, max_y]
 		self.wall_region = openmc.Intersection(+min_x & +min_y & -max_x & -max_y)

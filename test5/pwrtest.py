@@ -30,7 +30,6 @@ zircaloy.set_density('g/cm3', 6.55)
 zircaloy.add_nuclide(zr90, 7.2758e-3)
 # Instantiate a Materials collection
 materials_file = openmc.Materials((fuel, water, zircaloy))
-materials_file.default_xs = '06c'
 materials_file.export_to_xml()
 
 # Create a Universe to encapsulate a fuel pin
@@ -81,7 +80,10 @@ mypwr.lattice_elevs = [0, 5, 10]
 mypwr.mod = water
 pwrverse = mypwr.build()
 for surf in mypwr.openmc_surfaces:
-	surf.boundary_type = "reflective"
+	if surf in mypwr.walls:
+		surf.boundary_type = "reflective"
+	else:
+		surf.boundary_type = "transmission"
 # = mypwr.walls
 
 # Create root Cell
@@ -99,14 +101,21 @@ geometry.export_to_xml()
 
 
 # Instantiate a Plot
-plot = openmc.Plot(plot_id=1)
-plot.filename = 'plot-materials-xy'
-plot.origin = [0, 0, 0]
-plot.width = [21.5, 21.5]
-plot.pixels = [750, 750]
-plot.color = 'mat'
-plot.basis = 'xz'
-plot_file = openmc.Plots([plot])
+plotxz = openmc.Plot(plot_id=1)
+plotxz.filename = 'Plot-materials-xz'
+plotxz.origin = [0, 0, 5]
+plotxz.width = [21.5, 21.5]
+plotxz.pixels = [750, 750]
+plotxz.color = 'mat'
+plotxz.basis = 'xz'
+plotxy = openmc.Plot(plot_id=3)
+plotxy.filename = 'Plot-materials-xy'
+plotxy.origin = [0, 0, 0]
+plotxy.width = [21.5, 21.5]
+plotxy.pixels = [750, 750]
+plotxy.color = 'mat'
+plotxy.basis = 'xy'
+plot_file = openmc.Plots([plotxz, plotxy])
 plot_file.export_to_xml()
 ## Instantiate a Settings object
 # OpenMC simulation parameters
@@ -122,7 +131,7 @@ settings_file.output = {'tallies': False}
 settings_file.trigger_active = True
 settings_file.trigger_max_batches = max_batches
 # Create an initial uniform spatial source distribution over fissionable zones
-bounds = [-6.71, -6.71, 1, 6.71, 6.71, 2]
+bounds = [-6.71, -6.71, 1, 6.71, 6.71, 9]
 uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)
 settings_file.source = openmc.source.Source(space=uniform_dist)
 # Export to "settings.xml"
