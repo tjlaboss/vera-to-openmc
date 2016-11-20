@@ -1,6 +1,6 @@
 # counter.py
 #
-# Holder for the 'Counter' class, which allows the transfer of the 4 essential
+# Container for the 'Counter' class, which allows the transfer of the 4 essential
 # OpenMC counters back and forth between modules
 
 from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
@@ -42,25 +42,30 @@ class Counter(object):
 	
 	def count(self, TYPE):
 		if TYPE == SURFACE:
-			self.add_surface()
+			c = self.add_surface()
 		elif TYPE == CELL:
-			self.add_cell()
+			c = self.add_cell()
 		elif TYPE == MATERIAL:
-			self.add_material()
+			c = self.add_material()
 		elif TYPE == UNIVERSE:
-			self.add_universe()
+			c = self.add_universe()
 		else:
 			raise TypeError("TYPE must be SURFACE, CELL, MATERIAL, or UNIVERSE")
+		return c
 		
 	
 	def add_surface(self):
 		self.surface += 1
+		return self.surface
 	def add_cell(self):
 		self.cell += 1
+		return self.cell
 	def add_material(self):
 		self.material += 1
+		return self.material
 	def add_universe(self):
 		self.universe += 1
+		return self.universe
 	
 	
 	

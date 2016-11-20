@@ -168,7 +168,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	
 	plot_lattice(apitch, as3.npins, z = (z1 - z0)/2.0)
 	bounds = set_cubic_boundaries(apitch)
-	print(bounds)
+	#print(bounds)
 	
 	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds, zrange
 	

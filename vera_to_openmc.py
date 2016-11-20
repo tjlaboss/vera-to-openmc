@@ -46,7 +46,7 @@ class MC_Case(Case):
 		self.mod_verse = openmc.Universe(self.__counter(UNIVERSE), name = "Infinite Mod Universe", cells = (self.mod_cell,))
 		
 	
-	def __counter(self, count):
+	def __counter(self, TYPE):
 		'''Get the next cell/surface/material/universe number, and update the counter.
 		Input:
 			count:		CELL, SURFACE, MATERIAL, or UNIVERSE
@@ -54,7 +54,7 @@ class MC_Case(Case):
 			integer representing the next cell/surface/material/universe ID'''
 		
 		# Quick fix
-		return self.counter.count(count)
+		return self.counter.count(TYPE)
 		
 		'''
 		if count == SURFACE:
@@ -115,19 +115,16 @@ class MC_Case(Case):
 		for i in range(nx):
 			if not xlist[i]:
 				xp = openmc.XPlane(self.__counter(SURFACE), x0 = x0s[i])
-				#self.openmc_surfaces[xp.type + '-' + str(xp.id)] = xp
 				self.openmc_surfaces.append(xp)
 				xlist[i] = xp 
 		for i in range(ny):
 			if not ylist[i]:
 				yp = openmc.YPlane(self.__counter(SURFACE), y0 = y0s[i])
-				#self.openmc_surfaces[yp.type + '-' + str(yp.id)] = yp
 				self.openmc_surfaces.append(yp)
 				ylist[i] = yp
 		for i in range(nz):
 			if not zlist[i]:
 				zp = openmc.ZPlane(self.__counter(SURFACE), z0 = z0s[i])
-				#self.openmc_surfaces[zp.type + '-' + str(zp.id)] = zp 
 				self.openmc_surfaces.append(zp)
 				zlist[i] = zp
 		
@@ -671,8 +668,6 @@ class MC_Case(Case):
 		# Look for optional parameters available from vera_asmbly.params
 		# Possible params include:
 		# axial_elevations, axial_labels, grid_elev, grid_map,
-		# lower_nozzle_comp, lower_nozzle_height, lower_nozzle_mass,
-		# upper_nozzle_comp, upper_nozzle_height, upper_nozzle_mass,
 		# ppitch, title, num_pins, label
 		openmc_asmblies = []
 		
@@ -757,7 +752,7 @@ class MC_Case(Case):
 		
 		return None
 	
-	'''	Worth noting about the nozzles:
+		'''	Worth noting about the nozzles:
 	
 			== Analysis of the BEAVRS Benchmark Using MPACT ==
 		A major difference between the model and the benchmark specification is the treatment of 
@@ -814,7 +809,8 @@ class MC_Case(Case):
 			nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
 			mass = float(ps["lower_nozzle_mass"])
 			height = float(ps["lower_nozzle_height"])
-			lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch, "Lower Nozzle")
+			lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
+								counter = self.counter, name = "Lower Nozzle")
 			lnozmat = lnoz.get_nozzle_material()
 			self.openmc_materials[lnozmat.name] = lnozmat
 			pwr_asmbly.lower_nozzle = lnoz
@@ -822,7 +818,8 @@ class MC_Case(Case):
 			nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
 			mass = float(ps["upper_nozzle_mass"])
 			height = float(ps["upper_nozzle_height"])
-			unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch, "Upper Nozzle")
+			unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
+								counter = self.counter, name = "Upper Nozzle")
 			unozmat = unoz.get_nozzle_material()
 			self.openmc_materials[unozmat.name] = unozmat
 			pwr_asmbly.lower_nozzle = unoz

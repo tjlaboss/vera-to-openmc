@@ -16,6 +16,7 @@ class Nozzle(object):
 		mod_mat:	instance of openmc.Material; composition of the moderator
 		npins:		integer; number of pins in a row. Used to calculate Nozzle area
 		pitch:		float; pitch in cm between pins.  Used to calculate Nozzle area
+		counter:	instance of pwr.Counter needed to keep track of the material IDs
 		[name:		string; optional name for the nozzle material. Default is "nozzle-material".]
 	
 	Attributes:
@@ -24,10 +25,11 @@ class Nozzle(object):
 		material:	instance of openmc.Material; smearing of nozzle_mat and mod_mat
 	'''
 	
-	def __init__(self, height, mass, nozzle_mat, mod_mat, npins, pitch, name = "nozzle-material"):
+	def __init__(self, height, mass, nozzle_mat, mod_mat, npins, pitch, counter, name = "nozzle-material"):
 		self.height = height
 		self.mass = mass
 		self.name = name
+		self.counter = counter
 		volume = (npins*pitch)**2 * height
 		self.material = self.__mix(nozzle_mat, mod_mat, volume)
 		
@@ -48,7 +50,7 @@ class Nozzle(object):
 		mod_vol = v - mat_vol
 		vfracs = [mat_vol / v, mod_vol / v]
 		
-		material = Mixture((mat, mod), vfracs, name = self.name)
+		material = Mixture((mat, mod), vfracs, name = self.name, material_id = self.counter.add_material())
 		return material
 	
 	
