@@ -4,7 +4,7 @@
 # OpenMC counters back and forth between modules
 
 from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
-import openmc.AUTO_CELL_ID, openmc.AUTO_SURFACE_ID, openmc.AUTO_MATERIAL_ID, openmc.AUTO_UNIVERSE_ID
+from openmc import AUTO_SURFACE_ID, AUTO_CELL_ID, AUTO_MATERIAL_ID, AUTO_UNIVERSE_ID
 
 class Counter(object):
 	'''An essential class for the counting of OpenMC 
@@ -22,10 +22,10 @@ class Counter(object):
 		material:			current material count
 		universe:			current universe count
 	'''
-	def __init__(self, 	surface = openmc.AUTO_SURFACE_ID,
-				 cell = openmc.AUTO_CELL_ID,
-				 material = openmc.AUTO_MATERIAL_ID, 
-				 universe = openmc.AUTO_UNIVERSE_ID):
+	def __init__(self, 	surface = AUTO_SURFACE_ID,
+				 cell = AUTO_CELL_ID,
+				 material = AUTO_MATERIAL_ID, 
+				 universe = AUTO_UNIVERSE_ID):
 		self.surface = surface + 1
 		self.cell = cell + 1
 		self.material = material + 1
@@ -39,6 +39,19 @@ class Counter(object):
 		rep += "\nUniverse:\t" + str(self.universe)
 		return rep
 	
+	
+	def count(self, TYPE):
+		if TYPE == SURFACE:
+			self.add_surface()
+		elif TYPE == CELL:
+			self.add_cell()
+		elif TYPE == MATERIAL:
+			self.add_material()
+		elif TYPE == UNIVERSE:
+			self.add_universe()
+		else:
+			raise TypeError("TYPE must be SURFACE, CELL, MATERIAL, or UNIVERSE")
+		
 	
 	def add_surface(self):
 		self.surface += 1

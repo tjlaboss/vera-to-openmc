@@ -11,51 +11,6 @@ from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
 from copy import copy
 from math import sqrt
 
-# Global variables for counters
-openmc_surface_count	= openmc.AUTO_SURFACE_ID + 1
-openmc_cell_count 		= openmc.AUTO_CELL_ID + 1
-openmc_material_count	= openmc.AUTO_MATERIAL_ID + 1
-openmc_universe_count	= openmc.AUTO_UNIVERSE_ID + 1
-'''
-def set_counters(surface = openmc.AUTO_SURFACE_ID,
-				 cell = openmc.AUTO_CELL_ID,
-				 material = openmc.AUTO_MATERIAL_ID, 
-				 universe = openmc.AUTO_UNIVERSE_ID):
-	global openmc_surface_count, openmc_cell_count, openmc_material_cuont, openmc_universe_count
-	openmc_surface_count	= surface + 1
-	openmc_cell_count 		= cell + 1
-	openmc_material_count	= material + 1
-	openmc_universe_count	= universe + 1
-
-def get_counters():
-	global openmc_surface_count, openmc_cell_count, openmc_material_count, openmc_universe_count
-	return openmc_surface_count, openmc_cell_count, openmc_material_count, openmc_universe_count
-'''
-
-
-def counter(count):
-	'''Get the next cell/surface/material/universe number, and update the counter.
-	Input:
-		count:		CELL, SURFACE, MATERIAL, or UNIVERSE
-	Output:
-		integer representing the next cell/surface/material/universe ID'''
-	global openmc_surface_count, openmc_cell_count, openmc_material_cuont, openmc_universe_count
-
-	if count == SURFACE:
-		openmc_surface_count += 1
-		return openmc_surface_count
-	elif count == CELL:
-		openmc_cell_count += 1
-		return openmc_cell_count
-	elif count == MATERIAL:
-		openmc_material_count += 1
-		return openmc_material_count
-	elif count == UNIVERSE:
-		openmc_universe_count += 1
-		return openmc_universe_count
-	else:
-		raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
-
 
 
 """
@@ -87,24 +42,26 @@ def duplicate(orig):
 					"; expected Surface, Cell, Material, or Universe")
 	return dup
 """
-def duplicate(orig):
+
+def duplicate(orig, counter):
 	'''Copy an OpenMC object, except for a new id 
 	
 	Input:
-		orig: instance of openmc.(Surface, Cell, Material, or Universe)
+		orig: 		instance of openmc.(Surface, Cell, Material, or Universe)
+		counter:	instance of Counter
 	
 	Output:
-		dupl: same, but with a different instance.id 
+		dupl: 		same as 'orig', but with a different instance.id 
 	'''
 	dup = copy(orig)
 	if isinstance(orig, openmc.Surface):
-		dup.id = counter(SURFACE)
+		dup.id = counter.count(SURFACE)
 	elif isinstance(orig, openmc.Cell):
-		dup.id = counter(CELL)
+		dup.id = counter.count(CELL)
 	elif isinstance(orig, openmc.Material):
-		dup.id = counter(MATERIAL)
+		dup.id = counter.count(MATERIAL)
 	elif isinstance(orig, openmc.Universe):
-		dup.id = counter(UNIVERSE)
+		dup.id = counter.count(UNIVERSE)
 	else:
 		name = orig.__class__.__name__
 		raise TypeError(str(orig) + " is an instance of " + name + 
@@ -229,7 +186,7 @@ def add_spacer_to(pincell, pitch, t, material):
 	return new_cell
 
 
-def add_grid_to(lattice, pitch, npins, spacergrid):
+def add_grid_to(lattice, pitch, npins, spacergrid, counter):
 	'''Add a spacer to every pincell in the lattice.
 	FIXME: Determine 'pitch' and 'npins' from the attributes of 'lattice'
 
@@ -238,6 +195,7 @@ def add_grid_to(lattice, pitch, npins, spacergrid):
 		pitch:			float; its pitch (cm)
 		npins:			int; number of pins across
 		spacergrid:		instance of SpacerGrid
+		counter:		instance of Counter
 	Output:
 		gridded:		instance of openmc.RectLattice with the grid applied
 						to every cell'''
@@ -256,7 +214,7 @@ def add_grid_to(lattice, pitch, npins, spacergrid):
 		new_universes[j] = row
 	
 	new_name = str(lattice.id) + "-gridded"
-	gridded = openmc.RectLattice(counter(UNIVERSE), name = new_name)
+	gridded = openmc.RectLattice(counter.count(UNIVERSE), name = new_name)
 	gridded.pitch = (pitch, pitch)
 	gridded.lower_left = [-pitch * npins / 2.0] * 2
 	gridded.universes = new_universes
@@ -303,6 +261,8 @@ class Assembly(object):
 						[Default: None]
 		mod:			instance of openmc.Material describing  moderator surrounding the assembly.
 						[Default: None] 
+		counter:		instance of pwr.Counter used for keeping track of surface/cell/material/universe IDs.
+						[Default: None] 
 	
 	Attributes:
 		All the above, plus the following created at self.build():
@@ -320,7 +280,7 @@ class Assembly(object):
 						pitch = 0.0, 	npins = 0,			walls = [],
 						lattices = [], 	lattice_elevs = [],	spacers = [], 	spacer_mids = [],
 						lower_nozzle = None, 				upper_nozzle = None, 
-						mod = None):
+						mod = None,		counter = None):
 		self.key = key
 		self.name = name
 		self.universe_id = universe_id
@@ -330,6 +290,7 @@ class Assembly(object):
 		self.lower_nozzle = lower_nozzle;	self.upper_nozzle = upper_nozzle
 		self.walls = walls;
 		self.mod = mod
+		self.counter = counter
 	
 	
 	def __str__(self):
@@ -342,7 +303,7 @@ class Assembly(object):
 			boundary_type = "transmission"
 		if not eps:
 			eps = 5
-		return get_plane(self.openmc_surfaces, counter, dim, plane, boundary_type, name, eps)
+		return get_plane(self.openmc_surfaces, self.counter.count, dim, plane, boundary_type, name, eps)
 		
 	
 	
@@ -426,12 +387,12 @@ class Assembly(object):
 		self.__prebuild()
 		
 		# Start at the bottom
-		surf0 = openmc.ZPlane(counter(SURFACE), name="bottom", z0 = 0)
+		surf0 = openmc.ZPlane(self.counter.add_surface(), name="bottom", z0 = 0)
 		last_s = surf0
 		self.openmc_surfaces.append(surf0)
 		
 		if self.lower_nozzle:
-			lnoz = openmc.Cell(counter(CELL), "lower nozzle")
+			lnoz = openmc.Cell(self.counter.add_cell(), "lower nozzle")
 			nozzle_top = self.__get_plane('z', self.lower_nozzle.height)
 			lnoz.region = (self.wall_region & +last_s & -nozzle_top)
 			lnoz.fill = self.lower_nozzle.material
@@ -474,7 +435,7 @@ class Assembly(object):
 				
 			# Now, we have the current lattice, for the correct level, with or with a spacer
 			# grid as appropriate. Time to make the layer.
-			layer = openmc.Cell(counter(CELL), name = lat.name)
+			layer = openmc.Cell(self.counter.add_cell(), name = lat.name)
 			layer.region = (self.wall_region & +last_s & -s)
 			layer.fill = lat
 			self.openmc_cells.append(layer)
@@ -485,7 +446,7 @@ class Assembly(object):
 		# Great, we've done all the layers now!
 		# Add the top nozzle if necessary:
 		if self.upper_nozzle:
-			unoz = openmc.Cell(counter(CELL), "upper nozzle")
+			unoz = openmc.Cell(self.counter.add_cell(), "upper nozzle")
 			nozzle_top = self.__get_plane('z', self.upper_nozzle.height)
 			unoz.region = (self.wall_region & +last_s & -nozzle_top)
 			unoz.fill = self.upper_nozzle.material
@@ -493,7 +454,7 @@ class Assembly(object):
 			last_s = nozzle_top
 		
 		# Finally, surround the whole assembly with moderator
-		mod_cell = openmc.Cell(counter(CELL), name = self.name + " mod")
+		mod_cell = openmc.Cell(self.counter.add_cell(), name = self.name + " mod")
 		mod_cell.region = (~self.wall_region | +last_s | -surf0)
 		mod_cell.fill = self.mod
 		self.openmc_cells.append(mod_cell)
@@ -502,7 +463,7 @@ class Assembly(object):
 		if self.universe_id:
 			uid = self.universe_id
 		else:
-			uid = counter(UNIVERSE)
+			uid = self.counter.add_universe()
 		self.assembly = openmc.Universe(uid, name = self.name)
 		self.assembly.add_cells(self.openmc_cells)
 		

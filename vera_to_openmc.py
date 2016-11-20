@@ -29,8 +29,9 @@ class MC_Case(Case):
 		self.openmc_materials = {}
 		self.openmc_pincells = {}
 		
-		# ID Counters
-		self.openmc_surface_count = 0; self.openmc_cell_count = 0 ;self.openmc_material_count = 0; self.openmc_universe_count = 0
+		# ID Counter
+		self.counter = pwr.Counter(0, 0, 0, 0)
+		#self.openmc_surface_count = 0; self.openmc_cell_count = 0 ;self.openmc_material_count = 0; self.openmc_universe_count = 0
 		
 		
 		# Create the essential moderator material
@@ -51,6 +52,11 @@ class MC_Case(Case):
 			count:		CELL, SURFACE, MATERIAL, or UNIVERSE
 		Output:
 			integer representing the next cell/surface/material/universe ID'''
+		
+		# Quick fix
+		return self.counter.count(count)
+		
+		'''
 		if count == SURFACE:
 			self.openmc_surface_count += 1
 			return self.openmc_surface_count
@@ -65,6 +71,7 @@ class MC_Case(Case):
 			return self.openmc_universe_count
 		else:
 			raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
+		'''
 	
 	
 		
@@ -785,6 +792,7 @@ class MC_Case(Case):
 		pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
 		pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
 		pwr_asmbly.mod = self.mod
+		pwr_asmbly.counter = self.counter
 		
 		# Handle spacer grids
 		'''TODO: Re-enable this

@@ -14,6 +14,7 @@ def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", n
 		surface_list:	list of instances of openmc.Surface; the list to check for
 						surfaces in. WILL BE MODIFIED. 
 		counter:		function that keeps track of your surface/cell numbers
+						(such as pwr.Counter.count)
 		dim:			str; 'x', 'y', or 'z'
 		val:			float; value for x0, y0, or z0
 		boundary_type:	"transmission", "vacuum", or "reflective".
