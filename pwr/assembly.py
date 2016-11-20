@@ -11,15 +11,26 @@ from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
 from copy import copy
 from math import sqrt
 
-
 # Global variables for counters
 openmc_surface_count	= openmc.AUTO_SURFACE_ID + 1
 openmc_cell_count 		= openmc.AUTO_CELL_ID + 1
 openmc_material_count	= openmc.AUTO_MATERIAL_ID + 1
 openmc_universe_count	= openmc.AUTO_UNIVERSE_ID + 1
+'''
+def set_counters(surface = openmc.AUTO_SURFACE_ID,
+				 cell = openmc.AUTO_CELL_ID,
+				 material = openmc.AUTO_MATERIAL_ID, 
+				 universe = openmc.AUTO_UNIVERSE_ID):
+	global openmc_surface_count, openmc_cell_count, openmc_material_cuont, openmc_universe_count
+	openmc_surface_count	= surface + 1
+	openmc_cell_count 		= cell + 1
+	openmc_material_count	= material + 1
+	openmc_universe_count	= universe + 1
 
-
-
+def get_counters():
+	global openmc_surface_count, openmc_cell_count, openmc_material_count, openmc_universe_count
+	return openmc_surface_count, openmc_cell_count, openmc_material_count, openmc_universe_count
+'''
 
 
 def counter(count):
@@ -435,7 +446,8 @@ class Assembly(object):
 			s = self.__get_plane('z', z)
 			# See what lattice we are in
 			for i in range(len(self.lattices)):
-				if z > self.lattice_elevs[i]:
+				#if z > self.lattice_elevs[i]:
+				if z == self.lattice_elevs[i]:
 					break
 			lat = self.lattices[i-1]
 			# Check if there is a spacer grid

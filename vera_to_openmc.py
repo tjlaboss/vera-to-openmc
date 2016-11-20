@@ -7,7 +7,7 @@ from math import sqrt, copysign
 from copy import copy
 from read_xml import Case
 from functions import fill_lattice, clean
-import objects
+#import objects
 import pwr
 from pwr import SURFACE, CELL, MATERIAL, UNIVERSE	# Global constants for counters
 

@@ -54,7 +54,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	
 	bounds = set_cubic_boundaries(assembly1.pitch, ("reflective",)*6)
 
-	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds
+	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds, [0.0, 1.0]
 
 
 def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
@@ -113,7 +113,7 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	plot_lattice(apitch, as2.npins)
 	bounds = set_cubic_boundaries(apitch)
 	
-	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds
+	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds, [0.0, 1.0]
 
 
 
@@ -154,11 +154,23 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	#openmc_as3_layers = ascase.get_openmc_lattices(as3) 
 	some_asmbly = ascase.get_openmc_assembly(as3)
 	
-	#plot_lattice(apitch, as3.npins, z = max(as3.axial_elevations)/2.0)
-	plot_lattice(apitch, as3.npins, z = 150)
-	bounds = set_cubic_boundaries(apitch)
+	# Find the top and bottom of the active region
+	n = len(as3.axial_elevations)
+	maxdiff = 0
+	z0 = None; z1 = None
+	for i in range(1, n):
+		diff = as3.axial_elevations[i] - as3.axial_elevations[i-1]
+		if diff > maxdiff:
+			maxdiff = diff
+			z0 = as3.axial_elevations[i-1]
+			z1 = as3.axial_elevations[i]
+	zrange = [z0, z1]
 	
-	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds
+	plot_lattice(apitch, as3.npins, z = (z1 - z0)/2.0)
+	bounds = set_cubic_boundaries(apitch)
+	print(bounds)
+	
+	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds, zrange
 	
 
 
@@ -175,12 +187,12 @@ def set_cubic_boundaries(pitch, bounds=('reflective',)*6):
 		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
 	'''
 	
-	min_x = openmc.XPlane(x0=-pitch/2.0, boundary_type=bounds[0])
-	max_x = openmc.XPlane(x0=+pitch/2.0, boundary_type=bounds[1])
-	min_y = openmc.YPlane(y0=-pitch/2.0, boundary_type=bounds[2])
-	max_y = openmc.YPlane(y0=+pitch/2.0, boundary_type=bounds[3])
-	min_z = openmc.ZPlane(z0=-pitch/2.0, boundary_type=bounds[4])
-	max_z = openmc.ZPlane(z0=+pitch/2.0, boundary_type=bounds[5])
+	min_x = openmc.XPlane(x0=-pitch/2.0, boundary_type=bounds[0], name = "Bound - min x")
+	max_x = openmc.XPlane(x0=+pitch/2.0, boundary_type=bounds[1], name = "Bound - max x")
+	min_y = openmc.YPlane(y0=-pitch/2.0, boundary_type=bounds[2], name = "Bound - min y")
+	max_y = openmc.YPlane(y0=+pitch/2.0, boundary_type=bounds[3], name = "Bound - max y")
+	min_z = openmc.ZPlane(z0=-pitch/2.0, boundary_type=bounds[4], name = "Bound - min z")
+	max_z = openmc.ZPlane(z0=+pitch/2.0, boundary_type=bounds[5], name = "Bound - max z")
 	
 	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
@@ -237,7 +249,7 @@ def test_core(case_file = "../gold/2o.xml.gold"):
 	return core_case, fillcore, pitch, n, boundaries
 	
 
-def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, particles):
+def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactive, particles):
 	'''Create the OpenMC settings and export to XML.
 	
 	Inputs:
@@ -247,6 +259,8 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 					Used for detecting fissionable zones.
 		bounds:		iterable (tuple, list, etc.) of the X, Y, and Z bounding Planes:
 					 (min_x, max_x, min_y, max_y, min_z, max_z)
+		zrange:		list of floats describing the minimum and maximum z location
+					of fissionable material
 	'''
 	# Instantiate a Settings object
 	settings_file = openmc.Settings()
@@ -257,7 +271,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 	settings_file.trigger_active = True
 	settings_file.trigger_max_batches = max_batches
 	# Create an initial uniform spatial source distribution over fissionable zones
-	bounds = (-npins*pitch/2.0,)*3 + (npins*pitch/2.0,)*3
+	bounds = (-npins*pitch/2.0,)*2 + (zrange[0],) + (npins*pitch/2.0,)*2 + (zrange[1],)
 	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
@@ -266,10 +280,10 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 
 if __name__ == "__main__":
-	#case, fillcell, ppitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds = test_lattice("../gold/2j.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/3a.xml.gold")
-	#case, fillcell, pitch, n, bounds = test_core()
+	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2j.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	#case, fillcell, pitch, n, bounds, zrange = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
 	materials = openmc.Materials(matlist)
@@ -308,7 +322,7 @@ if __name__ == "__main__":
 	max_batches = min_batches*10
 	inactive 	= 75
 	particles 	= 200000
-	set_settings(n, ppitch, bounds, min_batches, max_batches, inactive, particles)
+	set_settings(n, ppitch, bounds, zrange, min_batches, max_batches, inactive, particles)
 	
 	
 	
