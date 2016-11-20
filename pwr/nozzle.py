@@ -50,6 +50,11 @@ class Nozzle(object):
 		
 		material = Mixture((mat, mod), vfracs, name = self.name)
 		return material
+	
+	
+	def get_nozzle_material(self):
+		'''Return the smeared material created during the construction of the nozzle.'''
+		return self.material
 		
 	def __str__(self):
 		return self.name

@@ -40,7 +40,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	
 	
 	
-	plot_assembly(assembly1.pitch, 1)
+	plot_lattice(assembly1.pitch, 1)
 	'''# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
@@ -110,7 +110,7 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	some_asmbly = pwr.assembly.add_grid_to(some_asmbly, 1.26, 17, spacergrid)
 	'''
 	
-	plot_assembly(apitch, as2.npins)
+	plot_lattice(apitch, as2.npins)
 	bounds = set_cubic_boundaries(apitch)
 	
 	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds
@@ -154,13 +154,10 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	#openmc_as3_layers = ascase.get_openmc_lattices(as3) 
 	some_asmbly = ascase.get_openmc_assembly(as3)
 	
-	'''
-	# Spacer test; doesn't work
-	import pwr
-	print(ascase.openmc_materials.keys())
-	spacergrid = pwr.SpacerGrid("key", 3.81, 875, ascase.get_openmc_material("ss"), 1.26, 17)
-	some_asmbly = pwr.assembly.add_grid_to(some_asmbly, 1.26, 17, spacergrid)
-	'''
+	#plot_lattice(apitch, as3.npins, z = max(as3.axial_elevations)/2.0)
+	plot_lattice(apitch, as3.npins, z = 150)
+	bounds = set_cubic_boundaries(apitch)
+	
 	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds
 	
 
@@ -188,17 +185,20 @@ def set_cubic_boundaries(pitch, bounds=('reflective',)*6):
 	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
 	
-def plot_assembly(pitch, npins = 1, width=1250, height=1250):
+def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
-	plot.filename = 'plot-materials-xy'
-	plot.origin = [0, 0, 0]
+	plot.filename = 'Plot-materials-xy'
+	plot.origin = [0, 0, z]
 	plot.width = [pitch - .01, pitch - .01]
 	plot.pixels = [width, height]
 	plot.color = 'mat'
 	# Instantiate a Plots collection and export to "plots.xml"
 	plot_file = openmc.Plots([plot])
 	plot_file.export_to_xml()
+
+
+#def plot_assembly(pitch, npins = 1, width = 1250, height = 1250):
 	
 
 
@@ -215,7 +215,7 @@ def test_core(case_file = "../gold/2o.xml.gold"):
 		aname = c.asmbly.square_map()[0][0].lower()
 		asmbly = core_case.assemblies[aname]
 		n = asmbly.npins; pitch = asmbly.pitch; 
-		plot_assembly(pitch, n)
+		plot_lattice(pitch, n)
 		fillcore = core_case.get_openmc_assemblies(asmbly)[0]
 		bounds = (c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["top"], c.bc["top"])
 		boundaries = set_cubic_boundaries(pitch, n, bounds)
@@ -225,7 +225,7 @@ def test_core(case_file = "../gold/2o.xml.gold"):
 		radius = openmc.ZCylinder(R = max(case.core.vessel_radii), boundary_type = 'vacuum')
 		min_z = openmc.ZPlane(z0 = 0, boundary_type="vacuum")
 		max_z = openmc.ZPlane(z0 = case.core.height, boundary_type="vacuum")
-		plot_assembly(c.pitch, 2)
+		plot_lattice(c.pitch, 2)
 		
 		boundaries = (radius, min_z, max_z)
 	
@@ -267,7 +267,7 @@ def set_settings(npins, pitch, bounds, min_batches, max_batches, inactive, parti
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds = test_lattice("../gold/2j.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds = test_lattice("../gold/2j.xml.gold")
 	case, fillcell, apitch, ppitch, n, bounds = test_assembly("../gold/3a.xml.gold")
 	#case, fillcell, pitch, n, bounds = test_core()
 	

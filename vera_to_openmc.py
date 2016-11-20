@@ -787,6 +787,7 @@ class MC_Case(Case):
 		pwr_asmbly.mod = self.mod
 		
 		# Handle spacer grids
+		'''TODO: Re-enable this
 		if vera_asmbly.spacergrids:
 			pwr_spacergrids = {}
 			# Translate from VERA to pwr 
@@ -798,18 +799,25 @@ class MC_Case(Case):
 			
 			pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: pwr_spacergrids[key] )
 			pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
+		'''
 		
 		# Handle nozzles
 		if "lower_nozzle_comp" in ps:
 			nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
 			mass = float(ps["lower_nozzle_mass"])
 			height = float(ps["lower_nozzle_height"])
-			pwr_asmbly.lower_nozzle = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch, "Lower Nozzle")
+			lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch, "Lower Nozzle")
+			lnozmat = lnoz.get_nozzle_material()
+			self.openmc_materials[lnozmat.name] = lnozmat
+			pwr_asmbly.lower_nozzle = lnoz
 		if "upper_nozzle_comp" in ps:
 			nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
 			mass = float(ps["upper_nozzle_mass"])
 			height = float(ps["upper_nozzle_height"])
-			pwr_asmbly.upper_nozzle = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch, "Upper Nozzle")
+			unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch, "Upper Nozzle")
+			unozmat = unoz.get_nozzle_material()
+			self.openmc_materials[unozmat.name] = unozmat
+			pwr_asmbly.lower_nozzle = unoz
 		
 		
 		# Where the magic happens
