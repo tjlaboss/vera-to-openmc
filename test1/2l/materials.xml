@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+    <material id="2" name="mod">
+        <temperature>600.0</temperature>
+        <density units="g/cc" value="0.743" />
+        <nuclide name="B10" wo="0.00023960169999999998" />
+        <nuclide name="B11" wo="0.0010603982999999998" />
+        <nuclide name="H1" wo="0.11176938395350654" />
+        <nuclide name="O16" wo="0.8869306160464936" />
+        <sab name="c_H_in_H2O" />
+    </material>
+    <material id="3" name="U31">
+        <temperature>600.0</temperature>
+        <density units="g/cc" value="10.257" />
+        <nuclide name="O16" wo="0.11850452244729154" />
+        <nuclide name="U234" wo="0.0002322476134708121" />
+        <nuclide name="U235" wo="0.027326359804133966" />
+        <nuclide name="U236" wo="0.00012570125509901625" />
+        <nuclide name="U238" wo="0.8538111688800047" />
+    </material>
+    <material id="4" name="he">
+        <temperature>600.0</temperature>
+        <density units="g/cc" value="0.0001786" />
+        <nuclide name="He4" wo="1.0" />
+    </material>
+    <material id="5" name="zirc4">
+        <temperature>600.0</temperature>
+        <density units="g/cc" value="6.56" />
+        <nuclide name="Cr50" wo="4.17369e-05" />
+        <nuclide name="Cr52" wo="0.000836988" />
+        <nuclide name="Cr53" wo="9.67361e-05" />
+        <nuclide name="Cr54" wo="2.45339e-05" />
+        <nuclide name="Fe54" wo="0.000118556" />
+        <nuclide name="Fe56" wo="0.00192992" />
+        <nuclide name="Fe57" wo="4.53675e-05" />
+        <nuclide name="Fe58" wo="6.14347e-06" />
+        <nuclide name="Hf174" wo="1.55926e-07" />
+        <nuclide name="Hf176" wo="5.18504e-06" />
+        <nuclide name="Hf177" wo="1.84393e-05" />
+        <nuclide name="Hf178" wo="2.71973e-05" />
+        <nuclide name="Hf179" wo="1.36552e-05" />
+        <nuclide name="Hf180" wo="3.53673e-05" />
+        <nuclide name="Sn112" wo="0.000132586" />
+        <nuclide name="Sn114" wo="9.18243e-05" />
+        <nuclide name="Sn115" wo="4.7719e-05" />
+        <nuclide name="Sn116" wo="0.00205842" />
+        <nuclide name="Sn117" wo="0.00109665" />
+        <nuclide name="Sn118" wo="0.00348799" />
+        <nuclide name="Sn119" wo="0.00124758" />
+        <nuclide name="Sn120" wo="0.00477153" />
+        <nuclide name="Sn122" wo="0.000689408" />
+        <nuclide name="Sn124" wo="0.000876293" />
+        <nuclide name="Zr90" wo="0.498086" />
+        <nuclide name="Zr91" wo="0.10983" />
+        <nuclide name="Zr92" wo="0.169723" />
+        <nuclide name="Zr94" wo="0.175744" />
+        <nuclide name="Zr96" wo="0.0289168" />
+    </material>
+    <material id="6" name="ifbaassembly_80ifba">
+        <temperature>600.0</temperature>
+        <density units="g/cc" value="3.85" />
+        <nuclide name="B10" wo="0.09347" />
+        <nuclide name="B11" wo="0.09347" />
+        <nuclide name="Zr90" wo="0.412271" />
+        <nuclide name="Zr91" wo="0.0909074" />
+        <nuclide name="Zr92" wo="0.140481" />
+        <nuclide name="Zr94" wo="0.145465" />
+        <nuclide name="Zr96" wo="0.0239348" />
+    </material>
+</materials>

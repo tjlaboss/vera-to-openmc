@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='utf-8'?>
+<geometry>
+    <cell fill="6" id="10000" name="root cell" region="(((((10000 -10001) 10002) -10003) 10004) -10005)" universe="0" />
+    <cell id="10" material="3" name="Cell_X-assembly_80ifba-ring0" region="-2" universe="5" />
+    <cell id="11" material="6" name="Cell_X-assembly_80ifba-ring1" region="(-7 2)" universe="5" />
+    <cell id="12" material="4" name="Cell_X-assembly_80ifba-ring2" region="(-3 7)" universe="5" />
+    <cell id="13" material="5" name="Cell_X-assembly_80ifba-ring3" region="(-4 3)" universe="5" />
+    <cell id="14" material="2" name="Cell_X-assembly_80ifba-Mod" region="4" universe="5" />
+    <cell id="2" material="2" name="Infinite Mod Cell" universe="2" />
+    <cell id="3" material="3" name="Cell_1-assembly_80ifba-ring0" region="-2" universe="3" />
+    <cell id="4" material="4" name="Cell_1-assembly_80ifba-ring1" region="(-3 2)" universe="3" />
+    <cell id="5" material="5" name="Cell_1-assembly_80ifba-ring2" region="(-4 3)" universe="3" />
+    <cell id="6" material="2" name="Cell_1-assembly_80ifba-Mod" region="4" universe="3" />
+    <cell id="7" material="2" name="Cell_O-assembly_80ifba-ring0" region="-5" universe="4" />
+    <cell id="8" material="5" name="Cell_O-assembly_80ifba-ring1" region="(-6 5)" universe="4" />
+    <cell id="9" material="2" name="Cell_O-assembly_80ifba-Mod" region="6" universe="4" />
+    <lattice id="6" name="LAT80">
+        <pitch>1.26 1.26</pitch>
+        <outer>2</outer>
+        <dimension>17 17</dimension>
+        <lower_left>-10.71 -10.71</lower_left>
+        <universes>
+5 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 5 
+3 3 3 3 3 5 3 3 5 3 3 5 3 3 3 3 3 
+3 3 5 3 5 4 3 5 4 5 3 4 5 3 5 3 3 
+3 3 3 4 5 5 3 3 3 3 3 5 5 4 3 3 3 
+3 3 5 5 3 5 3 3 5 3 3 5 3 5 5 3 3 
+3 5 4 5 5 4 3 5 4 5 3 4 5 5 4 5 3 
+3 3 3 3 3 3 5 3 3 3 5 3 3 3 3 3 3 
+3 3 5 3 3 5 3 3 5 3 3 5 3 3 5 3 3 
+3 5 4 3 5 4 3 5 4 5 3 4 5 3 4 5 3 
+3 3 5 3 3 5 3 3 5 3 3 5 3 3 5 3 3 
+3 3 3 3 3 3 5 3 3 3 5 3 3 3 3 3 3 
+3 5 4 5 5 4 3 5 4 5 3 4 5 5 4 5 3 
+3 3 5 5 3 5 3 3 5 3 3 5 3 5 5 3 3 
+3 3 3 4 5 5 3 3 3 3 3 5 5 4 3 3 3 
+3 3 5 3 5 4 3 5 4 5 3 4 5 3 5 3 3 
+3 3 3 3 3 5 3 3 5 3 3 5 3 3 3 3 3 
+5 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 5 </universes>
+    </lattice>
+    <surface boundary="reflective" coeffs="-10.75" id="10000" name="Bound - min x" type="x-plane" />
+    <surface boundary="reflective" coeffs="10.75" id="10001" name="Bound - max x" type="x-plane" />
+    <surface boundary="reflective" coeffs="-10.75" id="10002" name="Bound - min y" type="y-plane" />
+    <surface boundary="reflective" coeffs="10.75" id="10003" name="Bound - max y" type="y-plane" />
+    <surface boundary="reflective" coeffs="-10.75" id="10004" name="Bound - min z" type="z-plane" />
+    <surface boundary="reflective" coeffs="10.75" id="10005" name="Bound - max z" type="z-plane" />
+    <surface coeffs="0 0 0.4096" id="2" type="z-cylinder" />
+    <surface coeffs="0 0 0.418" id="3" type="z-cylinder" />
+    <surface coeffs="0 0 0.475" id="4" type="z-cylinder" />
+    <surface coeffs="0 0 0.561" id="5" type="z-cylinder" />
+    <surface coeffs="0 0 0.602" id="6" type="z-cylinder" />
+    <surface coeffs="0 0 0.4106" id="7" type="z-cylinder" />
+</geometry>
