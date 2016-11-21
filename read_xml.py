@@ -13,8 +13,10 @@
 import xml.etree.ElementTree as ET
 from warnings import warn
 from functions import clean, calc_u234_u236_enrichments
-import objects, isotopes
+import objects
 from objects import FUELTEMP, MODTEMP
+from openmc.data import atomic_mass
+from openmc.data.data import atomic_mass
 
 
 '''The VERAin XML files have the following structure:
@@ -512,11 +514,11 @@ class Case(object):
 		# Calculate the weight of the HMs, add the weight of oxygen and gadolinia, and normalize
 		mass = 0.0
 		for i in isos:
-			isomass = isotopes.MASS[i]
+			isomass = atomic_mass(i)
 			mass += isos[i]*isomass
 		# Add Oxygen: (HM)-O2
 		oname = 'O16'
-		omass = isotopes.MASS[oname]*2.0
+		omass = atomic_mass(oname)*2.0
 		ofrac = omass/mass  # Non-normalized; use: ( omass/(mass + omass) ) to pre-normalize oxygen
 		mass += omass
 		isos[oname] = ofrac
@@ -604,8 +606,8 @@ class Case(object):
 		h2ofrac = 1.0 - bfrac
 		b10frac = b10*bfrac
 		b11frac = (1.0-b10)*bfrac
-		hmass = isotopes.MASS['H1']*2
-		omass = isotopes.MASS['O16']
+		hmass = atomic_mass('H1')*2
+		omass = atomic_mass('O16')
 		mod_isos = {"B10" : b10frac,
 					"B11" : b11frac,
 					"H1"  : h2ofrac * hmass/(hmass + omass),

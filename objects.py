@@ -5,7 +5,7 @@
 from math import sqrt
 from functions import *
 #from PWR_assembly import Nozzle
-import isotopes
+from openmc.data import atomic_mass
 from copy import copy
 
 FUELTEMP = -1; MODTEMP = -2
@@ -46,9 +46,9 @@ class Material(object):
 			return
 		else:
 			for iso in self.isotopes:
-				total_wt += self.isotopes[iso] * isotopes.MASS[iso]
+				total_wt += self.isotopes[iso] * atomic_mass(iso)
 			for iso in self.isotopes:
-				iso_wts[iso] = abs( self.isotopes[iso] * isotopes.MASS[iso] / total_wt )
+				iso_wts[iso] = abs( self.isotopes[iso] * atomic_mass(iso) / total_wt )
 		
 			self.isotopes = iso_wts
 	
@@ -64,9 +64,9 @@ class Material(object):
 			return 
 		else:
 			for iso in self.isotopes:
-				total_at += self.isotopes[iso] / isotopes.MASS[iso]
+				total_at += self.isotopes[iso] / atomic_mass(iso)
 			for iso in self.isotopes:
-				iso_ats[iso] = -abs( self.isotopes[iso] / isotopes.MASS[iso] / total_at )
+				iso_ats[iso] = -abs( self.isotopes[iso] / atomic_mass(iso) / total_at )
 		
 			self.isotopes = iso_ats
 
