@@ -510,15 +510,17 @@ class MC_Case(Case):
 	
 	
 		
-	def get_openmc_material(self, material, suffix = ""):
+	def get_openmc_material(self, material, asname = "", inname = ""):
 		'''Given a vera material (objects.Material) as extracted by self.__get_material(),
 		return an instance of openmc.Material. If the OpenMC Material exists, look it
 		up in the dictionary. Otherwise, create it anew.
 		
 		Inputs:
 			material:			string; key of the material in self.materials
-			suffix:				string; Assembly or Insert name in which a pin cell is present.
+			asname:				string; name of the Assembly in which a pin cell is present.
 								VERA pin cells may have different materials sharing the same name.
+								[Default: empty string]
+			inname:				string; name of the Insert which has been placed inside the cell, if any.
 								[Default: empty string]
 		
 		Outputs:
@@ -527,7 +529,16 @@ class MC_Case(Case):
 		All of the material fractions sum to either +1.0 or -1.0. If positive fractions are used, they
 		refer to weight fractions. If negative fractions are used, they refer to atomic	fractions.
 		'''
-		material += suffix
+		
+		# Handle the permutations/combinations of suffixes.
+		# This order should be preserved.
+		all_suffixes = [asname + inname, asname, inname]
+		for suffix in all_suffixes:
+			if material + suffix in self.materials:
+				material += suffix
+				break
+		
+		
 		if material in self.openmc_materials:
 			# Look it up as normal
 			openmc_material = self.openmc_materials[material]
@@ -601,12 +612,11 @@ class MC_Case(Case):
 					# Generate new surface and get its surf_id
 					s = openmc.ZCylinder(self.__counter(SURFACE), "transmission", 0, 0, r)
 					# Add the new surfaces to the registry
-					#self.openmc_surfaces[s.id] = s
 					self.openmc_surfaces.append(s)
 					
 				# Otherwise, the surface s already exists
 				# Proceed to define the cell inside that surface:
-				new_cell = openmc.Cell(self.__counter(CELL), name)
+				new_cell = openmc.Cell(self.counter.add_cell(), name)
 				
 				if ring == 0:
 					# Inner ring
@@ -619,11 +629,7 @@ class MC_Case(Case):
 				
 				# Fill the cell in with a material
 				m = vera_cell.mats[ring]
-				if m + vera_cell.asname in self.materials:
-					fill = self.get_openmc_material(m, suffix = vera_cell.asname)
-				else:
-					fill = self.get_openmc_material(m)
-				#new_cell.temperature = fill.temperature
+				fill = self.get_openmc_material(m, vera_cell.asname, vera_cell.inname)
 				
 					
 				# What I want to do instead is, somewhere else in the code, generate the corresponding

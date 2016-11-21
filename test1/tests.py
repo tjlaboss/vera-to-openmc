@@ -271,8 +271,9 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 	settings_file.trigger_active = True
 	settings_file.trigger_max_batches = max_batches
 	# Create an initial uniform spatial source distribution over fissionable zones
-	bounds = (-npins*pitch/2.0,)*2 + (zrange[0],) + (npins*pitch/2.0,)*2 + (zrange[1],)
-	uniform_dist = openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)  # @UndefinedVariable
+	lleft  = (-npins*pitch/2.0,)*2 + (zrange[0],)
+	uright = (+npins*pitch/2.0,)*2 + (zrange[1],)
+	uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)  # @UndefinedVariable
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
 
@@ -281,13 +282,12 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2j.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
 	materials = openmc.Materials(matlist)
-	materials.default_xs = '06c'
 	materials.export_to_xml()
 	
 	# Create root Cell

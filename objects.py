@@ -434,7 +434,11 @@ class Cell(object):
 		radii:		List of length {num_rings} containing the lengths of the respective rings
 		mats:		List of length {num_rings} referencing Material objects of the respective rings
 		label:		string containing the unique identifier of the cell
-		asname:		string containing the name of the VERA assembly (or insert) the cell is in (optional)
+		asname:		string containing the name of the VERA assembly or insert the cell is in (optional)
+	
+	Other Attributes
+		inname:		string containing the name of the VERA insert (INSERT, DETECTOR, or CONTROL)
+					that has been inserted into this cell.
 	'''
 	
 	
@@ -446,7 +450,8 @@ class Cell(object):
 		self.label = label
 		self.asname = asname
 		
-		self.key = name #+ asname
+		self.inname = ""
+		self.key = name
 	
 	def __str__(self):
 		rep = self.key + " (radius = " + str(max(self.radii)) + ')'
@@ -470,6 +475,7 @@ class Cell(object):
 		self.mats = insert_cell.mats + self.mats
 		self.num_rings += len(insert_cell.radii)
 		self.name += "+" + insert_cell.asname
+		self.inname = insert_cell.asname
 		
 
 
