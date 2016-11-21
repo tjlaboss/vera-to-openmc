@@ -26,10 +26,10 @@ class Counter(object):
 				 cell = AUTO_CELL_ID,
 				 material = AUTO_MATERIAL_ID, 
 				 universe = AUTO_UNIVERSE_ID):
-		self.surface = surface + 1
-		self.cell = cell + 1
-		self.material = material + 1
-		self.universe = universe + 1
+		self.surface = surface
+		self.cell = cell
+		self.material = material
+		self.universe = universe
 	
 	def __str__(self):
 		rep = "Counter"
