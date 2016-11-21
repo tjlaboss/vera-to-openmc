@@ -52,8 +52,8 @@ class Case(object):
 		self.case_id = "Unnamed VERA Case"
 		
 		# Blocks to use and ignore
-		self.usable = ("CORE", "INSERTS", "STATES", "CONTROLS", "DETECTORS", "ASSEMBLIES") # Relevant to OpenMC
-		self.ignore = ("SHIFT", "MPACT", "INSILICO", "COBRATF", "EDITS")			# Blocks specific to other codes 
+		self.usable = ("CORE", "INSERTS", "STATES", "CONTROLS", "DETECTORS", "ASSEMBLIES", "SHIFT") # Relevant to OpenMC
+		self.ignore = ("MPACT", "INSILICO", "COBRATF", "EDITS")			# Blocks specific to other codes 
 		
 		# Initialize some parameters with empty lists
 		self.materials = {}
@@ -61,7 +61,6 @@ class Case(object):
 		self.inserts = {}
 		self.states = []
 		self.controls = [];	self.detectors = []
-		# and more to come... 
 		
 		
 		# Placeholder for an essential material
@@ -92,6 +91,8 @@ class Case(object):
 				warn(warnstr)
 				self.warnings += 1
 		
+		# Set the default Monte Carlo simulation parameters (which may be changed later)
+		self.mc = objects.MonteCarlo()
 		
 		print("There were", self.warnings, "warnings and", self.errors, "errors.")
 		
@@ -282,8 +283,6 @@ class Case(object):
 						self.core = objects.Core(pitch, core_size, core_height, shape, asmbly, core_params,
 												 bcs, lower_refl, upper_refl, radii, mats, baffle,
 												 control_bank, control_map, insert_map, detector_map)
-						# TODO: Account for controls, detectors, etc.
-						
 								
 						
 					elif name == "ASSEMBLIES":
@@ -372,6 +371,33 @@ class Case(object):
 						for stat in child:
 							new_state = self.__get_state(stat)
 							self.states.append(new_state)
+					
+					
+					elif name == "SHIFT":
+						for prop in child:
+							pname = prop.attrib["name"].lower()
+							if prop.tag == "ParameterList" and pname == "kcode_db":
+								for mcparam in prop:
+									p = mcparam.attrib["name"].lower()
+									v = mcparam.attrib["value"]
+									particles = 0; cycles = 0; inactive = 0
+									if p == "np":
+										particles = int(v)
+									elif p == "num_cycles":
+										cycles = int(v)
+									elif p == "num_inactive_cycles":
+										inactive = int(v)
+									else:
+										warnstr = "Warning: unknown Parameter " + p + " in ParameterList " + pname
+										warn(warnstr)
+										self.warnings += 1
+							elif prop.tag == "ParameterList":
+								warnstr = "Warning: unknown ParameterList " + pname + " in [SHIFT] block."
+								warn(warnstr)
+								self.warnings += 1
+									
+						self.mc = objects.MonteCarlo(cycles, inactive, particles)
+					
 							
 					elif name in ("INSERTS", "CONTROLS", "DETECTORS"):
 						for insert in child:
@@ -559,7 +585,8 @@ class Case(object):
 			a_state:	instance of objects.State
 		'''
 		key = state.attrib["name"].lower()
-		# dictionary of all independent parameters for this assembly
+		
+		# Initialize variables
 		name = ""
 		tinlet = 0.0;	tfuel = 0.0;
 		b10 = 0.184309	# wt fraction

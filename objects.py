@@ -4,7 +4,6 @@
 
 from math import sqrt
 from functions import *
-#from PWR_assembly import Nozzle
 from openmc.data import atomic_mass
 from copy import copy
 
@@ -133,7 +132,37 @@ class State(object):
 		self.params = params
 
 
-
+class MonteCarlo(object):
+	'''Container for all the Monte Carlo simulation parameters
+	
+	Inputs:
+		min_batches:		int; minimum number of batches to simulate
+							[Default: 275]
+		inactive:			int; number of batches to ignore in criticality calculation
+							[Default: 75]
+		particles:			int; number of particles per batch to simulate
+							[Default: 200000]
+		max_batch_mult:		float; factor * min_batches. Used to cut off a simulation that is
+							looking for a certain tally to be hit. Usually, this parameter is
+							not important and can be safely ignored.
+							[Default: 10]
+	
+	Other attributes:
+		max_batches:		int; min_batches*max_batch_mult
+	'''
+	def __init__(self, min_batches = 275, inactive = 75, particles = 200000, max_batch_mult = 10):
+		self.min_batches = min_batches
+		self.max_batches = int(max_batch_mult*min_batches)
+		self.inactive = inactive
+		self.particles = particles
+	
+	def __str__(self):
+		d = "Monte Carlo Simulation Parameters:"
+		d += "\n\tMin. batches:\t" + str(self.min_batches)
+		d += "\n\tMax. batches:\t" + str(self.max_batches)
+		d += "\n\tInactive cycles:\t" + str(self.inactive)
+		d += "\n\tParticles/cycle:\t" + str(self.particles)
+		return d
 
 
 

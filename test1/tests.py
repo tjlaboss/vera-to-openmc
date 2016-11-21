@@ -91,7 +91,6 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
 	for coremap in insertion_maps:
 		if coremap:
-			print(coremap)
 			insert_key = coremap[0][0]
 			if insert_key != "-":		# indicates no insertion in VERA
 				insertion = ascase.inserts[insert_key]
@@ -318,10 +317,14 @@ if __name__ == "__main__":
 
 	
 	# OpenMC simulation parameters
-	min_batches = 275
+	'''min_batches = 275
 	max_batches = min_batches*10
 	inactive 	= 75
-	particles 	= 200000
+	particles 	= 200000'''
+	min_batches = case.mc.min_batches
+	max_batches = case.mc.min_batches
+	inactive 	= case.mc.inactive
+	particles 	= case.mc.particles
 	set_settings(n, ppitch, bounds, zrange, min_batches, max_batches, inactive, particles)
 	
 	
@@ -330,9 +333,6 @@ if __name__ == "__main__":
 	###DEBUG###
 	
 	print('\n', case)
-	#print(case.openmc_surfaces)
-	#print(case.openmc_cells)
 	print(fillcell)
-	# '''
 
 	
