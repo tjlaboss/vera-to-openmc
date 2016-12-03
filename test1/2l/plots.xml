@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<plots>
-    <plot basis="xy" color="mat" filename="Plot-materials-xy" id="1" type="slice">
-        <origin>0 0 0</origin>
-        <width>21.49 21.49</width>
-        <pixels>1250 1250</pixels>
-    </plot>
-</plots>
