@@ -29,8 +29,8 @@ class MC_Case(Case):
 		self.openmc_pincells = {}
 		
 		# ID Counter
-		self.counter = pwr.Counter(0, 0, 0, 0)
-		#self.openmc_surface_count = 0; self.openmc_cell_count = 0 ;self.openmc_material_count = 0; self.openmc_universe_count = 0
+		# Starting at 9 makes all IDs double digits
+		self.counter = pwr.Counter(9, 9, 9, 9)
 		
 		
 		# Create the essential moderator material
