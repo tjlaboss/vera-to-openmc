@@ -794,8 +794,7 @@ class MC_Case(Case):
 		pwr_asmbly.mod = self.mod
 		pwr_asmbly.counter = self.counter
 		
-		# Handle spacer grids
-		'''TODO: Re-enable this
+		# FIXME: Handle spacer grids
 		if vera_asmbly.spacergrids:
 			pwr_spacergrids = {}
 			# Translate from VERA to pwr 
@@ -807,7 +806,6 @@ class MC_Case(Case):
 			
 			pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: pwr_spacergrids[key] )
 			pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
-		'''
 		
 		# Handle nozzles
 		if "lower_nozzle_comp" in ps:

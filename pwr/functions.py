@@ -13,8 +13,7 @@ def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", n
 	Inputs:
 		surface_list:	list of instances of openmc.Surface; the list to check for
 						surfaces in. WILL BE MODIFIED. 
-		counter:		function that keeps track of your surface/cell numbers
-						(such as pwr.Counter.count)
+		counter:		instance of Counter, to keep track of new surface numbers.
 		dim:			str; 'x', 'y', or 'z'
 		val:			float; value for x0, y0, or z0
 		boundary_type:	"transmission", "vacuum", or "reflective".
@@ -33,7 +32,7 @@ def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", n
 			if isinstance(xplane, openmc.XPlane):
 				if val == round(xplane.x0, eps):
 					return xplane
-		xplane =  openmc.XPlane(counter(SURFACE),
+		xplane =  openmc.XPlane(counter.count(SURFACE),
 					boundary_type = boundary_type, x0 = val, name = name)
 		surface_list.append(xplane)
 		return xplane
@@ -42,7 +41,7 @@ def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", n
 			if isinstance(yplane, openmc.YPlane):
 				if val == round(yplane.y0, eps):
 					return yplane
-		yplane =  openmc.YPlane(counter(SURFACE),
+		yplane =  openmc.YPlane(counter.count(SURFACE),
 					boundary_type = boundary_type, y0 = val, name = name)
 		surface_list.append(yplane)
 		return yplane
@@ -51,7 +50,7 @@ def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", n
 			if isinstance(zplane, openmc.ZPlane):
 				if val == round(zplane.z0, eps):
 					return zplane
-		zplane =  openmc.ZPlane(counter(SURFACE),
+		zplane =  openmc.ZPlane(counter.count(SURFACE),
 					boundary_type = boundary_type, z0 = val, name = name)
 		surface_list.append(zplane)
 		return zplane

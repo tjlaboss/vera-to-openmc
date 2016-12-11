@@ -150,7 +150,6 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 		# Doesn't matter for assembly benchmarks, but does for full core
 	
 		
-	#openmc_as3_layers = ascase.get_openmc_lattices(as3) 
 	some_asmbly = ascase.get_openmc_assembly(as3)
 	
 	# Find the top and bottom of the active region
@@ -167,7 +166,6 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	
 	plot_lattice(apitch, as3.npins, z = (z1 - z0)/2.0)
 	bounds = set_cubic_boundaries(apitch)
-	#print(bounds)
 	
 	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds, zrange
 	
@@ -281,8 +279,8 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
@@ -309,7 +307,6 @@ if __name__ == "__main__":
 	root_universe.add_cell(root_cell)
 	geometry = openmc.Geometry()
 	geometry.root_universe = root_universe
-	# Export to "geometry.xml"
 	geometry.export_to_xml()
 	
 	
