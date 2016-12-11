@@ -41,8 +41,8 @@ class MC_Case(Case):
 		self.mod.add_s_alpha_beta("c_H_in_H2O")
 		
 		# Create an infinite cell/universe of moderator
-		self.mod_cell = openmc.Cell(self.__counter(CELL), name = "Infinite Mod Cell", fill = self.mod)
-		self.mod_verse = openmc.Universe(self.__counter(UNIVERSE), name = "Infinite Mod Universe", cells = (self.mod_cell,))
+		self.mod_cell = openmc.Cell(1, name = "Infinite Mod Cell", fill = self.mod)
+		self.mod_verse = openmc.Universe(1, name = "Infinite Mod Universe", cells = (self.mod_cell,))
 		
 	
 	def __counter(self, TYPE):
@@ -54,23 +54,6 @@ class MC_Case(Case):
 		
 		# Quick fix
 		return self.counter.count(TYPE)
-		
-		'''
-		if count == SURFACE:
-			self.openmc_surface_count += 1
-			return self.openmc_surface_count
-		elif count == CELL:
-			self.openmc_cell_count += 1
-			return self.openmc_cell_count
-		elif count == MATERIAL:
-			self.openmc_material_count += 1
-			return self.openmc_material_count
-		elif count == UNIVERSE:
-			self.openmc_universe_count += 1
-			return self.openmc_universe_count
-		else:
-			raise IndexError("Index " + str(count) + " is not SURFACE, CELL, MATERIAL, or UNIVERSE.")
-		'''
 	
 	
 		
@@ -87,7 +70,6 @@ class MC_Case(Case):
 			ylist:		ditto, for openmc.YPlane, y0s
 			zlist:		ditto, for openmc.ZPlane, z0s
 		'''
-		
 		nx = len(x0s)
 		ny = len(y0s)
 		nz = len(z0s)
@@ -95,39 +77,15 @@ class MC_Case(Case):
 		ylist = [None,]*ny
 		zlist = [None,]*ny
 		
-		# Check if such a surface exists, and add it to the lists if so
-		for surf in self.openmc_surfaces:
-			if surf.type == 'x-plane':
-				for i in range(nx):
-					if round(surf.x0, rd) == round(x0s[i], rd):
-						xlist[i] = surf
-			elif surf.type == 'y-plane':
-				for i in range(ny):
-					if round(surf.y0, rd) == round(y0s[i], rd):
-						ylist[i] = surf
-			elif surf.type == 'z-plane':
-				for i in range(nz):
-					if round(surf.z0, rd) == round(z0s[i], rd):
-						zlist[i] = surf
-		
-		# If the surface doesn't exist, create it anew
 		for i in range(nx):
-			if not xlist[i]:
-				xp = openmc.XPlane(self.__counter(SURFACE), x0 = x0s[i])
-				self.openmc_surfaces.append(xp)
-				xlist[i] = xp 
+			xlist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'x', x0s[i], eps = rd)
 		for i in range(ny):
-			if not ylist[i]:
-				yp = openmc.YPlane(self.__counter(SURFACE), y0 = y0s[i])
-				self.openmc_surfaces.append(yp)
-				ylist[i] = yp
+			ylist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'y', y0s[i], eps = rd)
 		for i in range(nz):
-			if not zlist[i]:
-				zp = openmc.ZPlane(self.__counter(SURFACE), z0 = z0s[i])
-				self.openmc_surfaces.append(zp)
-				zlist[i] = zp
+			zlist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'z', z0s[i], eps = rd)
 		
 		return xlist, ylist, zlist
+	
 	
 	def get_openmc_baffle(self):
 		'''Generate the surfaces and cells required to model the baffle plates.
@@ -703,71 +661,9 @@ class MC_Case(Case):
 		return openmc_asmblies
 	
 	
-	def get_openmc_spacergrids(self, vera_grids, grid_labels, grid_elevations, npins, pitch):
-		'''Placeholder function for now.
-		
-		Inputs:
-			vera_grids:			dictionary of instances of SpacerGrid
-			grid_labels:		list of strings (which appear in vera_grids.keys)
-								referring to the next spacer grid that exists.s
-			grid_elevations:	list of floats (of len(grid_labels));
-								heights (cm) of the grid midpoints
-			npins:				integer; (npins)x(npins) fuel bundle 
-		Outputs:
-			None
-		'''
-		
-		for i in range(len(grid_elevations)):
-			z = grid_elevations[i]
-			grid = vera_grids[grid_labels[i]]
-			
-			# Thickness of one edge of the spacer
-			# The actual spacer wall between two cells will be twice this thickness
-			'''Math: How we calculate the thickness 't' of the spacer around 1 cell.
-			
-			Volume = mass / density;		Combined Area = Volume / height
-			Therefore, [ A = m/rho/h ],		and the area around a single pincell:
-												a = m/rho/h / npins^2
-			
-			The area of the spacer material around one cell can also be found:
-				a = p^2 - (p - 2*t)^2,		where 't' is the thickness and 'p' is the pitch
-			->  a = p^2 - [p^2 - 4*t*p + 4*t^2]
-			->  a = 4*t*p - 4*t^2
-				
-			Equate the two expressions for a:
-				m/rho/h / npins^2 = 4*t*p - 4*t^2
-			Then solve for 't' using the quadratic equation:
-			
-			              [             (          m/rho/h   ) ]
-				t = 0.5 * [ p  +/- sqrt ( p^2 -   ---------- ) ]
-				          [             (          npins^2   ) ]
-			
-			It turns out that the negative solution to the root is correct
-			(positive produces thicknesses of greater than the pitch, which is
-			physically impossible). As a check, the thickness should be approximately
-			equal to one fourth [one wall] of one pin's spacer's area, divided by the pitch.
-			To verify this, uncomment the print statement in the next block of code.'''
-			
-			A = grid.mass / self.materials[grid.material].density / grid.height
-			t = 0.5*(pitch - sqrt(pitch**2 - A/npins**2))
-			est = A/(4.0*pitch*npins**2)
-			#print("t="+str(t) + " cm;\tshould be close to " + str(est))
-			
-			# Then do something to model the grid...
-		
-		return None
 	
-		'''	Worth noting about the nozzles:
 	
-			== Analysis of the BEAVRS Benchmark Using MPACT ==
-		A major difference between the model and the benchmark specification is the treatment of 
-		the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled 
-		with a considerable amount of stainless steel. The authors discerned that 
-		the benchmark is specifying up to 10 times the amount of steel that is in the nozzle and
-		core plate region. Instead of using this amount of steel, a Westinghouse optimized fuel
-		assembly (OFA) design found in Technical Report ML033530020 is used for the upper and
-		lower reflector regions.
-										--CASL-U-2015-0183-000	'''
+		
 	
 	
 	def get_openmc_assembly(self, vera_asmbly):
@@ -827,24 +723,24 @@ class MC_Case(Case):
 			self.openmc_materials[unozmat.name] = unozmat
 			pwr_asmbly.upper_nozzle = unoz
 		
+		'''	Worth noting about the nozzles:
+	
+			== Analysis of the BEAVRS Benchmark Using MPACT ==
+		A major difference between the model and the benchmark specification is the treatment of 
+		the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled 
+		with a considerable amount of stainless steel. The authors discerned that 
+		the benchmark is specifying up to 10 times the amount of steel that is in the nozzle and
+		core plate region. Instead of using this amount of steel, a Westinghouse optimized fuel
+		assembly (OFA) design found in Technical Report ML033530020 is used for the upper and
+		lower reflector regions.
+										--CASL-U-2015-0183-000	'''
+		
 		
 		# Where the magic happens
 		openmc_asmbly = pwr_asmbly.build()
 		
 		
-		'''
-		# Start by getting the lattices and layers
-		lattices = self.get_openmc_lattices(vera_asmbly)
-		nlats = len(lattices)
-		
-		for layer in range(nlats):
-			z = vera_asmbly.axial_elevations[layer]
-			label = vera_asmbly.axial_labels[layer]
-			lat = lattices[layer]
-		
-		#TODO: This will probably be much easier if I use pwr.Assembly.
-		'''
-		
+			
 		return openmc_asmbly
 	
 	
@@ -1064,10 +960,6 @@ if __name__ == "__main__":
 
 	test_asmblys = test_case.get_openmc_lattices(a)[0]
 	#print(test_asmbly)
-	
-	#print('\n', a.name, test_asmblys.name, '\n')
-	#for cmap in test_case.core.str_maps(space = "~"):
-	#	print(cmap)
 	
 	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
 	#print(test_case.core.square_maps("a", ''))
