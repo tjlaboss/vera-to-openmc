@@ -488,7 +488,7 @@ class Assembly(object):
 			nozzle_top = self.__get_plane('z', self.upper_nozzle.height)
 			unoz.region = (self.wall_region & +last_s & -nozzle_top)
 			unoz.fill = self.upper_nozzle.material
-			self.openmc_cells.append(lnoz)
+			self.openmc_cells.append(unoz)
 			last_s = nozzle_top
 		
 		# Finally, surround the whole assembly with moderator

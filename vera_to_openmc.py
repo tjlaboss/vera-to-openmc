@@ -825,7 +825,7 @@ class MC_Case(Case):
 								counter = self.counter, name = "Upper Nozzle")
 			unozmat = unoz.get_nozzle_material()
 			self.openmc_materials[unozmat.name] = unozmat
-			pwr_asmbly.lower_nozzle = unoz
+			pwr_asmbly.upper_nozzle = unoz
 		
 		
 		# Where the magic happens
