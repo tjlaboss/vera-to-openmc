@@ -190,7 +190,7 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	return new_cell
 
 
-def add_grid_to(lattice, pitch, npins, spacergrid, counter, surflist):# = []):
+def add_grid_to(lattice, pitch, npins, spacergrid, counter, griddict, surflist):# = []):
 	'''Add a spacer to every pincell in the lattice.
 	FIXME: Determine 'pitch' and 'npins' from the attributes of 'lattice'
 
@@ -200,6 +200,8 @@ def add_grid_to(lattice, pitch, npins, spacergrid, counter, surflist):# = []):
 		npins:			int; number of pins across
 		spacergrid:		instance of SpacerGrid
 		counter:		instance of Counter
+		griddict:		dictionary of pincells and their gridded variants.
+						Will be directly modified. Optional, but strongly recommended.
 		surflist:		list of instances of openmc.Surface to check against.
 						Optional, but strongly recommended.
 	Output:
@@ -215,13 +217,22 @@ def add_grid_to(lattice, pitch, npins, spacergrid, counter, surflist):# = []):
 		row = new_universes[j]
 		for i in range(n):
 			old_cell = lattice.universes[j][i]
-			new_cell = add_spacer_to(old_cell, pitch, spacergrid.thickness, spacergrid.material,
-									 counter, surflist)
+			key = str(old_cell.id)
+			if key in griddict:
+				new_cell = griddict[key]
+			else:
+				new_cell = add_spacer_to(old_cell, pitch, spacergrid.thickness, spacergrid.material,
+										counter, surflist)
+				griddict[key] = new_cell
+				print("Just added pincell", key)
 			row[i] = new_cell
 		new_universes[j] = row
 	
-	new_name = str(lattice.id) + "-gridded"
-	gridded = openmc.RectLattice(counter.count(UNIVERSE), name = new_name)
+	if lattice.name:
+		new_name = lattice.name + "-gridded"
+	else:
+		new_name = str(lattice.id) + "-gridded"
+	gridded = openmc.RectLattice(counter.add_universe(), name = new_name)
 	gridded.pitch = (pitch, pitch)
 	gridded.lower_left = [-pitch * npins / 2.0] * 2
 	gridded.universes = new_universes
@@ -236,51 +247,53 @@ class Assembly(object):
 		and the surrounding moderator.
 	
 	Parameters (all optional except "key"):
-		key:			str; short, unique name of this Assembly as will appear in the core lattice.
-		name:			str; more descriptive name of this Assembly, if desired
-						[Default: same as key]
-		universe_id:	int; unique integer identifier for its OpenMC universe
-						[Default: None, and will be assigned automatically at instantiation of openmc.Universe]
-		pitch:			float; pitch (cm) between pincells in the lattices
-						[Default: 0.0]
-		npins:			int; number of pins across the assembly
-						[Default: 0]
-		walls:			list of instances of openmc.Surface: [min_x, max_x, min_y, max_y] 
-						Used to create the 2D region within the assembly.
-						[Will be generated automatically if not provided.]
-		lattices:		list of instances of openmc.RectLattice, in the axial order they appear in the assembly
-						(bottom -> top).
-						[Default: empty list]
-		lattice_elevs:	list of floats describing the elevations (cm) of each boundary in 'lattices',
-						relative to the bottom core plate. The next lattice starts where the last leaves off.
-						**Must contain exactly len(lattices)+1 entries**
-						[Default: empty list] 
-		spacers:		list of instances of SpacerGrid, in the axial order they appear in the assembly
-						(bottom -> top). 
-						[Default: empty list]
-		spacer_mids:	list of floats describing the elevations (cm) of the midpoint of each spacer grid
-						in 'spacers', relative to the bottom core plate. Gaps are expected.
-						***Must contain exactly len(spacers) entries**
-						[Default: empty list]
-		lower_nozzle:	instance of Nozzle, starting at z=0 and terminating at min(lattice_elevs)
-						[Default: None]
-		upper_nozzle:	instance of Nozzle, starting at max(lattice_elevs) and terminating at z += Nozzle.height
-						[Default: None]
-		mod:			instance of openmc.Material describing  moderator surrounding the assembly.
-						[Default: None] 
-		counter:		instance of pwr.Counter used for keeping track of surface/cell/material/universe IDs.
-						[Default: None] 
+		key:				str; short, unique name of this Assembly as will appear in the core lattice.
+		name:				str; more descriptive name of this Assembly, if desired
+							[Default: same as key]
+		universe_id:		int; unique integer identifier for its OpenMC universe
+							[Default: None, and will be assigned automatically at instantiation of openmc.Universe]
+		pitch:				float; pitch (cm) between pincells in the lattices
+							[Default: 0.0]
+		npins:				int; number of pins across the assembly
+							[Default: 0]
+		walls:				list of instances of openmc.Surface: [min_x, max_x, min_y, max_y] 
+							Used to create the 2D region within the assembly.
+							[Will be generated automatically if not provided.]
+		lattices:			list of instances of openmc.RectLattice, in the axial order they appear in the assembly
+							(bottom -> top).
+							[Default: empty list]
+		lattice_elevs:		list of floats describing the elevations (cm) of each boundary in 'lattices',
+							relative to the bottom core plate. The next lattice starts where the last leaves off.
+							**Must contain exactly len(lattices)+1 entries**
+							[Default: empty list] 
+		spacers:			list of instances of SpacerGrid, in the axial order they appear in the assembly
+							(bottom -> top). 
+							[Default: empty list]
+		spacer_mids:		list of floats describing the elevations (cm) of the midpoint of each spacer grid
+							in 'spacers', relative to the bottom core plate. Gaps are expected.
+							***Must contain exactly len(spacers) entries**
+							[Default: empty list]
+		lower_nozzle:		instance of Nozzle, starting at z=0 and terminating at min(lattice_elevs)
+							[Default: None]
+		upper_nozzle:		instance of Nozzle, starting at max(lattice_elevs) and terminating at z += Nozzle.height
+							[Default: None]
+		mod:				instance of openmc.Material describing  moderator surrounding the assembly.
+							[Default: None] 
+		counter:			instance of pwr.Counter used for keeping track of surface/cell/material/universe IDs.
+							[Default: None] 
 	
 	Attributes:
 		All the above, plus the following created at self.build():
-		spacer_elevs:	list of the elevations of the tops/bottoms of all spacer grids
-		all_elevs:		list of all axial elevations, created when (lattice_elevs + spacer_elevs)
-						have been concatenated, sorted, and checked for duplicates
-		openmc_surfs:	list of instances of openmc.Surface used in the construction of this assembly
-		openmc_cells:	list of all instances of openmc.Cell used in the construction of this assembly
-		assembly:		instance of openmc.Universe.
-						the whole reason you instantiated THIS object.
-						the OpenMC representation of the fuel assembly
+		spacer_elevs:		list of the elevations of the tops/bottoms of all spacer grids
+		all_elevs:			list of all axial elevations, created when (lattice_elevs + spacer_elevs)
+							have been concatenated, sorted, and checked for duplicates
+		openmc_surfs:		list of instances of openmc.Surface used in the construction of this assembly
+		openmc_cells:		list of all instances of openmc.Cell used in the construction of this assembly
+		gridded_pincells:	dictionary of pincells which have a gridded version, in the following format:
+							{'orig. universe id': gridded instance of openmc.Universe}
+		assembly:			instance of openmc.Universe.
+							the whole reason you instantiated THIS object.
+							the OpenMC representation of the fuel assembly
 	'''
 
 	def __init__(self, 	key = "", 		name = "", 			universe_id = None,
@@ -345,6 +358,7 @@ class Assembly(object):
 		self.openmc_cells = []
 		self.openmc_surfaces = []
 		
+		
 		# Combine spacer_elevs and lattice_elevs into one list to rule them all
 		if self.spacer_mids:
 			spacer_elevs = []
@@ -359,6 +373,11 @@ class Assembly(object):
 			self.all_elevs = list(set(elevs))	# Remove the duplicates
 		else:
 			self.all_elevs = self.lattice_elevs
+		
+		# This is a dictionary to keep track of 
+		# The key is the (string of the) original pincell, and the value is the gridded cell.
+		self.gridded_pincells = {}
+		
 		
 		# Finally, create the xy bounding planes
 		half = self.pitch*self.npins/2.0
@@ -410,6 +429,7 @@ class Assembly(object):
 		# When a grid is added by calling add_grid_to(), the lattice's name becomes "oldname-gridded".
 		gridded_lattices = {}
 		
+		
 		for z in self.all_elevs[1:]:
 			s = self.__get_plane('z', z)
 			# See what lattice we are in
@@ -437,7 +457,8 @@ class Assembly(object):
 						lat = gridded_lattices[gname]
 					else:
 						# We need to add the spacer grid to this one, and then add it to the index
-						lat = add_grid_to(lat, self.pitch, self.npins, grid, self.counter, self.openmc_surfaces)
+						lat = add_grid_to(lat, self.pitch, self.npins, grid, self.counter,
+											self.gridded_pincells, self.openmc_surfaces)
 						gridded_lattices[lat.name] = lat
 				
 			# Now, we have the current lattice, for the correct level, with or with a spacer
@@ -474,6 +495,7 @@ class Assembly(object):
 		self.assembly = openmc.Universe(uid, name = self.name)
 		self.assembly.add_cells(self.openmc_cells)
 		
+		print(self.gridded_pincells)#debug
 		return self.assembly
 
 
