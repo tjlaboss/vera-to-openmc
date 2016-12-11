@@ -436,12 +436,6 @@ class Assembly(object):
 			last_s = nozzle_top
 		
 		
-		'''
-		# The convention used here to avoid creating extra lattices when applying grids:
-		# When a grid is added by calling add_grid_to(), the lattice's name becomes "oldname-gridded".
-		gridded_lattices = {}
-		'''
-		
 		for z in self.all_elevs[1:]:
 			s = self.__get_plane('z', z)
 			# See what lattice we are in
@@ -452,18 +446,16 @@ class Assembly(object):
 			lat = self.lattices[i-1]
 			# Check if there is a spacer grid
 			if self.spacer_mids:
-				for g in range(len(self.spacer_mids)):
+				#for g in range(len(self.spacer_mids)):
+				for g in range(len(self.spacer_elevs)):
 					#if z > self.spacer_mids[g]:
-					if z == self.spacer_elevs[g]:
+					if z <= self.spacer_elevs[g] and z > self.spacer_elevs[g-1]:
 						break
 				# Even numbers are bottoms, odds are top
 				grid = False
-				if (g-1) % 2 == 0:
+				if (g-1) % 2 == 0 and z > min(self.spacer_elevs):
 					# Then the last one was a bottom: a grid is present
-					grid = self.spacers[g-1]
-					#debug
-					print("\n\n", "z=",z, lat.name, grid.key)
-				
+					grid = self.spacers[int(g/2)]
 				# OK--now we know what the current lattice is, and whether there's a grid here.
 				if grid:
 					g_id = str(lat.id)
