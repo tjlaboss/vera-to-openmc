@@ -6,7 +6,7 @@
 
 import openmc
 from pwr.nozzle import Nozzle
-from pwr.functions import *
+from pwr.functions import get_plane
 from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
 from copy import copy
 from math import sqrt
@@ -218,13 +218,20 @@ def add_grid_to(lattice, pitch, npins, spacergrid, counter, griddict, surflist):
 		for i in range(n):
 			old_cell = lattice.universes[j][i]
 			key = str(old_cell.id)
+			
+			#debug
+			if lattice.name == "PLUG":
+				if key not in griddict:
+					print("Cell", key, "is not in griddict...generating")
+				
+			
 			if key in griddict:
 				new_cell = griddict[key]
 			else:
 				new_cell = add_spacer_to(old_cell, pitch, spacergrid.thickness, spacergrid.material,
-										counter, surflist)
+										  counter, surflist)
 				griddict[key] = new_cell
-				print("Just added pincell", key)
+				print("Just added pincell", key, ":", new_cell.id)
 			row[i] = new_cell
 		new_universes[j] = row
 	
@@ -291,6 +298,8 @@ class Assembly(object):
 		openmc_cells:		list of all instances of openmc.Cell used in the construction of this assembly
 		gridded_pincells:	dictionary of pincells which have a gridded version, in the following format:
 							{'orig. universe id': gridded instance of openmc.Universe}
+		gridded_lattices:	dictionary of lattices  which have a gridded version, in the following format:
+							{'orig. universe id': gridded instance of openmc.RectLattice}
 		assembly:			instance of openmc.Universe.
 							the whole reason you instantiated THIS object.
 							the OpenMC representation of the fuel assembly
@@ -361,22 +370,23 @@ class Assembly(object):
 		
 		# Combine spacer_elevs and lattice_elevs into one list to rule them all
 		if self.spacer_mids:
-			spacer_elevs = []
+			self.spacer_elevs = []
 			for i in range(len(self.spacers)):
 				spacer = self.spacers[i]
 				mid = self.spacer_mids[i]
 				s_bot = mid - spacer.height / 2.0
 				s_top = mid + spacer.height / 2.0
-				spacer_elevs += (s_bot, s_top)
-			elevs = spacer_elevs + self.lattice_elevs
-			elevs.sort()
+				self.spacer_elevs += (s_bot, s_top)
+			elevs = self.spacer_elevs + self.lattice_elevs
 			self.all_elevs = list(set(elevs))	# Remove the duplicates
+			self.all_elevs.sort()
 		else:
 			self.all_elevs = self.lattice_elevs
 		
-		# This is a dictionary to keep track of 
-		# The key is the (string of the) original pincell, and the value is the gridded cell.
+		# Dictionaries to keep track of which pincells and lattices have had spacer grids generated  
+		# The key is the (string of the) original pincell/lattice, and the value is the gridded cell/lattice.
 		self.gridded_pincells = {}
+		self.gridded_lattices = {}
 		
 		
 		# Finally, create the xy bounding planes
@@ -425,41 +435,49 @@ class Assembly(object):
 			self.openmc_cells.append(lnoz)
 			last_s = nozzle_top
 		
+		
+		'''
 		# The convention used here to avoid creating extra lattices when applying grids:
 		# When a grid is added by calling add_grid_to(), the lattice's name becomes "oldname-gridded".
 		gridded_lattices = {}
-		
+		'''
 		
 		for z in self.all_elevs[1:]:
 			s = self.__get_plane('z', z)
 			# See what lattice we are in
 			for i in range(len(self.lattices)):
 				#if z > self.lattice_elevs[i]:
-				if z == self.lattice_elevs[i]:
+				if z <= self.lattice_elevs[i] and z > self.lattice_elevs[i-1]:
 					break
 			lat = self.lattices[i-1]
 			# Check if there is a spacer grid
 			if self.spacer_mids:
 				for g in range(len(self.spacer_mids)):
-					if z > self.spacer_mids[g]:
+					#if z > self.spacer_mids[g]:
+					if z == self.spacer_elevs[g]:
 						break
 				# Even numbers are bottoms, odds are top
 				grid = False
 				if (g-1) % 2 == 0:
 					# Then the last one was a bottom: a grid is present
 					grid = self.spacers[g-1]
+					#debug
+					print("\n\n", "z=",z, lat.name, grid.key)
 				
 				# OK--now we know what the current lattice is, and whether there's a grid here.
 				if grid:
-					gname = lat.name + "-gridded"
-					if gname in gridded_lattices:
+					g_id = str(lat.id)
+					if g_id in self.gridded_lattices:
 						# Then this one has been done before
-						lat = gridded_lattices[gname]
+						lat = self.gridded_lattices[g_id]
+						print("Success: looked up", lat.name)
 					else:
 						# We need to add the spacer grid to this one, and then add it to the index
 						lat = add_grid_to(lat, self.pitch, self.npins, grid, self.counter,
 											self.gridded_pincells, self.openmc_surfaces)
-						gridded_lattices[lat.name] = lat
+						self.gridded_lattices[g_id] = lat
+						print("Unable to find", lat.name, "; generated.")
+						print(self.gridded_lattices.keys())
 				
 			# Now, we have the current lattice, for the correct level, with or with a spacer
 			# grid as appropriate. Time to make the layer.
