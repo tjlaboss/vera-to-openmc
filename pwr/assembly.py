@@ -154,7 +154,7 @@ class Assembly(object):
 		
 		# Dictionaries to keep track of which pincells and lattices have had spacer grids generated  
 		# The key is the (string of the) original pincell/lattice, and the value is the gridded cell/lattice.
-		self.gridded_pincells = {}
+		#self.gridded_pincells = {}
 		self.gridded_lattices = {}
 		
 		
@@ -235,7 +235,7 @@ class Assembly(object):
 					else:
 						# We need to add the spacer grid to this one, and then add it to the index
 						lat = pwr.add_grid_to(lat, self.pitch, self.npins, grid, self.counter, 
-											   self.gridded_pincells, self.openmc_surfaces)
+											   self.openmc_surfaces)
 						self.gridded_lattices[g_id] = lat
 						print("Unable to find", lat.name, "; generated.")
 						print(self.gridded_lattices.keys())
@@ -274,7 +274,7 @@ class Assembly(object):
 		self.assembly = openmc.Universe(uid, name = self.name)
 		self.assembly.add_cells(self.openmc_cells)
 		
-		print(self.gridded_pincells)#debug
+		#print(self.gridded_pincells)#debug
 		return self.assembly
 
 

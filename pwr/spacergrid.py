@@ -83,7 +83,7 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 					spacers to more than one pin cell.
 	
 	Output:
-		new_cell:	instance of openmc.Universe describing the pincell
+		new_pin:	instance of openmc.Universe describing the pincell
 					surrounded by the spacer
 	'''
 	assert isinstance(pincell, openmc.Universe), str(pincell) + "must be an openmc.Universe (not a Cell)"
@@ -93,6 +93,18 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	
 	# Create necessary planes
 	p = pitch / 2.0
+	print("top out", p, "top in", p-t, "bot in", -p+t, "bot out", -p)
+	print("left out", -p, "left in", -p+t, "right in", p-t, "right out", p)
+	'''
+	top_out = get_plane(surflist, counter, 'y',  p)
+	top_in  = get_plane(surflist, counter, 'y',  p - t)
+	bot_in  = get_plane(surflist, counter, 'y', -p + t)
+	bot_out = get_plane(surflist, counter, 'y', -p)
+	left_out  = get_plane(surflist, counter, 'x', -p)		# He feels left out
+	left_in   = get_plane(surflist, counter, 'x', -p + t)
+	right_in  = get_plane(surflist, counter, 'x',  p - t)
+	right_out = get_plane(surflist, counter, 'x',  p)
+	'''
 	top_out = get_plane(surflist, counter, 'y',  p)
 	top_in  = get_plane(surflist, counter, 'y',  p - t)
 	bot_in  = get_plane(surflist, counter, 'y', -p + t)
@@ -104,6 +116,7 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	
 	# Get the outermost (mod) Cell of the pincell
 	mod_cell = duplicate(orig_list[-1], counter)
+	mod_cell.name += " (gridded)"
 	
 	# Make a cell encompassing the 4 sides of the spacer
 	spacer = openmc.Cell(counter.add_cell(), name = pincell.name + " spacer")
@@ -115,20 +128,21 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	spacer.fill = material
 	
 	# Then fix the moderator cell to be within the bounds of the spacer
-	mod_cell.region = mod_cell.region & \
-					(+bot_in	& +left_in	& -top_in	& -right_in )
+	#mod_cell.region = mod_cell.region & \
+	#				(+bot_in	& +left_in	& -top_in	& -right_in )
+	mod_cell.region &= (+bot_in	& +left_in	& -top_in	& -right_in )
 	
-	new_cell = openmc.Universe(counter.add_universe(), name = pincell.name + " gridded")
+	new_pin = openmc.Universe(counter.add_universe(), name = pincell.name + " gridded")
 	# Add all of the original cells except the old mod cell
 	for i in range(len(orig_list) - 1):
-		new_cell.add_cell(orig_list[i])
-	new_cell.add_cell(mod_cell) 	# the new mod cell
-	new_cell.add_cell(spacer)
+		new_pin.add_cell(orig_list[i])
+	new_pin.add_cell(mod_cell) 	# the new mod cell
+	new_pin.add_cell(spacer)
 	
-	return new_cell
+	return new_pin
 
 
-def add_grid_to(lattice, pitch, npins, spacer, counter, griddict, surflist):# = []):
+def add_grid_to(lattice, pitch, npins, spacer, counter, surflist):# = []):
 	'''Add a spacer to every pincell in the lattice.
 	FIXME: Determine 'pitch' and 'npins' from the attributes of 'lattice'
 
@@ -138,8 +152,6 @@ def add_grid_to(lattice, pitch, npins, spacer, counter, griddict, surflist):# = 
 		npins:			int; number of pins across
 		spacer:		instance of SpacerGrid
 		counter:		instance of Counter
-		griddict:		dictionary of pincells and their gridded variants.
-						Will be directly modified. Optional, but strongly recommended.
 		surflist:		list of instances of openmc.Surface to check against.
 						Optional, but strongly recommended.
 	Output:
@@ -159,16 +171,16 @@ def add_grid_to(lattice, pitch, npins, spacer, counter, griddict, surflist):# = 
 			
 			#debug
 			if lattice.name == "PLUG":
-				if key not in griddict:
-					print("Cell", key, "is not in griddict...generating")
+				if key not in old_cell.griddict:
+					print("Cell", key, "is not in old_cell.griddict...generating")
 				
 			
-			if key in griddict:
-				new_cell = griddict[key]
+			if key in old_cell.griddict:
+				new_cell = old_cell.griddict[key]
 			else:
 				new_cell = add_spacer_to(old_cell, pitch, spacer.thickness, spacer.material,
 										  counter, surflist)
-				griddict[key] = new_cell
+				old_cell.griddict[key] = new_cell
 				print("Just added pincell", key, ":", new_cell.id)
 			row[i] = new_cell
 		new_universes[j] = row

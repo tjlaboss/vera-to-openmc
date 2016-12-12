@@ -606,6 +606,9 @@ class MC_Case(Case):
 			pincell_universe = openmc.Universe(self.__counter(UNIVERSE), vera_cell.name + "-verse")
 			pincell_universe.add_cells(openmc_cells)
 			
+			# Initialize a useful dictionary to keep track of version of
+			# this cell which have spacer grids added
+			pincell_universe.griddict = {}
 			
 			self.openmc_pincells[vera_cell.key] = pincell_universe
 			

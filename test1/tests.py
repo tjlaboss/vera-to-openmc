@@ -162,24 +162,28 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 			maxdiff = diff
 			z0 = as3.axial_elevations[i-1]
 			z1 = as3.axial_elevations[i]
-	zrange = [z0, z1]
+	zrange_active = [z0, z1]
+	# Set Z range for boundary conditions
+	# FIXME: Correct this to account for core plates
+	zrange_total = [0, ascase.core.height]
 	
 	plot_lattice(apitch, as3.npins, z = (z1 - z0)/2.0)
-	bounds = set_cubic_boundaries(apitch)
+	bounds = set_cubic_boundaries(apitch, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
-	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds, zrange
+	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds, zrange_active
 	
 
 
 
 
-def set_cubic_boundaries(pitch, bounds=('reflective',)*6):
+def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
 	'''Inputs:
 		pitch:		float; pitch between fuel pins 
 		n:			int; number of fuel pins in an assembly (usually 1 or 17)
 		bounds:		tuple/list of strings with len=6, containing the respective
 					boundary types for min/max x, y, and z (default: all reflective)
-	
+		zrange: 	list of floats with len=2 describing the minimum and maximum z values
+					of the geometry
 	Outputs:
 		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
 	'''
@@ -188,8 +192,8 @@ def set_cubic_boundaries(pitch, bounds=('reflective',)*6):
 	max_x = openmc.XPlane(x0=+pitch/2.0, boundary_type=bounds[1], name = "Bound - max x")
 	min_y = openmc.YPlane(y0=-pitch/2.0, boundary_type=bounds[2], name = "Bound - min y")
 	max_y = openmc.YPlane(y0=+pitch/2.0, boundary_type=bounds[3], name = "Bound - max y")
-	min_z = openmc.ZPlane(z0=-pitch/2.0, boundary_type=bounds[4], name = "Bound - min z")
-	max_z = openmc.ZPlane(z0=+pitch/2.0, boundary_type=bounds[5], name = "Bound - max z")
+	min_z = openmc.ZPlane(z0=zrange[0],  boundary_type=bounds[4], name = "Bound - min z")
+	max_z = openmc.ZPlane(z0=zrange[1],  boundary_type=bounds[5], name = "Bound - max z")
 	
 	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
