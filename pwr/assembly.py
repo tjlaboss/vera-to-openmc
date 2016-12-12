@@ -152,11 +152,6 @@ class Assembly(object):
 		else:
 			self.all_elevs = self.lattice_elevs
 		
-		# Dictionaries to keep track of which pincells and lattices have had spacer grids generated  
-		# The key is the (string of the) original pincell/lattice, and the value is the gridded cell/lattice.
-		#self.gridded_pincells = {}
-		self.gridded_lattices = {}
-		
 		
 		# Finally, create the xy bounding planes
 		half = self.pitch*self.npins/2.0
@@ -227,17 +222,14 @@ class Assembly(object):
 					grid = self.spacers[int(g/2)]
 				# OK--now we know what the current lattice is, and whether there's a grid here.
 				if grid:
-					g_id = str(lat.id)
-					if g_id in self.gridded_lattices:
+					if grid.key in lat.griddict:
 						# Then this one has been done before
-						lat = self.gridded_lattices[g_id]
-						print("Success: looked up", lat.name)
+						lat = lat.griddict[grid.key]
 					else:
 						# We need to add the spacer grid to this one, and then add it to the index
-						lat = pwr.add_grid_to(lat, grid, self.counter, self.openmc_surfaces)
-						self.gridded_lattices[g_id] = lat
-						print("Unable to find", lat.name, "; generated.")
-						print(self.gridded_lattices.keys())
+						lat.griddict[grid.key] = pwr.add_grid_to(lat, grid, self.counter, self.openmc_surfaces)
+						lat = lat.griddict[grid.key]
+						print("Unable to find", lat.name, "; generated.")#debug
 				
 			# Now, we have the current lattice, for the correct level, with or with a spacer
 			# grid as appropriate. Time to make the layer.
@@ -273,7 +265,6 @@ class Assembly(object):
 		self.assembly = openmc.Universe(uid, name = self.name)
 		self.assembly.add_cells(self.openmc_cells)
 		
-		#print(self.gridded_pincells)#debug
 		return self.assembly
 
 

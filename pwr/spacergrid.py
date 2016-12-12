@@ -170,9 +170,9 @@ def add_grid_to(lattice,spacer, counter, surflist):# = []):
 		new_universes[j] = row
 	
 	if lattice.name:
-		new_name = lattice.name + "-gridded"
+		new_name = lattice.name + "-grid:" + spacer.key
 	else:
-		new_name = str(lattice.id) + "-gridded"
+		new_name = str(lattice.id) + "-grid:" + spacer.key
 	gridded = openmc.RectLattice(counter.add_universe(), name = new_name)
 	gridded.pitch = (pitch, pitch)
 	gridded.lower_left = [-pitch * n / 2.0] * 2

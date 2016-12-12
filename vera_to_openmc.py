@@ -587,13 +587,11 @@ class MC_Case(Case):
 				# Fill the cell in with a material
 				m = vera_cell.mats[ring]
 				fill = self.get_openmc_material(m, vera_cell.asname, vera_cell.inname)
-				
 					
 				# What I want to do instead is, somewhere else in the code, generate the corresponding
 				# openmc material for each objects.Material instance. Then, just look it up in that dictionary.
 				new_cell.fill = fill
 				openmc_cells.append(new_cell)
-			
 			# end of "for ring" loop
 			
 			# Then add the moderator outside the pincell
@@ -606,7 +604,7 @@ class MC_Case(Case):
 			pincell_universe = openmc.Universe(self.__counter(UNIVERSE), vera_cell.name + "-verse")
 			pincell_universe.add_cells(openmc_cells)
 			
-			# Initialize a useful dictionary to keep track of version of
+			# Initialize a useful dictionary to keep track of versions of
 			# this cell which have spacer grids added
 			pincell_universe.griddict = {}
 			
@@ -635,7 +633,7 @@ class MC_Case(Case):
 		# Possible params include:
 		# axial_elevations, axial_labels, grid_elev, grid_map,
 		# ppitch, title, num_pins, label
-		openmc_asmblies = []
+		openmc_lattices = []
 		
 		# Instantiate all the pin cells (openmc.Universes) that appear in the Assembly
 		cell_verses = {}
@@ -645,23 +643,26 @@ class MC_Case(Case):
 		
 		
 		for latname in vera_asmbly.axial_labels:
-			openmc_asmbly = openmc.RectLattice(self.__counter(UNIVERSE), latname)
-			openmc_asmbly.pitch = (pitch, pitch)
-			openmc_asmbly.lower_left = [-pitch * float(npins) / 2.0] * 2
+			lattice = openmc.RectLattice(self.__counter(UNIVERSE), latname)
+			lattice.pitch = (pitch, pitch)
+			lattice.lower_left = [-pitch * float(npins) / 2.0] * 2
 			# And populate with universes from cell_verses
 			asmap = vera_asmbly.cellmaps[latname]
 			#print(latname, asmap)
 			
 			# NASTY TEMPORARY HACK, DO NOT LEAVE THIS
+			# FIXME: I haven't forgotten. Really.
 			lookup = lambda c: cell_verses[c] if c in cell_verses else cell_verses[vera_asmbly.celldict[c]]
 			
-			openmc_asmbly.universes = fill_lattice(asmap, lookup, npins)
-			#openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
-			#openmc_asmbly.universes = fill_lattice(asmap, lambda c: cell_verses[vera_asmbly.celldict[c]], npins)
-			openmc_asmbly.outer = self.mod_verse	# To account for the assembly gap
-			openmc_asmblies.append(openmc_asmbly)
+			lattice.universes = fill_lattice(asmap, lookup, npins)
+			#lattice.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
+			#lattice.universes = fill_lattice(asmap, lambda c: cell_verses[vera_asmbly.celldict[c]], npins)
+			lattice.outer = self.mod_verse	# To account for the assembly gap
+			# Initialize a dictionary of versions of this lattice which have spacer grids added
+			lattice.griddict = {}
+			openmc_lattices.append(lattice)
 		
-		return openmc_asmblies
+		return openmc_lattices
 	
 	
 	
