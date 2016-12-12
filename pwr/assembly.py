@@ -5,14 +5,8 @@
 # a model of a Westinghouse-style PWR assembly
 
 import openmc
-import pwr.nozzle
 import pwr.spacergrid
 from pwr.functions import get_plane
-from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
-from copy import copy
-from math import sqrt
-
-
 
 
 
@@ -116,7 +110,7 @@ class Assembly(object):
 			blank_allowable.append('lower_nozzle')
 		
 		# Check that all necessary parameters are present.
-		err_str = "Error: the following parameters need to be set:\n"
+		err_str = "the following attributes need to be set:\n"
 		errs = 0
 		for attr in self.__dict__:
 			if not self.__dict__[attr]:
@@ -124,10 +118,10 @@ class Assembly(object):
 					errs += 1
 					err_str += '\t- ' + attr + '\n'
 		if errs:
-			raise TypeError(err_str)
+			raise AttributeError(err_str)
 		
 		# Check that the number of entries in the lists is correct
-		assert (len(self.lattice_elevs) == len(self.lattices) +1), \
+		assert (len(self.lattice_elevs) == len(self.lattices)+1), \
 			"Error: number of entries in lattice_elevs must be len(lattices) + 1"
 		assert (len(self.spacers) == len(self.spacer_mids)), \
 			"Error: number of entries in spacer_elevs must be len(spacers)"
@@ -154,28 +148,17 @@ class Assembly(object):
 		
 		
 		# Finally, create the xy bounding planes
-		half = self.pitch*self.npins/2.0
-		
 		if self.walls:
 			[min_x, max_x, min_y, max_y] = self.walls
 		else:
+			half = self.pitch*self.npins/2.0
 			min_x = self.__get_plane('x', -half, name = self.name + ' - min_x') 
 			max_x = self.__get_plane('x', +half, name = self.name + ' - max_x') 
 			min_y = self.__get_plane('y', -half, name = self.name + ' - min_y') 
 			max_y = self.__get_plane('y', +half, name = self.name + ' - max_y') 
 			self.walls = [min_x, max_x, min_y, max_y]
-		
 		self.openmc_surfaces = [min_x, max_x, min_y, max_y]
 		self.wall_region = openmc.Intersection(+min_x & +min_y & -max_x & -max_y)
-		self.openmc_cells = []
-	
-	
-	
-		
-	
-	def test_prebuild(self):
-		'''Temporary method--to be removed once this class is complete'''
-		self.__prebuild()
 	
 	
 	def build(self):
@@ -273,8 +256,9 @@ class Assembly(object):
 # Test
 if __name__ == '__main__':
 	from pwr.mixture import Mixture
-	# Define a global test moderator
+	import pwr.nozzle
 	c = pwr.Counter()
+	# Define a global test moderator
 	mod = openmc.Material(c.add_material(), "mod")
 	mod.set_density("g/cc", 1.0)
 	mod.add_nuclide("h1", 2.0/3, 'ao')
@@ -287,7 +271,7 @@ if __name__ == '__main__':
 	
 	mix1 = Mixture([mod, iron], [0.5,0.5], c.add_material(), 'watery iron')
 	assert isinstance(mix1, openmc.Material)	
-	noz1 = pwr.Nozzle(10, 6250, iron, mod, 1, 10, c)
+	noz1 = pwr.nozzle.Nozzle(10, 6250, iron, mod, 1, 10, c)
 
 	# Test a pincell
 	cyl0 = openmc.ZCylinder(c.add_surface(), R = 0.300) 
