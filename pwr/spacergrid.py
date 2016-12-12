@@ -93,18 +93,6 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	
 	# Create necessary planes
 	p = pitch / 2.0
-	print("top out", p, "top in", p-t, "bot in", -p+t, "bot out", -p)
-	print("left out", -p, "left in", -p+t, "right in", p-t, "right out", p)
-	'''
-	top_out = get_plane(surflist, counter, 'y',  p)
-	top_in  = get_plane(surflist, counter, 'y',  p - t)
-	bot_in  = get_plane(surflist, counter, 'y', -p + t)
-	bot_out = get_plane(surflist, counter, 'y', -p)
-	left_out  = get_plane(surflist, counter, 'x', -p)		# He feels left out
-	left_in   = get_plane(surflist, counter, 'x', -p + t)
-	right_in  = get_plane(surflist, counter, 'x',  p - t)
-	right_out = get_plane(surflist, counter, 'x',  p)
-	'''
 	top_out = get_plane(surflist, counter, 'y',  p)
 	top_in  = get_plane(surflist, counter, 'y',  p - t)
 	bot_in  = get_plane(surflist, counter, 'y', -p + t)
@@ -124,12 +112,8 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 					(+right_in	& -right_out& +bot_in	& 	-top_in)	| \
 					(+left_out	& -left_in	& +bot_in	&	-top_in)	| \
 					(+bot_out 	& -bot_in	& +left_out	&	-right_out )  
-					#& mod_cell.region	# top; bottom; right; left; #outside cylinder	 
 	spacer.fill = material
-	
 	# Then fix the moderator cell to be within the bounds of the spacer
-	#mod_cell.region = mod_cell.region & \
-	#				(+bot_in	& +left_in	& -top_in	& -right_in )
 	mod_cell.region &= (+bot_in	& +left_in	& -top_in	& -right_in )
 	
 	new_pin = openmc.Universe(counter.add_universe(), name = pincell.name + " gridded")
@@ -142,15 +126,12 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	return new_pin
 
 
-def add_grid_to(lattice, pitch, npins, spacer, counter, surflist):# = []):
+def add_grid_to(lattice,spacer, counter, surflist):# = []):
 	'''Add a spacer to every pincell in the lattice.
-	FIXME: Determine 'pitch' and 'npins' from the attributes of 'lattice'
 
 	Inputs:
 		lattice:		instance of openmc.RectLattice
-		pitch:			float; its pitch (cm)
-		npins:			int; number of pins across
-		spacer:		instance of SpacerGrid
+		spacer:			instance of SpacerGrid
 		counter:		instance of Counter
 		surflist:		list of instances of openmc.Surface to check against.
 						Optional, but strongly recommended.
@@ -159,8 +140,11 @@ def add_grid_to(lattice, pitch, npins, spacer, counter, surflist):# = []):
 						to every cell'''
 	
 	assert isinstance(lattice, openmc.RectLattice), "'lattice' must be a RectLattice."
+	assert lattice.pitch[0] == lattice.pitch[1], "lattice must have a square pitch at this time.\n" + \
+			"If you need a non-square rectangular pitch, please contact the developers."
 	assert isinstance(spacer, SpacerGrid), "'spacer' must be an instance of SpacerGrid."
-	n = int(npins)
+	pitch = lattice.pitch[0]
+	n = len(lattice.universes)
 	new_universes = [[None,]*n,]*n
 	
 	for j in range(n):
@@ -191,7 +175,7 @@ def add_grid_to(lattice, pitch, npins, spacer, counter, surflist):# = []):
 		new_name = str(lattice.id) + "-gridded"
 	gridded = openmc.RectLattice(counter.add_universe(), name = new_name)
 	gridded.pitch = (pitch, pitch)
-	gridded.lower_left = [-pitch * npins / 2.0] * 2
+	gridded.lower_left = [-pitch * n / 2.0] * 2
 	gridded.universes = new_universes
 	return gridded
 	

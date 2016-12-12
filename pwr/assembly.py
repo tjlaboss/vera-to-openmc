@@ -234,8 +234,7 @@ class Assembly(object):
 						print("Success: looked up", lat.name)
 					else:
 						# We need to add the spacer grid to this one, and then add it to the index
-						lat = pwr.add_grid_to(lat, self.pitch, self.npins, grid, self.counter, 
-											   self.openmc_surfaces)
+						lat = pwr.add_grid_to(lat, grid, self.counter, self.openmc_surfaces)
 						self.gridded_lattices[g_id] = lat
 						print("Unable to find", lat.name, "; generated.")
 						print(self.gridded_lattices.keys())
