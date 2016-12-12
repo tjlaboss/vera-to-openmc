@@ -254,7 +254,7 @@ class Assembly(object):
 		# Add the top nozzle if necessary:
 		if self.upper_nozzle:
 			unoz = openmc.Cell(self.counter.add_cell(), "upper nozzle")
-			nozzle_top = self.__get_plane('z', self.upper_nozzle.height)
+			nozzle_top = self.__get_plane('z', last_s.z0 + self.upper_nozzle.height)
 			unoz.region = (self.wall_region & +last_s & -nozzle_top)
 			unoz.fill = self.upper_nozzle.material
 			self.openmc_cells.append(unoz)
