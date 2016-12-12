@@ -4,6 +4,34 @@
 
 from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
 import openmc
+import copy
+
+
+def duplicate(orig, counter):
+	'''Copy an OpenMC object, except for a new id 
+	
+	Input:
+		orig: 		instance of openmc.(Surface, Cell, Material, or Universe)
+		counter:	instance of Counter
+	
+	Output:
+		dupl: 		same as 'orig', but with a different instance.id 
+	'''
+	dup = copy.copy(orig)
+	if isinstance(orig, openmc.Surface):
+		dup.id = counter.count(SURFACE)
+	elif isinstance(orig, openmc.Cell):
+		dup.id = counter.count(CELL)
+	elif isinstance(orig, openmc.Material):
+		dup.id = counter.count(MATERIAL)
+	elif isinstance(orig, openmc.Universe):
+		dup.id = counter.count(UNIVERSE)
+	else:
+		name = orig.__class__.__name__
+		raise TypeError(str(orig) + " is an instance of " + name + 
+					"; expected Surface, Cell, Material, or Universe")
+	return dup
+
 
 
 def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", name = "", eps = 5):
@@ -54,6 +82,8 @@ def get_plane(surface_list, counter, dim, val, boundary_type = "transmission", n
 					boundary_type = boundary_type, z0 = val, name = name)
 		surface_list.append(zplane)
 		return zplane
+
+
 
 
 
