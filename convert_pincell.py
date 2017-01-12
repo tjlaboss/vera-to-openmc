@@ -1,70 +1,54 @@
-# Convert Common
+# Convert Pincell
 #
-# Functions common to all or most of the 'convert_[type].py' modules
+#TODO: Write description
 
-import openmc
+import sys
+import vera_to_openmc
+from convert_common import *
 
+def convert_pincell(case, aname = "", pname = ""):
+	"""Create and run a simple pincell.
 
-def set_cubic_boundaries(pitch, bounds = ('reflective',) * 6, zrange = [0.0, 1.0]):
-	'''Inputs:
-		pitch:		float; pitch between fuel pins
-		n:			int; number of fuel pins in an assembly (usually 1 or 17)
-		bounds:		tuple/list of strings with len=6, containing the respective
-					boundary types for min/max x, y, and z (default: all reflective)
-		zrange: 	list of floats with len=2 describing the minimum and maximum z values
-					of the geometry
-	Outputs:
-		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
-	'''
-	
-	min_x = openmc.XPlane(x0 = -pitch / 2.0, boundary_type = bounds[0], name = "Bound - min x")
-	max_x = openmc.XPlane(x0 = +pitch / 2.0, boundary_type = bounds[1], name = "Bound - max x")
-	min_y = openmc.YPlane(y0 = -pitch / 2.0, boundary_type = bounds[2], name = "Bound - min y")
-	max_y = openmc.YPlane(y0 = +pitch / 2.0, boundary_type = bounds[3], name = "Bound - max y")
-	min_z = openmc.ZPlane(z0 = zrange[0], boundary_type = bounds[4], name = "Bound - min z")
-	max_z = openmc.ZPlane(z0 = zrange[1], boundary_type = bounds[5], name = "Bound - max z")
-	
-	return (min_x, max_x, min_y, max_y, min_z, max_z)
+	True pincell cases (those starting with a '1') only have 1 assembly consisting of 1 pin cell.
+	In that case, just take the first (and only) entry in case.assemblies and assembly.cells.
 
-
-def plot_xy_lattice(pitch, z = 0, width = 1250, height = 1250, plot_name = 'Plot-materials-xy'):
-	# Plot properties for this test
-	plot = openmc.Plot(plot_id = 1)
-	plot.filename = plot_name
-	plot.origin = [0, 0, z]
-	plot.width = [pitch - .01, pitch - .01]
-	plot.pixels = [width, height]
-	plot.color = 'mat'
-	# Instantiate a Plots collection--don't export to "plots.xml" just yet
-	plot_file = openmc.Plots([plot])
-
-
-# plot_file.export_to_xml()
-
-def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactive, particles):
-	'''Create the OpenMC settings and export to XML.
+	This function may also be used to run individual pin cells that are parts of larger cases.
+	In this event, the user must specify the assembly name 'aname' in which the pincell lies,
+	and the pincell name 'pname' referring to the cell itself.
 
 	Inputs:
-		npins:		int; number of pins across an assembly. Use 1 for a pin cell,
-					and the lattice size for an assembly (usually 17).
-		pitch:		float; distance in cm between two PIN CELLS (not assemblies).
-					Used for detecting fissionable zones.
-		bounds:		iterable (tuple, list, etc.) of the X, Y, and Z bounding Planes:
-					 (min_x, max_x, min_y, max_y, min_z, max_z)
-		zrange:		list of floats describing the minimum and maximum z location
-					of fissionable material
-	'''
-	# Instantiate a Settings object
-	settings_file = openmc.Settings()
-	settings_file.batches = min_batches
-	settings_file.inactive = inactive
-	settings_file.particles = particles
-	settings_file.output = {'tallies':False}
-	settings_file.trigger_active = True
-	settings_file.trigger_max_batches = max_batches
-	# Create an initial uniform spatial source distribution over fissionable zones
-	lleft = (-npins * pitch / 2.0,) * 2 + (zrange[0],)
-	uright = (+npins * pitch / 2.0,) * 2 + (zrange[1],)
-	uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable = True)  # @UndefinedVariable
-	settings_file.source = openmc.source.Source(space = uniform_dist)
-	settings_file.export_to_xml()
+		case_file:		string of the location on the filesystem of the XML.GOLD input
+		aname:			string; unique key of the Assembly in which the cell lies.
+		pname:			string; unique key of the Cell in the Assembly
+	"""
+	assembly1 = list(case.assemblies.values())[0]
+	veracell1 = list(assembly1.cells.values())[0]
+	
+	if aname and pname:
+		try:
+			assembly1 = case.assemblies[aname.lower()]
+			veracell1 = assembly1.cells[pname.lower()]
+		except KeyError as e:
+			print("Key", e, "not found; autodetecting.")
+			print("Using Assembly:", assembly1.name, "and Cell:", veracell1.name)
+	
+	openmc_cell1 = case.get_openmc_pincell(veracell1)
+	
+	plot_xy_lattice(assembly1.pitch)
+	bounds = set_cubic_boundaries(assembly1.pitch, ("reflective",) * 6)
+	
+	return case, openmc_cell1, assembly1.pitch, 1, bounds, [0.0, 1.0]
+
+
+def get_pincell_case():
+	"""TODO: Write this
+	
+	For a given case file, see if it's a single pincell case.
+	If not, guide the user in selecting the exact pin cell out of the VERA case.
+	
+	"""
+	
+	case_file = None
+	aname = None
+	pname = None
+	return case_file, aname, pname
