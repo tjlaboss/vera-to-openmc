@@ -1,15 +1,5 @@
-/.project
-/.pydevproject
-/objects.pyc
-/read_xml.pyc
-/vera_to_openmc.pyc
-/test_assembly.py
-/lattice.py
 /geometry.xml
 /materials.xml
 /plots.xml
 /settings.xml
-/test_pandas.py
-/functions.pyc
-/isotopes.pyc
-/PWR_assembly.pyc
+*.pyc
