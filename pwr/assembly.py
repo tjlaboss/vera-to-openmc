@@ -126,6 +126,8 @@ class Assembly(object):
 		assert (len(self.spacers) == len(self.spacer_mids)), \
 			"Error: number of entries in spacer_elevs must be len(spacers)"
 		
+		#TODO: If griddict not in lattice.__dict__  --> add it
+		
 		# Initialize the openmc list attributes
 		self.openmc_cells = []
 		self.openmc_surfaces = []
@@ -205,7 +207,6 @@ class Assembly(object):
 					if grid.key not in lat.griddict:
 						# We need to add the spacer grid to this one, and then add it to the index
 						lat.griddict[grid.key] = pwr.add_grid_to(lat, grid, self.counter, self.openmc_surfaces)
-						print("Unable to find", lat.name, "; generated.")#debug
 					lat = lat.griddict[grid.key]
 				
 			# Now, we have the current lattice, for the correct level, with or with a spacer

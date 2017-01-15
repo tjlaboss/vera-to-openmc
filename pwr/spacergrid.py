@@ -155,21 +155,12 @@ def add_grid_to(lattice, spacer, counter, surflist):# = []):
 		for i in range(n):
 			old_cell = lattice.universes[j][i]
 			key = str(old_cell.id)
-			
-			#debug
-			if lattice.name == "PLUG":
-				if key not in old_cell.griddict:
-					print("Cell", key, "is not in old_cell.griddict...generating")
-				
-			
 			if key in old_cell.griddict:
 				new_cell = old_cell.griddict[key]
 			else:
 				new_cell = add_spacer_to(old_cell, pitch, spacer.thickness, spacer.material,
 										  counter, surflist)
 				old_cell.griddict[key] = new_cell
-				print("Just added pincell", key, ":", new_cell.id)
-				print(new_cell.__dict__)
 			row[i] = new_cell
 		new_universes[j] = row
 	
