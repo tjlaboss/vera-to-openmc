@@ -204,12 +204,12 @@ class Assembly(object):
 		for cell in self.cells.values():
 			self.celldict[cell.label] = cell.key
 		
-		print(self.celldict) #debug
-		
 		self.key_maps = {}
 		for cmap in self.cellmaps:
 			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap], name = self.name+'-'+cmap, label = cmap)
-			self.key_maps[cmap] = CoreMap(fill_lattice(self.cellmaps[cmap], self.lookup, self.npins), name=self.name+"keymap", label = cmap)
+			self.key_maps[cmap] = CoreMap(fill_lattice(self.cellmaps[cmap], self.lookup, self.npins), \
+										name=self.name+"-"+cmap + " (keymap)", label = cmap)
+			print(self.cellmaps[cmap], "\n\n" + "*"*12, self.key_maps[cmap])#debug
 		
 		
 	def __str__(self):
@@ -239,11 +239,20 @@ class Assembly(object):
 		Input:
 			insertion:		instance of Insert'''
 		
+		# First of all, ignore insertions in the nozzle region
+		# TODO: At a later date, figure out if it is important to model them.
+		# If so, a "nozzle lattice" can be created to handle this.
+		insertion_elevations = []
+		for i in insertion.axial_elevations:
+			if i <= max(self.axial_elevations):
+				insertion_elevations.append(i)
 		
 		na_levels = len(self.axial_labels) 
-		ni_levels = len(insertion.axial_labels)
+		#ni_levels = len(insertion.axial_labels)
+		ni_levels = len(insertion_elevations)
 		# Merge and remove the duplicates
-		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
+		all_elevs = list(set(self.axial_elevations + insertion_elevations))
+		all_elevs.sort()
 		all_labels = [None,]*(len(all_elevs) - 1)
 		all_cellmaps = dict(self.cellmaps)	# A copy of this dictionary
 		all_key_maps = dict(self.key_maps)
@@ -252,45 +261,53 @@ class Assembly(object):
 		print(self.cellmaps)
 		print(self.key_maps)
 		
-		
-		for kk in range(len(all_labels)):
-			z = all_elevs[kk]
+		for kk in range(len(all_labels) - 1):
+			z = all_elevs[kk+1]
 			a_label = None
 			i_label = None
 			# See where we are
-			for k in range(na_levels):
-				if z >= self.axial_elevations[k]:
-					a_label = self.axial_labels[k]
+			for k in range(na_levels - 1):
+				#if z >= self.axial_elevations[k]:
+				print("A: z =", z, "\tk =", k, "/", na_levels-2)
+				if z <= self.axial_elevations[k+1] and z > self.axial_elevations[k]:
+					a_label = self.axial_labels[k+1]
 					amap = self.cellmaps[a_label]
 					akeymap = fill_lattice(amap, self.lookup)
 					break
-			for k in range(ni_levels):
-				if z >= insertion.axial_elevations[k]:
-					i_label = insertion.axial_labels[k]
+			for k in range(ni_levels - 1):
+				#if z >= insertion.axial_elevations[k]:
+				print("I: z =", z, "\tk =", k, "/", ni_levels-2)
+				if z <= insertion.axial_elevations[k+1] and z > insertion.axial_elevations[k]:
+					i_label = insertion.axial_labels[k+1]
 					imap = insertion.cellmaps[i_label]
 					ikeymap = fill_lattice(imap, insertion.lookup)
 					break
 			# Now we know the label of this level in self (assembly) and insertion
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
-				new_label = a_label + '-' + i_label
+				new_label = a_label + '+' + i_label
 				lamij = lambda i,j: self.get_cell_insert(insertion, imap, amap, i, j)
 				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij)
-				new_map = CoreMap(new_lattice, label = new_label)
+				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion
 				new_map = amap
+			else:
+				print("Something went wrong!")
+				print("z =",z, "\ta_label =", a_label, "\ti_label =", i_label)
+				raise SystemExit
 				
 			all_labels[kk] = new_map.label
 			#FIXME: What value do I need to update this with?
-			# Do I even need to update all_cellmaps at all?
+			# Actually, do I even need to update all_cellmaps at all?
 			#all_cellmaps[new_map.label] = #new_map
 			all_key_maps[new_map.label] = new_map
+			print("\n", "$$"*13, new_map)
 		
 		self.axial_elevations = all_elevs
 		self.axial_labels = all_labels
 		self.cells.update(insertion.cells)
-		self.cellmaps.update(all_cellmaps)
+		#self.cellmaps.update(all_cellmaps)
 		self.key_maps.update(all_key_maps)
 		
 		
@@ -427,7 +444,8 @@ class CoreMap(object):
 			self.cell_map = cell_map
 	
 	def __str__(self):
-		return self.name
+		#return self.name
+		return self.name + ":\n" + self.str_map()
 	
 	def __len__(self):
 		return len(self.square_map())
