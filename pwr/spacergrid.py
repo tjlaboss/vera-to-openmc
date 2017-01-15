@@ -90,6 +90,7 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	assert isinstance(material, openmc.Material), str(material) + "is not an instance of openmc.Material" 
 	
 	orig_list = list(pincell.cells.values())
+	suffix = " (gridded)"
 	
 	# Create necessary planes
 	p = pitch / 2.0
@@ -104,7 +105,7 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	
 	# Get the outermost (mod) Cell of the pincell
 	mod_cell = duplicate(orig_list[-1], counter)
-	mod_cell.name += " (gridded)"
+	mod_cell.name += suffix
 	
 	# Make a cell encompassing the 4 sides of the spacer
 	spacer = openmc.Cell(counter.add_cell(), name = pincell.name + " spacer")
@@ -119,14 +120,16 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	new_pin = openmc.Universe(counter.add_universe(), name = pincell.name + " gridded")
 	# Add all of the original cells except the old mod cell
 	for i in range(len(orig_list) - 1):
-		new_pin.add_cell(orig_list[i])
+		new_cell = duplicate(orig_list[i], counter)
+		new_cell.name += suffix
+		new_pin.add_cell(new_cell)
 	new_pin.add_cell(mod_cell) 	# the new mod cell
 	new_pin.add_cell(spacer)
 	
 	return new_pin
 
 
-def add_grid_to(lattice,spacer, counter, surflist):# = []):
+def add_grid_to(lattice, spacer, counter, surflist):# = []):
 	'''Add a spacer to every pincell in the lattice.
 
 	Inputs:
@@ -148,24 +151,16 @@ def add_grid_to(lattice,spacer, counter, surflist):# = []):
 	new_universes = [[None,]*n,]*n
 	
 	for j in range(n):
-		row = new_universes[j]
+		row = [None,]*n
 		for i in range(n):
 			old_cell = lattice.universes[j][i]
 			key = str(old_cell.id)
-			
-			#debug
-			if lattice.name == "PLUG":
-				if key not in old_cell.griddict:
-					print("Cell", key, "is not in old_cell.griddict...generating")
-				
-			
 			if key in old_cell.griddict:
 				new_cell = old_cell.griddict[key]
 			else:
 				new_cell = add_spacer_to(old_cell, pitch, spacer.thickness, spacer.material,
 										  counter, surflist)
 				old_cell.griddict[key] = new_cell
-				print("Just added pincell", key, ":", new_cell.id)
 			row[i] = new_cell
 		new_universes[j] = row
 	
