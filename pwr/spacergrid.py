@@ -126,7 +126,7 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	return new_pin
 
 
-def add_grid_to(lattice,spacer, counter, surflist):# = []):
+def add_grid_to(lattice, spacer, counter, surflist):# = []):
 	'''Add a spacer to every pincell in the lattice.
 
 	Inputs:
@@ -148,10 +148,11 @@ def add_grid_to(lattice,spacer, counter, surflist):# = []):
 	new_universes = [[None,]*n,]*n
 	
 	for j in range(n):
-		row = new_universes[j]
+		row = [None,]*n
 		for i in range(n):
 			old_cell = lattice.universes[j][i]
 			key = str(old_cell.id)
+			print(key)
 			
 			#debug
 			if lattice.name == "PLUG":
@@ -177,6 +178,8 @@ def add_grid_to(lattice,spacer, counter, surflist):# = []):
 	gridded.pitch = (pitch, pitch)
 	gridded.lower_left = [-pitch * n / 2.0] * 2
 	gridded.universes = new_universes
+	print(new_universes)
+	stoppoint=True
 	return gridded
 	
 
