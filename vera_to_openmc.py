@@ -641,21 +641,19 @@ class MC_Case(Case):
 			c = self.get_openmc_pincell(vera_cell)
 			cell_verses[vera_cell.key] = c
 		
+		#debug
+		print(cell_verses)
 		
 		for latname in vera_asmbly.axial_labels:
 			lattice = openmc.RectLattice(self.__counter(UNIVERSE), latname)
 			lattice.pitch = (pitch, pitch)
 			lattice.lower_left = [-pitch * float(npins) / 2.0] * 2
 			# And populate with universes from cell_verses
-			asmap = vera_asmbly.cellmaps[latname]
-			#print(latname, asmap)
+			asmap = vera_asmbly.key_maps[latname]
 			
-			# NASTY TEMPORARY HACK, DO NOT LEAVE THIS
-			# FIXME: I haven't forgotten. Really.
-			lookup = lambda c: cell_verses[c] if c in cell_verses else cell_verses[vera_asmbly.celldict[c]]
-			
-			lattice.universes = fill_lattice(asmap, lookup, npins)
-			#lattice.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
+			#lookup = lambda c: cell_verses[c] if c in cell_verses else cell_verses[vera_asmbly.celldict[c]]
+			#lattice.universes = fill_lattice(asmap, lookup, npins)
+			lattice.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
 			#lattice.universes = fill_lattice(asmap, lambda c: cell_verses[vera_asmbly.celldict[c]], npins)
 			lattice.outer = self.mod_verse	# To account for the assembly gap
 			# Initialize a dictionary of versions of this lattice which have spacer grids added

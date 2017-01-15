@@ -204,10 +204,12 @@ class Assembly(object):
 		for cell in self.cells.values():
 			self.celldict[cell.label] = cell.key
 		
+		print(self.celldict) #debug
+		
 		self.key_maps = {}
 		for cmap in self.cellmaps:
 			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap], name = self.name+'-'+cmap, label = cmap)
-			self.key_maps[cmap] = fill_lattice(self.cellmaps[cmap], self.lookup, self.npins)
+			self.key_maps[cmap] = CoreMap(fill_lattice(self.cellmaps[cmap], self.lookup, self.npins), name=self.name+"keymap", label = cmap)
 		
 		
 	def __str__(self):
@@ -219,11 +221,14 @@ class Assembly(object):
 	
 	def lookup(self, c, blank = "-"):
 		if c != blank:
+			'''
 			# NASTY HACK, NEED TO REMOVE
 			if c in self.celldict:
 				return self.celldict[c]
 			else:
 				return self.cells[c].key
+				'''
+			return self.celldict[c]
 		else:
 			return blank
 	
@@ -241,7 +246,11 @@ class Assembly(object):
 		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
 		all_labels = [None,]*(len(all_elevs) - 1)
 		all_cellmaps = dict(self.cellmaps)	# A copy of this dictionary
-		all_key_maps = dict(self.cellmaps)
+		all_key_maps = dict(self.key_maps)
+		
+		#debug
+		print(self.cellmaps)
+		print(self.key_maps)
 		
 		
 		for kk in range(len(all_labels)):
@@ -265,19 +274,18 @@ class Assembly(object):
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
 				new_label = a_label + '-' + i_label
-				# call the new function I'm about to write
 				lamij = lambda i,j: self.get_cell_insert(insertion, imap, amap, i, j)
-				#self.__add_cell_insert(insertion, imap, amap)
-				
-				# change this next line to account for the new cells
 				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij)
-				
 				new_map = CoreMap(new_lattice, label = new_label)
 			elif a_label:
 				# No insertion
 				new_map = amap
+				
 			all_labels[kk] = new_map.label
-			all_cellmaps[new_map.label] = new_map
+			#FIXME: What value do I need to update this with?
+			# Do I even need to update all_cellmaps at all?
+			#all_cellmaps[new_map.label] = #new_map
+			all_key_maps[new_map.label] = new_map
 		
 		self.axial_elevations = all_elevs
 		self.axial_labels = all_labels
@@ -339,8 +347,8 @@ class Insert(Assembly):
 		npins:			int; number of pins across the assembly this insert is to be placed in.
 						Must be equal to assembly.npins.
 						[Default: 0]
-		cells:			list of instances of Cell
-		cellmaps:		list of instances of Cellmap
+		cells:			dictionary of instances of Cell 	{cell.key:Cell}
+		cellmaps:		dictionary of instances of Cellmap 	{???:Cellmap}
 		axial_elevs:	list of floats describing
 		stroke:			float; Control rod stroke. Distance (cm) between
 						full-insertion and full-withdrawal

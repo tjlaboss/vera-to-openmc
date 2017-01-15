@@ -54,6 +54,9 @@ def fill_lattice(keys, lam, n=0):
 	if not n:
 		n = len(keys)
 	
+	#debug
+	#print(keys.str_map())
+	
 	lattice = [[None,]*n]*n
 	for i in range(n):
 		new_row = [None,]*n
