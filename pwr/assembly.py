@@ -187,32 +187,26 @@ class Assembly(object):
 			s = self.__get_plane('z', z)
 			# See what lattice we are in
 			for i in range(len(self.lattices)):
-				#if z > self.lattice_elevs[i]:
 				if z <= self.lattice_elevs[i] and z > self.lattice_elevs[i-1]:
 					break
 			lat = self.lattices[i-1]
 			# Check if there is a spacer grid
 			if self.spacer_mids:
-				#for g in range(len(self.spacer_mids)):
 				for g in range(len(self.spacer_elevs)):
-					#if z > self.spacer_mids[g]:
 					if z <= self.spacer_elevs[g] and z > self.spacer_elevs[g-1]:
 						break
 				# Even numbers are bottoms, odds are top
 				grid = False
-				if (g-1) % 2 == 0 and z > min(self.spacer_elevs):
+				if g % 2 and z > min(self.spacer_elevs):
 					# Then the last one was a bottom: a grid is present
 					grid = self.spacers[int(g/2)]
 				# OK--now we know what the current lattice is, and whether there's a grid here.
 				if grid:
-					if grid.key in lat.griddict:
-						# Then this one has been done before
-						lat = lat.griddict[grid.key]
-					else:
+					if grid.key not in lat.griddict:
 						# We need to add the spacer grid to this one, and then add it to the index
 						lat.griddict[grid.key] = pwr.add_grid_to(lat, grid, self.counter, self.openmc_surfaces)
-						lat = lat.griddict[grid.key]
 						print("Unable to find", lat.name, "; generated.")#debug
+					lat = lat.griddict[grid.key]
 				
 			# Now, we have the current lattice, for the correct level, with or with a spacer
 			# grid as appropriate. Time to make the layer.
