@@ -209,7 +209,7 @@ class Assembly(object):
 			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap], name = self.name+'-'+cmap, label = cmap)
 			self.key_maps[cmap] = CoreMap(fill_lattice(self.cellmaps[cmap], self.lookup, self.npins), \
 										name=self.name+"-"+cmap + " (keymap)", label = cmap)
-			print(self.cellmaps[cmap], "\n\n" + "*"*12, self.key_maps[cmap])#debug
+			print("**"+cmap+"**\n", self.cellmaps[cmap].str_map(), "\n\n" + "*"*12, self.key_maps[cmap].str_map())#debug
 		
 		
 	def __str__(self):
@@ -257,9 +257,6 @@ class Assembly(object):
 		all_cellmaps = dict(self.cellmaps)	# A copy of this dictionary
 		all_key_maps = dict(self.key_maps)
 		
-		#debug
-		print(self.cellmaps)
-		print(self.key_maps)
 		
 		for kk in range(len(all_labels) - 1):
 			z = all_elevs[kk+1]
@@ -289,24 +286,35 @@ class Assembly(object):
 				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion
-				new_map = amap
+				new_lattice = fill_lattice(amap, self.lookup, self.npins)
+				new_map = CoreMap(new_lattice, name = a_label + " (keymap)", label = a_label)
 			else:
-				print("Something went wrong!")
-				print("z =",z, "\ta_label =", a_label, "\ti_label =", i_label)
-				raise SystemExit
+				errstr = "Something went wrong. There should be an Assembly level here, but there isn't.\n"
+				errstr += "z = " + str(z) + "\ta_label = " + a_label + "\ti_label = " + i_label
+				raise IndexError(errstr)
 				
 			all_labels[kk] = new_map.label
 			#FIXME: What value do I need to update this with?
 			# Actually, do I even need to update all_cellmaps at all?
 			#all_cellmaps[new_map.label] = #new_map
 			all_key_maps[new_map.label] = new_map
-			print("\n" + "$$"*13 + "\n", new_map)
 		
 		self.axial_elevations = all_elevs
 		self.axial_labels = all_labels
 		self.cells.update(insertion.cells)
 		#self.cellmaps.update(all_cellmaps)
 		self.key_maps.update(all_key_maps)
+		
+		'''#debug
+		print(10*"\n")
+		for k in self.key_maps.values():
+			print(k)
+		print(self.__dict__.keys())
+		
+		raise(SystemExit)
+		#print(self.cellmaps)'
+		#print(self.key_maps)'''
+		
 		
 		
 	def get_cell_insert(self, insertion, imap, amap, i, j, blank = "-"):
