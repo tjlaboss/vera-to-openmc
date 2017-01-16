@@ -426,8 +426,10 @@ class CoreMap(object):
 			self.cell_map = cell_map
 	
 	def __str__(self):
-		#return self.name
-		return self.name + ":\n" + self.str_map()
+		rep = self.name
+		rep += ":\n"
+		rep += self.str_map()
+		return rep
 	
 	def __len__(self):
 		return len(self.square_map())

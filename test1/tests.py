@@ -150,28 +150,64 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 		# Doesn't matter for assembly benchmarks, but does for full core
 	
 		
-	some_asmbly = ascase.get_openmc_assembly(as3)
+	pwr_asmbly = ascase.get_openmc_assembly(as3)
+	asmbly_universe = pwr_asmbly.assembly
 	
 	# Find the top and bottom of the active region
-	n = len(as3.axial_elevations)
+	# 
+	# Currently, all this does is select the tallest region. This isn't necessarily what we want.
+	# A better solution may be to select everything between the nozzle regions.
+	
+
+	
+	''''n = len(as3.axial_elevations)
 	maxdiff = 0
-	z0 = None; z1 = None
 	for i in range(1, n):
 		diff = as3.axial_elevations[i] - as3.axial_elevations[i-1]
 		if diff > maxdiff:
 			maxdiff = diff
 			z0 = as3.axial_elevations[i-1]
-			z1 = as3.axial_elevations[i]
-	zrange_active = [z0, z1]
-	# Set Z range for boundary conditions
-	# FIXME: Correct this to account for core plates
-	zrange_total = [0, ascase.core.height]
+			z1 = as3.axial_elevations[i]'''
+
+	# The last cell of the universe should contain the moderator.
+	# We need to get the key to this before adding any more cells.
+	mod_key = list(asmbly_universe.cells.keys())[-1]
+
+	lplate = ascase.core.bot_refl
+	uplate = ascase.core.top_refl
+	if lplate:
+		# Add the lower core plate
+		zbot = pwr_asmbly.bottom.z0 - lplate.thick
+		bot_surf = openmc.ZPlane(ascase.counter.add_surface(), z0 = zbot, name = "Bottom")
+		bot_plate_cell = openmc.Cell(ascase.counter.add_cell(), "Lower Core Plate")
+		bot_plate_cell.fill = ascase.get_openmc_material(lplate.material)
+		bot_plate_cell.region = (pwr_asmbly.wall_region & +bot_surf & -pwr_asmbly.bottom)
+		asmbly_universe.add_cell(bot_plate_cell)
+	else:
+		print("Warning: No lower core plate found.")
+		zbot = pwr_asmbly.bottom.z0
+		bot_surf = pwr_asmbly.bottom
+	if uplate:
+		# Add the upper core plate
+		ztop = pwr_asmbly.top.z0 + uplate.thick
+		top_surf = openmc.ZPlane(ascase.counter.add_surface(), z0 = ztop, name = "Top")
+		top_plate_cell = openmc.Cell(ascase.counter.add_cell(), "Upper Core Plate")
+		top_plate_cell.fill = ascase.get_openmc_material(uplate.material)
+		top_plate_cell.region = (pwr_asmbly.wall_region & +pwr_asmbly.top & -top_surf)
+		asmbly_universe.add_cell(top_plate_cell)
+	else:
+		print("Warning: No upper core plate found.")
+		ztop = pwr_asmbly.top.z0
+		top_surf = pwr_asmbly.top
 	
+	asmbly_universe.cells[mod_key].region = (pwr_asmbly.wall_region & -bot_surf & +top_surf) 
+
+	zrange_total = [zbot, ztop]			# zrange for boundary conditions
+	[z0, z1] = pwr_asmbly.z_active		# zrange for fission source
 	plot_assembly(apitch, as3.npins, z = (z1 - z0)/2.0)
 	bounds = set_cubic_boundaries(apitch, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
-	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds, zrange_active
-	
+	return ascase, asmbly_universe, apitch, as3.pitch, as3.npins, bounds, [z0, z1]
 
 
 
@@ -302,7 +338,11 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
+<<<<<<< HEAD
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2b.xml.gold")
+=======
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
+>>>>>>> assembly_test_dev
 	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
 	
