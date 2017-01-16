@@ -242,14 +242,9 @@ class Assembly(object):
 		# First of all, ignore insertions in the nozzle region
 		# TODO: At a later date, figure out if it is important to model them.
 		# If so, a "nozzle lattice" can be created to handle this.
-		insertion_elevations = []
-		for i in insertion.axial_elevations:
-			if i <= max(self.axial_elevations):
-				insertion_elevations.append(i)
 		
 		na_levels = len(self.axial_elevations) 
 		ni_levels = len(insertion.axial_elevations)
-		#ni_levels = len(insertion_elevations)
 		# Merge and remove the duplicates
 		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
 		all_elevs.sort()
@@ -258,7 +253,7 @@ class Assembly(object):
 		all_key_maps = dict(self.key_maps)
 		
 		
-		for kk in range(len(all_labels) - 1):
+		for kk in range(len(all_labels)):
 			z = all_elevs[kk+1]
 			a_label = None
 			i_label = None
@@ -293,7 +288,9 @@ class Assembly(object):
 				errstr += "z = " + str(z) + "\ta_label = " + a_label + "\ti_label = " + i_label
 				raise IndexError(errstr)
 				
+			print("NEW MAP LABEL:", new_map.label)#debug
 			all_labels[kk] = new_map.label
+			print(all_labels, "\n\n")
 			#FIXME: What value do I need to update this with?
 			# Actually, do I even need to update all_cellmaps at all?
 			#all_cellmaps[new_map.label] = #new_map
@@ -305,6 +302,11 @@ class Assembly(object):
 		#self.cellmaps.update(all_cellmaps)
 		self.key_maps.update(all_key_maps)
 		
+		#debug
+		print(len(self.axial_elevations), self.axial_elevations)
+		print(len(self.axial_labels), self.axial_labels)
+		print(new_map)
+		#raise(SystemExit)
 		'''#debug
 		print(10*"\n")
 		for k in self.key_maps.values():
