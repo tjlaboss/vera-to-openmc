@@ -150,19 +150,25 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 		# Doesn't matter for assembly benchmarks, but does for full core
 	
 		
-	some_asmbly = ascase.get_openmc_assembly(as3)
+	pwr_asmbly = ascase.get_openmc_assembly(as3)
+	asmbly_universe = pwr_asmbly.assembly
 	
 	# Find the top and bottom of the active region
-	n = len(as3.axial_elevations)
+	# 
+	# Currently, all this does is select the tallest region. This isn't necessarily what we want.
+	# A better solution may be to select everything between the nozzle regions.
+	
+
+	
+	''''n = len(as3.axial_elevations)
 	maxdiff = 0
-	z0 = None; z1 = None
 	for i in range(1, n):
 		diff = as3.axial_elevations[i] - as3.axial_elevations[i-1]
 		if diff > maxdiff:
 			maxdiff = diff
 			z0 = as3.axial_elevations[i-1]
-			z1 = as3.axial_elevations[i]
-	zrange_active = [z0, z1]
+			z1 = as3.axial_elevations[i]'''
+	[z0, z1] = pwr_asmbly.z_active
 	# Set Z range for boundary conditions
 	# FIXME: Correct this to account for core plates
 	zrange_total = [0, ascase.core.height]
@@ -170,7 +176,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	plot_assembly(apitch, as3.npins, z = (z1 - z0)/2.0)
 	bounds = set_cubic_boundaries(apitch, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
-	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds, zrange_active
+	return ascase, asmbly_universe, apitch, as3.pitch, as3.npins, bounds, [z0, z1]
 	
 
 
@@ -303,7 +309,7 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
