@@ -47,6 +47,9 @@ class Assembly(object):
 							[Default: None]
 		upper_nozzle:		instance of Nozzle, starting at max(lattice_elevs) and terminating at z += Nozzle.height
 							[Default: None]
+		z_active:			list with len=2 of the z-range of active fuel. If not specified, the minimum and maximum
+							values of lattice_elevs will be automatically selected when you run build(). 
+							[Default: empty list]  
 		mod:				instance of openmc.Material describing  moderator surrounding the assembly.
 							[Default: None] 
 		counter:			instance of pwr.Counter used for keeping track of surface/cell/material/universe IDs.
@@ -54,6 +57,8 @@ class Assembly(object):
 	
 	Attributes:
 		All the above, plus the following created at self.build():
+		bottom:				instance of openmc.ZPlane marking the lowest surface in the Assembly
+		top:				instance of openmc.ZPlane marking the highest surface in the Assembly
 		spacer_elevs:		list of the elevations of the tops/bottoms of all spacer grids
 		all_elevs:			list of all axial elevations, created when (lattice_elevs + spacer_elevs)
 							have been concatenated, sorted, and checked for duplicates
@@ -72,7 +77,7 @@ class Assembly(object):
 						pitch = 0.0, 	npins = 0,			walls = [],
 						lattices = [], 	lattice_elevs = [],	spacers = [], 	spacer_mids = [],
 						lower_nozzle = None, 				upper_nozzle = None, 
-						mod = None,		counter = None):
+						z_active = [],	mod = None,			counter = None):
 		self.key = key
 		self.name = name
 		self.universe_id = universe_id
@@ -81,6 +86,7 @@ class Assembly(object):
 		self.spacers = spacers;				self.spacer_mids = spacer_mids
 		self.lower_nozzle = lower_nozzle;	self.upper_nozzle = upper_nozzle
 		self.walls = walls;
+		self.z_active = z_active
 		self.mod = mod
 		self.counter = counter
 	
@@ -105,7 +111,7 @@ class Assembly(object):
 		
 		if not self.name:
 			self.name = self.key
-		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle', 'walls']
+		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle', 'walls', 'z_active']
 		if min(self.lattice_elevs) == 0:
 			blank_allowable.append('lower_nozzle')
 		
@@ -132,6 +138,9 @@ class Assembly(object):
 		self.openmc_cells = []
 		self.openmc_surfaces = []
 		
+		# Determine the range of the active fuel
+		if len(self.z_active) != 2:
+			self.z_active = [min(self.lattice_elevs), max(self.lattice_elevs)]
 		
 		# Combine spacer_elevs and lattice_elevs into one list to rule them all
 		if self.spacer_mids:
@@ -172,9 +181,9 @@ class Assembly(object):
 		self.__prebuild()
 		
 		# Start at the bottom
-		surf0 = openmc.ZPlane(self.counter.add_surface(), name="bottom", z0 = 0)
-		last_s = surf0
-		self.openmc_surfaces.append(surf0)
+		self.bottom = openmc.ZPlane(self.counter.add_surface(), name="bottom", z0 = 0)
+		last_s = self.bottom
+		self.openmc_surfaces.append(self.bottom)
 		
 		if self.lower_nozzle:
 			lnoz = openmc.Cell(self.counter.add_cell(), "lower nozzle")
@@ -229,9 +238,11 @@ class Assembly(object):
 			self.openmc_cells.append(unoz)
 			last_s = nozzle_top
 		
+		self.top = last_s
+		
 		# Finally, surround the whole assembly with moderator
 		mod_cell = openmc.Cell(self.counter.add_cell(), name = self.name + " mod")
-		mod_cell.region = (~self.wall_region | +last_s | -surf0)
+		mod_cell.region = (~self.wall_region | +self.top | -self.bottom)
 		mod_cell.fill = self.mod
 		self.openmc_cells.append(mod_cell)
 		
