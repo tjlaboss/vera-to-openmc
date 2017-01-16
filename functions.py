@@ -54,9 +54,6 @@ def fill_lattice(keys, lam, n=0):
 	if not n:
 		n = len(keys)
 	
-	#debug
-	#print(keys.str_map())
-	
 	lattice = [[None,]*n]*n
 	for i in range(n):
 		new_row = [None,]*n
@@ -88,18 +85,6 @@ def replace_lattice(new_keys, original, lam = None, n=0, blank = "-"):
 		lattice[i] = new_row
 	
 	return lattice
-
-
-"""
-def replace_cell(pin_key, dictionary, orig_val, blank = "-"):
-	'''VERA represents areas with no insertion as "-".
-	This function is necessary to perform replacements only where
-	the key in the map is not this character.'''
-	if pin_key != blank:
-		return dictionary[pin_key]
-	else:
-		return orig_val
-"""
 
 
 def set_nuclide_xs(material, xstring):

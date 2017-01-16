@@ -198,8 +198,7 @@ class Assembly(object):
 		
 		
 	def construct_maps(self):
-		
-		# Construct the cell dictionary and key map
+		"""Construct the cell dictionary and key map"""
 		self.celldict = {}
 		for cell in self.cells.values():
 			self.celldict[cell.label] = cell.key
@@ -209,7 +208,6 @@ class Assembly(object):
 			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap], name = self.name+'-'+cmap, label = cmap)
 			self.key_maps[cmap] = CoreMap(fill_lattice(self.cellmaps[cmap], self.lookup, self.npins), \
 										name=self.name+"-"+cmap + " (keymap)", label = cmap)
-			print("**"+cmap+"**\n", self.cellmaps[cmap].str_map(), "\n\n" + "*"*12, self.key_maps[cmap].str_map())#debug
 		
 		
 	def __str__(self):
@@ -249,7 +247,6 @@ class Assembly(object):
 		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
 		all_elevs.sort()
 		all_labels = [None,]*(len(all_elevs) - 1)
-		all_cellmaps = dict(self.cellmaps)	# A copy of this dictionary
 		all_key_maps = dict(self.key_maps)
 		
 		
@@ -270,8 +267,6 @@ class Assembly(object):
 					imap = insertion.cellmaps[i_label]
 					ikeymap = fill_lattice(imap, insertion.lookup)
 					break
-			#debug
-			print("z =", z, "-->", a_label, "+", i_label)
 			# Now we know the label of this level in self (assembly) and insertion
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
@@ -288,34 +283,13 @@ class Assembly(object):
 				errstr += "z = " + str(z) + "\ta_label = " + a_label + "\ti_label = " + i_label
 				raise IndexError(errstr)
 				
-			print("NEW MAP LABEL:", new_map.label)#debug
 			all_labels[kk] = new_map.label
-			print(all_labels, "\n\n")
-			#FIXME: What value do I need to update this with?
-			# Actually, do I even need to update all_cellmaps at all?
-			#all_cellmaps[new_map.label] = #new_map
 			all_key_maps[new_map.label] = new_map
 		
 		self.axial_elevations = all_elevs
 		self.axial_labels = all_labels
 		self.cells.update(insertion.cells)
-		#self.cellmaps.update(all_cellmaps)
 		self.key_maps.update(all_key_maps)
-		
-		#debug
-		print(len(self.axial_elevations), self.axial_elevations)
-		print(len(self.axial_labels), self.axial_labels)
-		print(new_map)
-		#raise(SystemExit)
-		'''#debug
-		print(10*"\n")
-		for k in self.key_maps.values():
-			print(k)
-		print(self.__dict__.keys())
-		
-		raise(SystemExit)
-		#print(self.cellmaps)'
-		#print(self.key_maps)'''
 		
 		
 		
