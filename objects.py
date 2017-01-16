@@ -198,8 +198,7 @@ class Assembly(object):
 		
 		
 	def construct_maps(self):
-		
-		# Construct the cell dictionary and key map
+		"""Construct the cell dictionary and key map"""
 		self.celldict = {}
 		for cell in self.cells.values():
 			self.celldict[cell.label] = cell.key
@@ -207,7 +206,8 @@ class Assembly(object):
 		self.key_maps = {}
 		for cmap in self.cellmaps:
 			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap], name = self.name+'-'+cmap, label = cmap)
-			self.key_maps[cmap] = fill_lattice(self.cellmaps[cmap], self.lookup, self.npins)
+			self.key_maps[cmap] = CoreMap(fill_lattice(self.cellmaps[cmap], self.lookup, self.npins), \
+										name=self.name+"-"+cmap + " (keymap)", label = cmap)
 		
 		
 	def __str__(self):
@@ -219,11 +219,14 @@ class Assembly(object):
 	
 	def lookup(self, c, blank = "-"):
 		if c != blank:
+			'''
 			# NASTY HACK, NEED TO REMOVE
 			if c in self.celldict:
 				return self.celldict[c]
 			else:
 				return self.cells[c].key
+				'''
+			return self.celldict[c]
 		else:
 			return blank
 	
@@ -234,29 +237,32 @@ class Assembly(object):
 		Input:
 			insertion:		instance of Insert'''
 		
+		# First of all, ignore insertions in the nozzle region
+		# TODO: At a later date, figure out if it is important to model them.
+		# If so, a "nozzle lattice" can be created to handle this.
 		
-		na_levels = len(self.axial_labels) 
-		ni_levels = len(insertion.axial_labels)
+		na_levels = len(self.axial_elevations) 
+		ni_levels = len(insertion.axial_elevations)
 		# Merge and remove the duplicates
 		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
+		all_elevs.sort()
 		all_labels = [None,]*(len(all_elevs) - 1)
-		all_cellmaps = dict(self.cellmaps)	# A copy of this dictionary
-		all_key_maps = dict(self.cellmaps)
+		all_key_maps = dict(self.key_maps)
 		
 		
 		for kk in range(len(all_labels)):
-			z = all_elevs[kk]
+			z = all_elevs[kk+1]
 			a_label = None
 			i_label = None
 			# See where we are
-			for k in range(na_levels):
-				if z >= self.axial_elevations[k]:
+			for k in range(na_levels-1):
+				if (z >= max(self.axial_elevations)) or (z <= self.axial_elevations[k+1] and z > self.axial_elevations[k]):
 					a_label = self.axial_labels[k]
 					amap = self.cellmaps[a_label]
 					akeymap = fill_lattice(amap, self.lookup)
 					break
-			for k in range(ni_levels):
-				if z >= insertion.axial_elevations[k]:
+			for k in range(ni_levels-1):
+				if (z == max(insertion.axial_elevations)) or (z <= insertion.axial_elevations[k+1] and z > insertion.axial_elevations[k]):
 					i_label = insertion.axial_labels[k]
 					imap = insertion.cellmaps[i_label]
 					ikeymap = fill_lattice(imap, insertion.lookup)
@@ -264,26 +270,27 @@ class Assembly(object):
 			# Now we know the label of this level in self (assembly) and insertion
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
-				new_label = a_label + '-' + i_label
-				# call the new function I'm about to write
+				new_label = a_label + '+' + i_label
 				lamij = lambda i,j: self.get_cell_insert(insertion, imap, amap, i, j)
-				#self.__add_cell_insert(insertion, imap, amap)
-				
-				# change this next line to account for the new cells
 				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij)
-				
-				new_map = CoreMap(new_lattice, label = new_label)
+				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion
-				new_map = amap
+				new_lattice = fill_lattice(amap, self.lookup, self.npins)
+				new_map = CoreMap(new_lattice, name = a_label + " (keymap)", label = a_label)
+			else:
+				errstr = "Something went wrong. There should be an Assembly level here, but there isn't.\n"
+				errstr += "z = " + str(z) + "\ta_label = " + a_label + "\ti_label = " + i_label
+				raise IndexError(errstr)
+				
 			all_labels[kk] = new_map.label
-			all_cellmaps[new_map.label] = new_map
+			all_key_maps[new_map.label] = new_map
 		
 		self.axial_elevations = all_elevs
 		self.axial_labels = all_labels
 		self.cells.update(insertion.cells)
-		self.cellmaps.update(all_cellmaps)
 		self.key_maps.update(all_key_maps)
+		
 		
 		
 	def get_cell_insert(self, insertion, imap, amap, i, j, blank = "-"):
@@ -339,8 +346,8 @@ class Insert(Assembly):
 		npins:			int; number of pins across the assembly this insert is to be placed in.
 						Must be equal to assembly.npins.
 						[Default: 0]
-		cells:			list of instances of Cell
-		cellmaps:		list of instances of Cellmap
+		cells:			dictionary of instances of Cell 	{cell.key:Cell}
+		cellmaps:		dictionary of instances of Cellmap 	{???:Cellmap}
 		axial_elevs:	list of floats describing
 		stroke:			float; Control rod stroke. Distance (cm) between
 						full-insertion and full-withdrawal
@@ -419,7 +426,8 @@ class CoreMap(object):
 			self.cell_map = cell_map
 	
 	def __str__(self):
-		return self.name
+		#return self.name
+		return self.name + ":\n" + self.str_map()
 	
 	def __len__(self):
 		return len(self.square_map())
