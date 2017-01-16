@@ -67,6 +67,8 @@ class Case(object):
 		mod_density = 1.0; mod_isotopes = {"H1":-2.0/3, "O16":-1.0/3}
 		self.materials['mod'] = objects.Material("mod", mod_density, mod_isotopes)
 		
+		# Set the default Monte Carlo simulation parameters (which may be changed later)
+		self.mc = objects.MonteCarlo()
 		
 		# Then populate everything:
 		self.errors = 0; self.warnings = 0
@@ -90,9 +92,6 @@ class Case(object):
 				warnstr = "Material " + mat.name + " does not have a temperature specified; defaulting to tinlet."
 				warn(warnstr)
 				self.warnings += 1
-		
-		# Set the default Monte Carlo simulation parameters (which may be changed later)
-		self.mc = objects.MonteCarlo()
 		
 		print("There were", self.warnings, "warnings and", self.errors, "errors.")
 		
@@ -374,13 +373,13 @@ class Case(object):
 					
 					
 					elif name == "SHIFT":
+						particles = 0; cycles = 0; inactive = 0
 						for prop in child:
 							pname = prop.attrib["name"].lower()
 							if prop.tag == "ParameterList" and pname == "kcode_db":
 								for mcparam in prop:
 									p = mcparam.attrib["name"].lower()
 									v = mcparam.attrib["value"]
-									particles = 0; cycles = 0; inactive = 0
 									if p == "np":
 										particles = int(v)
 									elif p == "num_cycles":
