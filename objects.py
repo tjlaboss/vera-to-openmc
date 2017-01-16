@@ -273,7 +273,7 @@ class Assembly(object):
 					akeymap = fill_lattice(amap, self.lookup)
 					break
 			for k in range(ni_levels-1):
-				if (z >= max(insertion.axial_elevations)) or (z <= insertion.axial_elevations[k+1] and z > insertion.axial_elevations[k]):
+				if (z == max(insertion.axial_elevations)) or (z <= insertion.axial_elevations[k+1] and z > insertion.axial_elevations[k]):
 					i_label = insertion.axial_labels[k]
 					imap = insertion.cellmaps[i_label]
 					ikeymap = fill_lattice(imap, insertion.lookup)
@@ -300,7 +300,7 @@ class Assembly(object):
 			# Actually, do I even need to update all_cellmaps at all?
 			#all_cellmaps[new_map.label] = #new_map
 			all_key_maps[new_map.label] = new_map
-			print("\n", "$$"*13, new_map)
+			print("\n" + "$$"*13 + "\n", new_map)
 		
 		self.axial_elevations = all_elevs
 		self.axial_labels = all_labels
