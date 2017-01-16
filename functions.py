@@ -87,18 +87,6 @@ def replace_lattice(new_keys, original, lam = None, n=0, blank = "-"):
 	return lattice
 
 
-"""
-def replace_cell(pin_key, dictionary, orig_val, blank = "-"):
-	'''VERA represents areas with no insertion as "-".
-	This function is necessary to perform replacements only where
-	the key in the map is not this character.'''
-	if pin_key != blank:
-		return dictionary[pin_key]
-	else:
-		return orig_val
-"""
-
-
 def set_nuclide_xs(material, xstring):
 	'''Set the cross section for each nuclide of a material.
 	Inputs:

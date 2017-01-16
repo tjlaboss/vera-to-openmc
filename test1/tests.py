@@ -167,7 +167,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	# FIXME: Correct this to account for core plates
 	zrange_total = [0, ascase.core.height]
 	
-	plot_lattice(apitch, as3.npins, z = (z1 - z0)/2.0)
+	plot_assembly(apitch, as3.npins, z = (z1 - z0)/2.0)
 	bounds = set_cubic_boundaries(apitch, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
 	return ascase, some_asmbly, apitch, as3.pitch, as3.npins, bounds, zrange_active
@@ -211,7 +211,26 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
 	plot_file.export_to_xml()
 
 
-#def plot_assembly(pitch, npins = 1, width = 1250, height = 1250):
+def plot_assembly(pitch, npins = 1, z = 188, width = 1250, height = 1250):
+	# Plot properties for this test
+	plot1 = openmc.Plot(plot_id=1)
+	plot1.filename = 'Plot-fuel-xy'
+	plot1.origin = [0, 0, z]
+	plot1.width = [pitch - .01, pitch - .01]
+	plot1.pixels = [width, height]
+	plot1.color = 'mat'
+	
+	#tmp
+	plot2 = openmc.Plot(plot_id=2)
+	plot2.filename = 'Plot-grid-xy'
+	plot2.origin = [0, 0, 127]
+	plot2.width = [pitch - .01, pitch - .01]
+	plot2.pixels = [width, height]
+	plot2.color = 'mat'
+	
+	# Instantiate a Plots collection and export to "plots.xml"
+	plot_file = openmc.Plots([plot1, plot2])
+	plot_file.export_to_xml()
 	
 
 
@@ -283,8 +302,8 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2b.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
