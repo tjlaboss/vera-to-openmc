@@ -733,11 +733,11 @@ class MC_Case(Case):
 		
 		
 		# Where the magic happens
-		openmc_asmbly = pwr_asmbly.build()
-		
+		pwr_asmbly.build()
+		#openmc_asmbly_builder = pwr_asmbly.build()
 		
 			
-		return openmc_asmbly
+		return pwr_asmbly
 	
 	
 	def get_openmc_reactor_vessel(self):
