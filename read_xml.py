@@ -16,7 +16,6 @@ from functions import clean, calc_u234_u236_enrichments
 import objects
 from objects import FUELTEMP, MODTEMP
 from openmc.data import atomic_mass
-from openmc.data.data import atomic_mass
 
 
 '''The VERAin XML files have the following structure:
