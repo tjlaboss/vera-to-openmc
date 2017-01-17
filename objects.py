@@ -241,6 +241,9 @@ class Assembly(object):
 		# TODO: At a later date, figure out if it is important to model them.
 		# If so, a "nozzle lattice" can be created to handle this.
 		
+		# TODO: This method needs to account for the depth of insertion, for control rods.
+		# The control rod insertion is given in the [STATE] block.
+		
 		na_levels = len(self.axial_elevations) 
 		ni_levels = len(insertion.axial_elevations)
 		# Merge and remove the duplicates
@@ -262,6 +265,8 @@ class Assembly(object):
 					akeymap = fill_lattice(amap, self.lookup)
 					break
 			for k in range(ni_levels-1):
+				# TODO: Account for control rod insertion depth by checking 
+				# whether z > insertion.depth or something
 				if (z == max(insertion.axial_elevations)) or (z <= insertion.axial_elevations[k+1] and z > insertion.axial_elevations[k]):
 					i_label = insertion.axial_labels[k]
 					imap = insertion.cellmaps[i_label]
@@ -426,8 +431,10 @@ class CoreMap(object):
 			self.cell_map = cell_map
 	
 	def __str__(self):
-		#return self.name
-		return self.name + ":\n" + self.str_map()
+		rep = self.name
+		rep += ":\n"
+		rep += self.str_map()
+		return rep
 	
 	def __len__(self):
 		return len(self.square_map())
