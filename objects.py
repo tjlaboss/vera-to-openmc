@@ -243,6 +243,8 @@ class Assembly(object):
 		# TODO: At a later date, figure out if it is important to model them.
 		# If so, a "nozzle lattice" can be created to handle this.
 		
+		# TODO: This method needs to account for the depth of insertion, for control rods.
+		# The control rod insertion is given in the [STATE] block.
 		na_levels = len(self.axial_elevations) 
 		ni_levels = len(insertion.axial_elevations)
 		if depth:
@@ -257,20 +259,30 @@ class Assembly(object):
 					insert_labels.append(insertion.axial_labels[i+1])
 				else:
 					break
-			ni_levels = len(insert_elevations)
+			ni_levels = len(insert_elevations)	
 			#next two lines are debug
 			print("Before:", insertion.axial_elevations, insertion.axial_labels)
 			print("After:", insert_elevations, insert_labels)
 		else:
 			insert_elevations = insertion.axial_elevations
 			insert_labels = insertion.axial_labels
-			
+		
+		
+		# If the lowest insertion goes below the bottom of the lowest axial lattice,
+		# truncate it as well.
+		#if min()
+		
+		
 		# Merge and remove the duplicates
 		all_elevs = list(set(self.axial_elevations + insert_elevations))
 		all_elevs.sort()
 		all_labels = [None,]*(len(all_elevs) - 1)
 		all_key_maps = dict(self.key_maps)
-	
+		
+		#debugging stuff
+		print("\n"*3 + "*"*8, all_elevs)
+		print("Insertion:", insert_elevations, insert_labels)
+		print("Axial:", self.axial_elevations, self.axial_labels)
 		
 		for kk in range(len(all_labels)):
 			z = all_elevs[kk+1]
@@ -283,6 +295,11 @@ class Assembly(object):
 					amap = self.cellmaps[a_label]
 					akeymap = fill_lattice(amap, self.lookup)
 					break
+				elif z == min(self.axial_elevations):
+					a_label = self.axial_labels[0]
+					amap = self.cellmaps[a_label]
+					akeymap = fill_lattice(amap, self.lookup)
+				
 			for k in range(ni_levels-1):
 				# TODO: Account for control rod insertion depth by checking 
 				# whether z > insertion.depth or something
@@ -303,6 +320,7 @@ class Assembly(object):
 				new_lattice = fill_lattice(amap, self.lookup, self.npins)
 				new_map = CoreMap(new_lattice, name = a_label + " (keymap)", label = a_label)
 			else:
+				print("z:", z, "\ta_label:", a_label, "\ti_label:", i_label)
 				errstr = "Something went wrong. There should be an Assembly level here, but there isn't.\n"
 				errstr += "z = " + str(z) + "\ta_label = " + a_label + "\ti_label = " + i_label
 				raise IndexError(errstr)
