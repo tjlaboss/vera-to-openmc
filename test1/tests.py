@@ -210,6 +210,20 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	return ascase, asmbly_universe, apitch, as3.pitch, as3.npins, bounds, [z0, z1]
 
 
+def test_core_lattice(case_file = "../gold/p7.xml.gold"):
+	"""Inputs:
+		case_file	
+	"""
+	
+	case = vera_to_openmc.MC_Case(case_file)
+	lat = case.get_openmc_core_lattice()
+	apitch = case.core.pitch
+	
+	plot_lattice(apitch, case.core.size)
+	bounds = set_cubic_boundaries(apitch)
+	
+	return case, lat, case.core.size*apitch, apitch, case.core.size, bounds, [0.0, 1.0]
+
 
 
 def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
@@ -338,12 +352,9 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
-<<<<<<< HEAD
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2b.xml.gold")
-=======
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
->>>>>>> assembly_test_dev
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]

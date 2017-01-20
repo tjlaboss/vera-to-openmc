@@ -874,57 +874,41 @@ class MC_Case(Case):
 		n = len(shape)
 		halfwidth = self.core.pitch * n / 2.0
 		
-		
 		openmc_core = openmc.RectLattice(self.__counter(UNIVERSE), "Core Lattice")
 		openmc_core.pitch = (self.core.pitch, self.core.pitch)
 		openmc_core.lower_left = [-halfwidth * n / 2.0] * 2
-		
+		openmc_core.outer = self.mod_verse
 		
 		ins_map = self.core.insert_map.square_map()
 		det_map = self.core.detector_map.square_map()
 		crd_map = self.core.control_map.square_map()
 		crd_bank_map = self.core.control_bank.square_map()
 		
-		# BAD PROBLEM:
-		# FIXME: the insert_map isn't the same size as the shape map!!
-		print(self.core.insert_map.str_map())
-		print("Insert map:\t", len(ins_map), "x", len(ins_map[-1]))
-		print("Core map:\t", self.core.size, "x", self.core.size)
-					
-		
 		lattice = [[None,]*n]*n
 		
-		# Note: For efficiency, see if I can replace this with functions.fill_lattice()
+		print("Generating core (this may take a while)...")
 		for j in range(n):
 			new_row = [None,]*n
 			for i in range(n):
 				# Check if there is supposed to be an assembly in this position
 				if shape[j][i]:
 					askey = asmap[j][i].lower()
-					
 					vera_asmbly = self.assemblies[askey]
-					
-					
-					
 					
 					ins_key = ins_map[j][i]
 					det_key = det_map[j][i]
 					crd_key = crd_map[j][i]
 					crd_bank_key = crd_bank_map[j][i]
 					
-					
 					if (ins_key or crd_key or det_key) != blank:
 						vera_asmbly = copy(vera_asmbly)
 						# Handle each type of insertion differently.
-						# Do we need to rename the assembly here, or is it done in add_insert?
 						if ins_key != blank:
 							vera_ins = self.inserts[ins_key]
-							print("\n\nDebug: Adding burnable poison:", vera_ins.name)
 							vera_asmbly.add_insert(vera_ins)
 							vera_asmbly.name += "+" + vera_ins.name
 						if crd_key != blank:
 							vera_crd = self.controls[crd_key]
-							print("\n\nDebug: Adding control rod:", vera_crd.name)
 							steps = self.state.rodbank[crd_bank_key]
 							depth = steps*vera_crd.step_size
 							vera_asmbly.add_insert(vera_crd, depth)
@@ -932,15 +916,9 @@ class MC_Case(Case):
 						if det_key != blank:
 							# Is it any different than a regular insert?
 							vera_det = self.detectors[det_key]
-							print("\n\nDebug: Adding detector:", vera_det.name)
 							vera_asmbly.add_insert(vera_det)
 							vera_asmbly.name += "+" + vera_det.name
 					
-					# TODO: Verify if there is renaming to be done
-					print("\nCURRENT ASSEMBLY NAME:", vera_asmbly.name)
-					as_key = vera_asmbly.name
-					#if as_key not in self.assemblies:
-					#	self.assemblies[as_key]
 					openmc_assembly = self.get_openmc_assembly(vera_asmbly)
 					
 					new_row[i] = openmc_assembly.universe
@@ -949,8 +927,11 @@ class MC_Case(Case):
 					#new_row[i] = 0 # REPLACE WITH: that universe
 					new_row[i] = self.mod_verse
 			lattice[j] = new_row
-			
-		return lattice
+		
+		
+		openmc_core.universes = lattice
+		
+		return openmc_core
 	
 	
 	
