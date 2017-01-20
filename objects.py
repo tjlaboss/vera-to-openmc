@@ -173,8 +173,12 @@ class Assembly(object):
 		cells:			Dictionary of Cell objects in this assembly {cell.key:cell}
 		params:			Dictionary of all the other parameters provided
 						in the Assembly block
-		cellmaps: 		Dictionary of CellMap objects
+		cellmaps: 		Dictionary of CellMap objects containing the original cell maps
 		spacergrids:	Dictionary of SpacerGrid objects
+	Other attributes:
+		key_maps:		Dictionary of CellMap objects containing the unique Cell keys
+		pwr_nozzles:	Dictionary of pwr.Nozzle instances which have been created for this
+		pwr_spacers: 	Dictionary of pwr.SpacerGrid instances which have been created for this
 	'''
 	
 	def __init__(self, name, cells, params = {}, cellmaps = {}, spacergrids = {}): # more inputs to come
@@ -190,6 +194,9 @@ class Assembly(object):
 		self.axial_elevations = clean(params["axial_elevations"], float)
 		self.pitch = float(params["ppitch"])
 		self.npins = int(params["num_pins"])
+		
+		self.pwr_spacers = {}
+		self.pwr_nozzles = {}
 		
 		self.construct_maps()
 		

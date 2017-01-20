@@ -30,8 +30,8 @@ class MC_Case(Case):
 		self.openmc_assemblies = {}
 		
 		# ID Counter
-		# Starting at 9 makes all IDs double digits
-		self.counter = pwr.Counter(9, 9, 9, 9)
+		# Starting at 99 makes all IDs triple digits
+		self.counter = pwr.Counter(99, 99, 99, 99)
 		
 		
 		# Create the essential moderator material
@@ -42,8 +42,8 @@ class MC_Case(Case):
 		self.mod.add_s_alpha_beta("c_H_in_H2O")
 		
 		# Create an infinite cell/universe of moderator
-		self.mod_cell = openmc.Cell(1, name = "Infinite Mod Cell", fill = self.mod)
-		self.mod_verse = openmc.Universe(1, name = "Infinite Mod Universe", cells = (self.mod_cell,))
+		self.mod_cell = openmc.Cell(100, name = "Infinite Mod Cell", fill = self.mod)
+		self.mod_verse = openmc.Universe(100, name = "Infinite Mod Universe", cells = (self.mod_cell,))
 		
 	
 	def __counter(self, TYPE):
@@ -486,6 +486,14 @@ class MC_Case(Case):
 			if material + suffix in self.materials:
 				material += suffix
 				break
+
+		
+		#material += asname + inname
+		
+		
+		# debug
+		if inname:
+			print(material, asname, inname)
 		
 		
 		if material in self.openmc_materials:
@@ -518,6 +526,9 @@ class MC_Case(Case):
 				#	openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
 					
 			self.openmc_materials[material] = openmc_material
+			
+			#debug
+			print(openmc_material)
 		
 		return openmc_material
 	
@@ -559,7 +570,7 @@ class MC_Case(Case):
 							break # from the "for s in" loop
 				if not surf_id:
 					# Generate new surface and get its surf_id
-					s = openmc.ZCylinder(self.__counter(SURFACE), "transmission", 0, 0, r)
+					s = openmc.ZCylinder(self.counter.add_surface(), "transmission", 0, 0, r)
 					# Add the new surfaces to the registry
 					self.openmc_surfaces.append(s)
 					
@@ -587,13 +598,13 @@ class MC_Case(Case):
 			# end of "for ring" loop
 			
 			# Then add the moderator outside the pincell
-			mod_cell = openmc.Cell(self.__counter(CELL), vera_cell.name + "-Mod")
+			mod_cell = openmc.Cell(self.counter.add_cell(), vera_cell.name + "-Mod")
 			mod_cell.fill = self.mod
 			mod_cell.region = +last_s
 			openmc_cells.append(mod_cell)
 			
 			# Create a new universe in which the pin cell exists 
-			pincell_universe = openmc.Universe(self.__counter(UNIVERSE), vera_cell.name + "-verse")
+			pincell_universe = openmc.Universe(self.counter.add_universe(), vera_cell.name + "-verse")
 			pincell_universe.add_cells(openmc_cells)
 			
 			# Initialize a useful dictionary to keep track of versions of
@@ -616,9 +627,6 @@ class MC_Case(Case):
 		Outputs:
 			openmc_asmblies:	list of instance of openmc.RectLattice
 		'''
-		
-		
-		ps = vera_asmbly.params
 		pitch = vera_asmbly.pitch
 		npins = vera_asmbly.npins
 		# Look for optional parameters available from vera_asmbly.params
@@ -651,9 +659,6 @@ class MC_Case(Case):
 	
 	
 	
-		
-	
-	
 	def get_openmc_assembly(self, vera_asmbly):
 		"""Creates an OpenMC fuel assembly, complete with lattices
 		of fuel pins and spacer grids, that should be equivalent to what
@@ -677,43 +682,54 @@ class MC_Case(Case):
 			npins = vera_asmbly.npins
 			
 			# Initiate and describe the Assembly
-			pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.__counter(UNIVERSE), pitch, npins)
+			pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.counter.add_universe(), pitch, npins)
 			pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
 			pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
 			pwr_asmbly.mod = self.mod
 			pwr_asmbly.counter = self.counter
 			
-			# FIXME: Handle spacer grids
 			if vera_asmbly.spacergrids:
-				pwr_spacergrids = {}
-				# Translate from VERA to pwr 
-				for gkey in vera_asmbly.spacergrids:
-					g = vera_asmbly.spacergrids[gkey]
-					mat = self.get_openmc_material(g.material)
-					grid = pwr.SpacerGrid(gkey, g.height, g.mass, mat, pitch, npins)
-					pwr_spacergrids[gkey] = grid
+				if not vera_asmbly.pwr_spacers:
+					# Translate from VERA to pwr 
+					for gkey in vera_asmbly.spacergrids:
+						g = vera_asmbly.spacergrids[gkey]
+						mat = self.get_openmc_material(g.material)
+						grid = pwr.SpacerGrid(gkey, g.height, g.mass, mat, pitch, npins)
+						vera_asmbly.pwr_spacers[gkey] = grid
+				# Otherwise, we should already have a dictionary of them.
 				
-				pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: pwr_spacergrids[key] )
+				pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: vera_asmbly.pwr_spacers[key] )
 				pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
 			
 			# Handle nozzles
+			
 			if "lower_nozzle_comp" in ps:
-				nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
-				mass = float(ps["lower_nozzle_mass"])
-				height = float(ps["lower_nozzle_height"])
-				lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
-									counter = self.counter, name = "Lower Nozzle")
-				lnozmat = lnoz.get_nozzle_material()
-				self.openmc_materials[lnozmat.name] = lnozmat
+				if "lower" not in vera_asmbly.pwr_nozzles:
+					nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
+					mass = float(ps["lower_nozzle_mass"])
+					height = float(ps["lower_nozzle_height"])
+					lnozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch, "lower-nozzle-mat")
+					#lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
+					#					counter = self.counter, name = "Lower Nozzle")
+					#self.openmc_materials[lnozmat.name] = lnozmat
+					lnoz = pwr.Nozzle2(height, lnozmat, "Lower Nozzle")
+					vera_asmbly.pwr_nozzles["lower"] = lnoz
+				else:
+					lnoz = vera_asmbly.pwr_nozzles["lower"]
 				pwr_asmbly.lower_nozzle = lnoz
 			if "upper_nozzle_comp" in ps:
-				nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
-				mass = float(ps["upper_nozzle_mass"])
-				height = float(ps["upper_nozzle_height"])
-				unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
-									counter = self.counter, name = "Upper Nozzle")
-				unozmat = unoz.get_nozzle_material()
-				self.openmc_materials[unozmat.name] = unozmat
+				if "upper" not in vera_asmbly.pwr_nozzles:
+					nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
+					mass = float(ps["upper_nozzle_mass"])
+					height = float(ps["upper_nozzle_height"])
+					unozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch, "upper-nozzle-mat")
+					#unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
+					#					counter = self.counter, name = "Upper Nozzle")
+					#self.openmc_materials[unozmat.name] = unozmat
+					unoz = pwr.Nozzle2(height, unozmat, "Upper Nozzle") 
+					vera_asmbly.pwr_nozzles["upper"] = unoz
+				else:
+					unoz = vera_asmbly.pwr_nozzles["upper"]
 				pwr_asmbly.upper_nozzle = unoz
 			
 			'''	Worth noting about the nozzles:
@@ -737,6 +753,29 @@ class MC_Case(Case):
 			return pwr_asmbly
 	
 	
+	def get_nozzle_mixture(self, height, mass, nozzle_mat, mod_mat, npins, pitch, name = "nozzle-material"):
+		"""Get the mixture for a nozzle. 
+		
+		Inputs:
+		
+		Output:
+			new_mixture:		instance of pwr.Mixture
+		"""
+		if name in self.openmc_materials:
+			return self.openmc_materials[name]
+		else:
+			v = (npins*pitch)**2 * height
+			mat_vol = mass / nozzle_mat.density
+			mod_vol = v - mat_vol
+			vfracs = [mat_vol / v, mod_vol / v]
+			new_mixture = pwr.Mixture((nozzle_mat, mod_mat), vfracs,
+			                name = name, material_id = self.counter.add_material())
+			self.openmc_materials[name] = new_mixture
+			return new_mixture
+		
+	
+	
+	
 	def get_openmc_reactor_vessel(self):
 		'''Creates the pressure vessel representation in OpenMC
 		
@@ -758,11 +797,11 @@ class MC_Case(Case):
 		core_cells = []
 		
 		# Create the top and bottom planes of the core and core plate
-		plate_bot = openmc.ZPlane(self.__counter(SURFACE),
+		plate_bot = openmc.ZPlane(self.counter.add_surface(),
 							z0 = -self.core.bot_refl.thick, boundary_type = self.core.bc["bot"])
-		core_bot = openmc.ZPlane(self.__counter(SURFACE), z0 = 0.0)
-		core_top = openmc.ZPlane(self.__counter(SURFACE), z0 = self.core.height)
-		plate_top = openmc.ZPlane(self.__counter(SURFACE),
+		core_bot = openmc.ZPlane(self.counter.add_surface(), z0 = 0.0)
+		core_top = openmc.ZPlane(self.counter.add_surface(), z0 = self.core.height)
+		plate_top = openmc.ZPlane(self.counter.add_surface(),
 							z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
 		
 		# Create the concentric cylinders of the vessel
@@ -770,10 +809,10 @@ class MC_Case(Case):
 			r = self.core.vessel_radii[ring]
 			m = self.core.vessel_mats[ring]
 			
-			s = openmc.ZCylinder(self.__counter(SURFACE), R = r)
+			s = openmc.ZCylinder(self.self.counter.add_surface(), R = r)
 			
 			cell_name = "Vessel_" + str(ring)
-			new_cell = openmc.Cell(self.__counter(CELL), cell_name)
+			new_cell = openmc.Cell(self.self.counter.add_cell(), cell_name)
 			
 			if ring == 0:
 				# For the center ring,
