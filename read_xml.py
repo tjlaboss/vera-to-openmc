@@ -206,16 +206,12 @@ class Case(object):
 								core_height = float(v)
 							elif p == "insert_map":
 								insert_cellmap = clean(v, str)
-								print(len(insert_cellmap), insert_cellmap) #debug
 							elif p == "crd_bank":
 								control_bank_cellmap = clean(v, str)
-								print(len(control_bank_cellmap), control_bank_cellmap) #debug
 							elif p == "crd_map":
 								control_cellmap = clean(v, str)
-								print(len(control_cellmap), control_cellmap) #debug
 							elif p == "det_map":
 								detector_cellmap = clean(v, str)
-								print(len(detector_cellmap), detector_cellmap) #debug
 			
 							elif p[:3] == "bc_":
 								bcs[p[3:]] = v

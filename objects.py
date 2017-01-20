@@ -274,11 +274,6 @@ class Assembly(object):
 		all_labels = [None,]*(len(all_elevs) - 1)
 		all_key_maps = dict(self.key_maps)
 		
-		#debugging stuff
-		print("\n" + "*"*8, all_elevs)
-		print("Insertion:", insert_elevations, insert_labels)
-		print("Axial:", self.axial_elevations, self.axial_labels)
-		
 		for kk in range(len(all_labels)):
 			z = all_elevs[kk+1]
 			a_label = None
@@ -287,41 +282,27 @@ class Assembly(object):
 			for k in range(na_levels-1):
 				if (z >= max(self.axial_elevations)) or (z <= self.axial_elevations[k+1] and z > self.axial_elevations[k]):
 					a_label = self.axial_labels[k]
-					#amap = self.cellmaps[a_label]
-					#akeymap = fill_lattice(amap, self.lookup)
 					akeymap = self.key_maps[a_label]
 					break
 				elif z == min(self.axial_elevations):
 					a_label = self.axial_labels[0]
-					#amap = self.cellmaps[a_label]
-					#akeymap = fill_lattice(amap, self.lookup)
 					akeymap = self.key_maps[a_label]
 					break
 				
 			for k in range(ni_levels-1):
-				# TODO: Account for control rod insertion depth by checking 
-				# whether z > insertion.depth or something
 				if (z == max(insert_elevations)) or (z <= insert_elevations[k+1] and z > insert_elevations[k]):
 					i_label = insert_labels[k]
-					#imap = insertion.cellmaps[i_label]
-					#ikeymap = fill_lattice(imap, insertion.lookup)
 					ikeymap = insertion.key_maps[i_label]
 					break
 			# Now we know the label of this level in self (assembly) and insertion
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
 				new_label = a_label + '+' + i_label
-				#lamij = lambda i,j: self.get_cell_insert(insertion, imap, amap, i, j)
-				#new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij)
 				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap)
 				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion
-				#new_lattice = fill_lattice(amap, self.lookup, self.npins)
 				new_lattice = self.key_maps[a_label]
-				#debug
-				#print(new_lattice, "\nvs\n", self.key_maps[a_label])
-				
 				new_map = CoreMap(new_lattice, name = a_label + " (keymap)", label = a_label)
 			else:
 				print("z:", z, "\ta_label:", a_label, "\ti_label:", i_label)
