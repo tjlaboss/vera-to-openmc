@@ -134,18 +134,23 @@ class MC_Case(Case):
 					south = cmap[j+1][i]
 					east  = cmap[j][i+1]
 					west  = cmap[j][i-1]
+					southeast = cmap[j+1][i+1]
+					southwest = cmap[j+1][i-1]
 					
 					
-					# Left edge
+					# Left side
 					if not west:
 						x_left = x - d2
 						x_right = x - d1
 						if north:
-							y_top = y + d3	#d4?
+							y_top = y + d3
 						else:
 							y_top = y + d2
 						if south:
-							y_bot = y - d3	#d4?
+							if southwest:
+								y_bot = y - d3
+							else:
+								y_bot = y - d2
 						else:
 							y_bot = y - d2
 						(left, right), (bot, top) = self.__get_xyz_planes( \
@@ -153,16 +158,19 @@ class MC_Case(Case):
 						west_region = (+left & -right & +bot & -top)
 						master_region.nodes.append(west_region)
 					
-					# Right edge
+					# Right side
 					if not east:
 						x_left = x + d1
 						x_right = x + d2
 						if north:
-							y_top = y + d3	#d4?
+							y_top = y + d3
 						else:
 							y_top = y + d2
 						if south:
-							y_bot = y - d3	#d4?
+							if southwest:
+								y_bot = y - d3
+							else:
+								y_bot = y - d2
 						else:
 							y_bot = y - d2
 						(left, right), (bot, top) = self.__get_xyz_planes( \
@@ -170,7 +178,7 @@ class MC_Case(Case):
 						east_region = (+left & -right & +bot & -top)
 						master_region.nodes.append(east_region)
 					
-					# Top edge
+					# Top side
 					if not north:
 						y_bot = y + d1
 						y_top = y + d2
@@ -187,7 +195,7 @@ class MC_Case(Case):
 						north_region = (+left & -right & +bot & -top)
 						master_region.nodes.append(north_region)
 					
-					# Bottom edge
+					# Bottom side
 					if not south:
 						y_bot = y - d2
 						y_top = y - d1
@@ -203,7 +211,6 @@ class MC_Case(Case):
 							x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
 						south_region = (+left & -right & +bot & -top)
 						master_region.nodes.append(south_region)
-						print("\ny_bot", y_bot, "\ty_top", y_top, "\nx_left", x_left, "\tx_right", x_right)
 		
 		
 		# Set the baffle material, cell, etc.
