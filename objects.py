@@ -685,7 +685,7 @@ class Reflector(object):
 
 class Baffle(object):
 	'''Inputs:
-		mat:	instance of Material
+		mat:	key referring to an instance of Material in Case.materials
 		thick:	thickness of baffle (cm)
 		gap:	thickness of gap (cm) between the outside assembly
 				(including the assembly gap) and the baffle itself
@@ -705,7 +705,10 @@ class Baffle(object):
 if __name__ == "__main__":
 	print('''This is a module containing classes
  - Material(key_name, density, mat_fracs, mat_names)
- - Assembly(name, [params, cellmaps, spacergrids])
+ - Assembly(name, cells, [params, cellmaps, spacergrids])
+ - Insert(key, [name, npins, cells, cellmaps, axial_elevs,
+    axial_labels, npins, params, stroke, maxstep])
+ - CoreMap(cell_map, [name, label])
  - SpacerGrid(name, height, mass, label, material)
  - CellMap(name, label, cell_map)
  - Cell(name, num_rings, radii, mats, label)
@@ -713,7 +716,7 @@ if __name__ == "__main__":
  	[bc, bot_refl, top_refl, vessel_radii, vessel_mats,
  	baffle, control_bank, control_map, detector_map])
  - Reflector(mat, thick, vfrac, [name])
- - Baffle(mat, thick, vfrac)
+ - Baffle(mat, thick, gap)
 ''')
 	
 	
