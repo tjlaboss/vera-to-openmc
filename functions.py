@@ -87,6 +87,34 @@ def replace_lattice(new_keys, original, lam = None, n=0, blank = "-"):
 	return lattice
 
 
+def shape(raw_list, shape_map, blank = "-"):
+	"""Turn an oddly-shaped list into one suitable for a square map.
+	Warning: this does not check to verify if they are of compatible lengths.
+	
+	Inputs:
+		raw_list:	the list that needs to be shaped
+		shape_map:	instance of objects.CoreMap describing the arbitrary shape
+					that raw_list follows.
+		blank:		string to be inserted in assm_map
+		
+	Output:
+		nice_list:	list of len=len(shape_map)^2
+	"""
+	count = 0
+	n = len(shape_map)
+	nice_list = [None,]*n**2
+	for j in range(n):
+		for i in range(n):
+			k = j*n + i		# index within nice_list
+			if shape_map[j][i]:
+				nice_list[k] = raw_list[count]
+				count += 1
+			else:
+				nice_list[k] = blank
+	return nice_list
+	
+
+
 def set_nuclide_xs(material, xstring):
 	'''Set the cross section for each nuclide of a material.
 	Inputs:

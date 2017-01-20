@@ -484,14 +484,15 @@ class SpacerGrid(object):
 		
 
 class CoreMap(object):
-	'''A core mapping for assembly, control rod, and detector positions
+	"""A core mapping for assembly, control rod, and detector positions
 	Inputs: 
 		cell_map: 	List of integers or strings describing the assembly layout
 					You can also give it a square_map, and it will process it appropriately
-	Optional:
 		name: 		String containing the descriptive Assembly name
+					[Default: empty string]
 		label:		string containing the unique Assembly identifier
-	'''
+					[Default: empty string]	
+	"""
 	def __init__(self, cell_map, name = "", label = ""):
 		self.name = name 
 		self.label = label
@@ -604,9 +605,8 @@ class Core(object):
 		size:		int; 	number of assemblies across one axis of the full core
 		height:		float;	total axial distance (cm) from the bottom core plate
 					to the top core plate, excluding plate thickness
-		shape:		list of integers containing a map of the shape of the core,
-					which is converted to an instance of CoreMap. (Alternatively,
-					an instance of CoreMap may be directly specified.)
+		shape_map:	list or CoreMap of integers containing a map of the shape of the core.
+					If a list is given, it will be transformed into a CoreMap.
 					A 1 marks a valid assembly location; a 0, an invalid location
 		asmbly:		list of strings containing a map of the fuel assemblies in the core, 
 					which may be specified or converted as above. **Must conform to self.shape**
