@@ -347,9 +347,103 @@ class MC_Case(Case):
 						x0s = (x_left, x_right), y0s = (y_top,))[0:2]
 					east_region = (+left & -right & +bot & -top)
 					master_region.nodes.append(east_region)
-				
-						
 		# Done iterating.
+		
+		
+		# Corner cases (UNTESTED)
+		# Top left
+		if cmap[0][0]:
+			x = -(width - 0.5*pitch)
+			y = -x
+			x_left = x - d2
+			y_top =  y + d2
+			
+			# West
+			x_right = x - d1
+			y_bot = y - d2 
+			(left, right), (bot, top) = self.__get_xyz_planes( \
+				x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+			west_region =  (+left & -right & +bot & -top)
+			master_region.nodes.append(west_region)
+			
+			# North
+			x_right = x + d2
+			y_bot = y + d1
+			(right,), (bot,) = self.__get_xyz_planes( \
+				x0s = (x_right,), y0s = (y_bot,))[0:2]
+			north_region =  (+left & -right & +bot & -top)
+			master_region.nodes.append(north_region)
+			
+		# Top right
+		if cmap[0][n]:
+			x = +(width - 0.5*pitch)
+			y = +x
+			x_right = x + d2
+			y_top =  y + d2
+			
+			# East
+			x_left = x + d1
+			y_bot = y - d2 
+			(left, right), (bot, top) = self.__get_xyz_planes( \
+				x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+			east_region =  (+left & -right & +bot & -top)
+			master_region.nodes.append(east_region)
+			
+			# North
+			x_left = x - d2
+			y_bot = y + d1
+			(left,), (bot,) = self.__get_xyz_planes( \
+				x0s = (x_left,), y0s = (y_bot,))[0:2]
+			north_region =  (+left & -right & +bot & -top)
+			master_region.nodes.append(north_region)
+		
+		# Bottom right
+		if cmap[n][n]:
+			x = +(width - 0.5*pitch)
+			y = -x
+			x_right = x + d2
+			y_bot =  y - d2
+			
+			# East
+			x_left = x + d1
+			y_top = y + d2 
+			(left, right), (bot, top) = self.__get_xyz_planes( \
+				x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+			east_region =  (+left & -right & +bot & -top)
+			master_region.nodes.append(east_region)
+			
+			# South
+			x_left = x - d2
+			y_top = y - d1
+			(left,), (top,) = self.__get_xyz_planes( \
+				x0s = (x_left,), y0s = (y_top,))[0:2]
+			south_region =  (+left & -right & +bot & -top)
+			master_region.nodes.append(south_region)
+		
+		# Bottom left
+		if cmap[n][0]:
+			x = -(width - 0.5*pitch)
+			y = +x
+			x_left = x - d2
+			y_bot =  y - d2
+			
+			# West
+			x_right = x - d1
+			y_top = y + d2 
+			(left, right), (bot, top) = self.__get_xyz_planes( \
+				x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+			west_region =  (+left & -right & +bot & -top)
+			master_region.nodes.append(west_region)
+			
+			# South
+			x_right = x + d2
+			y_top = y - d1
+			(right,), (top,) = self.__get_xyz_planes( \
+				x0s = (x_right,), y0s = (y_top,))[0:2]
+			south_region =  (+left & -right & +bot & -top)
+			master_region.nodes.append(south_region)
+		
+		
 		# Set the baffle material, cell, etc.
 		baffle_cell = openmc.Cell(self.__counter(CELL), "Baffle", self.get_openmc_material(baf.mat), master_region)
 		
