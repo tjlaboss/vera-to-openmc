@@ -151,7 +151,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	
 		
 	pwr_asmbly = ascase.get_openmc_assembly(as3)
-	asmbly_universe = pwr_asmbly.assembly
+	asmbly_universe = pwr_asmbly.universe
 	
 	# Find the top and bottom of the active region
 	# 

@@ -27,6 +27,7 @@ class MC_Case(Case):
 		self.openmc_surfaces = []
 		self.openmc_materials = {}
 		self.openmc_pincells = {}
+		self.openmc_assemblies = {}
 		
 		# ID Counter
 		# Starting at 9 makes all IDs double digits
@@ -654,7 +655,7 @@ class MC_Case(Case):
 	
 	
 	def get_openmc_assembly(self, vera_asmbly):
-		'''Creates an OpenMC fuel assembly, complete with lattices
+		"""Creates an OpenMC fuel assembly, complete with lattices
 		of fuel pins and spacer grids, that should be equivalent to what
 		is constructed by VERA.
 		
@@ -662,73 +663,78 @@ class MC_Case(Case):
 			vera_asmbly:		instance of objects.Assembly
 		
 		Outputs:
-			openmc_asmbly:		instance of openmc.Universe containing
-								the lattices, spacers, and such
-		'''
-		
-		ps = vera_asmbly.params
-		pitch = vera_asmbly.pitch
-		npins = vera_asmbly.npins
-		
-		# Initiate and describe the Assembly
-		pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.__counter(UNIVERSE), pitch, npins)
-		pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
-		pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
-		pwr_asmbly.mod = self.mod
-		pwr_asmbly.counter = self.counter
-		
-		# FIXME: Handle spacer grids
-		if vera_asmbly.spacergrids:
-			pwr_spacergrids = {}
-			# Translate from VERA to pwr 
-			for gkey in vera_asmbly.spacergrids:
-				g = vera_asmbly.spacergrids[gkey]
-				mat = self.get_openmc_material(g.material)
-				grid = pwr.SpacerGrid(gkey, g.height, g.mass, mat, pitch, npins)
-				pwr_spacergrids[gkey] = grid
+			pwr_asmbly:			instance of pwr.Assembly containing the lattices, spacers, and such. 
+								pwr_asmbly.universe is the instance of openmc.Universe modeling
+								the fuel assembly.
+		"""
+		key = vera_asmbly.name
+		if key in self.openmc_assemblies:
+			return self.openmc_assemblies[key]
+		else:
 			
-			pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: pwr_spacergrids[key] )
-			pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
-		
-		# Handle nozzles
-		if "lower_nozzle_comp" in ps:
-			nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
-			mass = float(ps["lower_nozzle_mass"])
-			height = float(ps["lower_nozzle_height"])
-			lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
-								counter = self.counter, name = "Lower Nozzle")
-			lnozmat = lnoz.get_nozzle_material()
-			self.openmc_materials[lnozmat.name] = lnozmat
-			pwr_asmbly.lower_nozzle = lnoz
-		if "upper_nozzle_comp" in ps:
-			nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
-			mass = float(ps["upper_nozzle_mass"])
-			height = float(ps["upper_nozzle_height"])
-			unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
-								counter = self.counter, name = "Upper Nozzle")
-			unozmat = unoz.get_nozzle_material()
-			self.openmc_materials[unozmat.name] = unozmat
-			pwr_asmbly.upper_nozzle = unoz
-		
-		'''	Worth noting about the nozzles:
-	
-			== Analysis of the BEAVRS Benchmark Using MPACT ==
-		A major difference between the model and the benchmark specification is the treatment of 
-		the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled 
-		with a considerable amount of stainless steel. The authors discerned that 
-		the benchmark is specifying up to 10 times the amount of steel that is in the nozzle and
-		core plate region. Instead of using this amount of steel, a Westinghouse optimized fuel
-		assembly (OFA) design found in Technical Report ML033530020 is used for the upper and
-		lower reflector regions.
-										--CASL-U-2015-0183-000	'''
-		
-		
-		# Where the magic happens
-		pwr_asmbly.build()
-		#openmc_asmbly_builder = pwr_asmbly.build()
-		
+			ps = vera_asmbly.params
+			pitch = vera_asmbly.pitch
+			npins = vera_asmbly.npins
 			
-		return pwr_asmbly
+			# Initiate and describe the Assembly
+			pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.__counter(UNIVERSE), pitch, npins)
+			pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
+			pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
+			pwr_asmbly.mod = self.mod
+			pwr_asmbly.counter = self.counter
+			
+			# FIXME: Handle spacer grids
+			if vera_asmbly.spacergrids:
+				pwr_spacergrids = {}
+				# Translate from VERA to pwr 
+				for gkey in vera_asmbly.spacergrids:
+					g = vera_asmbly.spacergrids[gkey]
+					mat = self.get_openmc_material(g.material)
+					grid = pwr.SpacerGrid(gkey, g.height, g.mass, mat, pitch, npins)
+					pwr_spacergrids[gkey] = grid
+				
+				pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: pwr_spacergrids[key] )
+				pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
+			
+			# Handle nozzles
+			if "lower_nozzle_comp" in ps:
+				nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
+				mass = float(ps["lower_nozzle_mass"])
+				height = float(ps["lower_nozzle_height"])
+				lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
+									counter = self.counter, name = "Lower Nozzle")
+				lnozmat = lnoz.get_nozzle_material()
+				self.openmc_materials[lnozmat.name] = lnozmat
+				pwr_asmbly.lower_nozzle = lnoz
+			if "upper_nozzle_comp" in ps:
+				nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
+				mass = float(ps["upper_nozzle_mass"])
+				height = float(ps["upper_nozzle_height"])
+				unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
+									counter = self.counter, name = "Upper Nozzle")
+				unozmat = unoz.get_nozzle_material()
+				self.openmc_materials[unozmat.name] = unozmat
+				pwr_asmbly.upper_nozzle = unoz
+			
+			'''	Worth noting about the nozzles:
+		
+				== Analysis of the BEAVRS Benchmark Using MPACT ==
+			A major difference between the model and the benchmark specification is the treatment of 
+			the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled 
+			with a considerable amount of stainless steel. The authors discerned that 
+			the benchmark is specifying up to 10 times the amount of steel that is in the nozzle and
+			core plate region. Instead of using this amount of steel, a Westinghouse optimized fuel
+			assembly (OFA) design found in Technical Report ML033530020 is used for the upper and
+			lower reflector regions.
+											--CASL-U-2015-0183-000	'''
+			
+			
+			# Where the magic happens
+			pwr_asmbly.build()
+			self.openmc_assemblies[key] = pwr_asmbly
+			
+				
+			return pwr_asmbly
 	
 	
 	def get_openmc_reactor_vessel(self):
@@ -888,14 +894,18 @@ class MC_Case(Case):
 				# Check if there is supposed to be an assembly in this position
 				if shape[j][i]:
 					askey = asmap[j][i].lower()
+					
 					vera_asmbly = self.assemblies[askey]
+					
+					
 					print(self.core.insert_map.str_map())
 					print(len(self.core.insert_map), j, i)
-					inkey = self.core.insert_map.square_map()[j][i]
-					if inkey != "-":
-						vera_insert = self.inserts[inkey]
+					ins_key = self.core.insert_map.square_map()[j][i]
+					if ins_key != "-":
+						vera_insert = self.inserts[ins_key]
 						vera_asmbly = copy(vera_asmbly)
 						vera_asmbly.add_insert(vera_insert)
+					crd_key = self.core.crd_bank
 					# TODO: add control_map, detector_map
 					
 					new_row[i] = vera_asmbly # REPLACE WITH: this assembly
