@@ -16,7 +16,6 @@ from functions import clean, calc_u234_u236_enrichments
 import objects
 from objects import FUELTEMP, MODTEMP
 from openmc.data import atomic_mass
-from openmc.data.data import atomic_mass
 
 
 '''The VERAin XML files have the following structure:
@@ -78,6 +77,9 @@ class Case(object):
 		#FIXME: Right now, this just selects the first state encountered
 		state = self.states[0]
 		self.materials['mod'] = state.mod
+		
+		#debug
+		print(self.inserts)
 		
 		# Set all material temperatures based off the STATE block
 		for mat in self.materials.values():
@@ -400,8 +402,12 @@ class Case(object):
 							
 					elif name in ("INSERTS", "CONTROLS", "DETECTORS"):
 						for insert in child:
+							# FIXME: Right now, it's possible for inserts, controls, and detectors
+							# to have the same key, which is not good. Need to find a solution.
 							new_insert = self.__get_insert(insert)
 							self.inserts[new_insert.key] = new_insert
+							#self.inserts[new_insert.name] = new_insert
+							print(new_insert)#debug
 					else:
 						warn("Unexpected ParameterList " + name + " encountered; ignoring.")
 				

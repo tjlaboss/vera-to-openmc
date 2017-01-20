@@ -241,6 +241,9 @@ class Assembly(object):
 		# TODO: At a later date, figure out if it is important to model them.
 		# If so, a "nozzle lattice" can be created to handle this.
 		
+		# TODO: This method needs to account for the depth of insertion, for control rods.
+		# The control rod insertion is given in the [STATE] block.
+		
 		na_levels = len(self.axial_elevations) 
 		ni_levels = len(insertion.axial_elevations)
 		# Merge and remove the duplicates
@@ -262,6 +265,8 @@ class Assembly(object):
 					akeymap = fill_lattice(amap, self.lookup)
 					break
 			for k in range(ni_levels-1):
+				# TODO: Account for control rod insertion depth by checking 
+				# whether z > insertion.depth or something
 				if (z == max(insertion.axial_elevations)) or (z <= insertion.axial_elevations[k+1] and z > insertion.axial_elevations[k]):
 					i_label = insertion.axial_labels[k]
 					imap = insertion.cellmaps[i_label]
@@ -544,8 +549,8 @@ class Core(object):
 						reactor vessel--must be same length as vessel_radii
 		baffle:			instance of class Baffle
 		control_bank,	\
-		control_map,	Not coded yet, but they will likely be lists of strings in the
-		insert_map,		style of asmbly_map
+		control_map,	 instance of CoreMap 
+		insert_map,		 /
 		detector_map:	/
 	'''
 
@@ -680,7 +685,7 @@ class Reflector(object):
 
 class Baffle(object):
 	'''Inputs:
-		mat:	instance of Material
+		mat:	key referring to an instance of Material in Case.materials
 		thick:	thickness of baffle (cm)
 		gap:	thickness of gap (cm) between the outside assembly
 				(including the assembly gap) and the baffle itself
@@ -700,7 +705,10 @@ class Baffle(object):
 if __name__ == "__main__":
 	print('''This is a module containing classes
  - Material(key_name, density, mat_fracs, mat_names)
- - Assembly(name, [params, cellmaps, spacergrids])
+ - Assembly(name, cells, [params, cellmaps, spacergrids])
+ - Insert(key, [name, npins, cells, cellmaps, axial_elevs,
+    axial_labels, npins, params, stroke, maxstep])
+ - CoreMap(cell_map, [name, label])
  - SpacerGrid(name, height, mass, label, material)
  - CellMap(name, label, cell_map)
  - Cell(name, num_rings, radii, mats, label)
@@ -708,7 +716,7 @@ if __name__ == "__main__":
  	[bc, bot_refl, top_refl, vessel_radii, vessel_mats,
  	baffle, control_bank, control_map, detector_map])
  - Reflector(mat, thick, vfrac, [name])
- - Baffle(mat, thick, vfrac)
+ - Baffle(mat, thick, gap)
 ''')
 	
 	
