@@ -549,8 +549,8 @@ class Core(object):
 						reactor vessel--must be same length as vessel_radii
 		baffle:			instance of class Baffle
 		control_bank,	\
-		control_map,	Not coded yet, but they will likely be lists of strings in the
-		insert_map,		style of asmbly_map
+		control_map,	 instance of CoreMap 
+		insert_map,		 /
 		detector_map:	/
 	'''
 
