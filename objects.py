@@ -350,17 +350,12 @@ class Insert(Assembly):
 						[Default: 0]
 		cells:			dictionary of instances of Cell 	{cell.key:Cell}
 		cellmaps:		dictionary of instances of Cellmap 	{???:Cellmap}
-		axial_elevs:	list of floats describing
-		stroke:			float; Control rod stroke. Distance (cm) between
-						full-insertion and full-withdrawal
-						[Only used for CONTROL inserts]  [Default: 0]
-		maxstep:		int; Total number of steps between full-insertion and full-withdrawal
-						[Only used for CONTROL inserts] [Default: 0]
+		axial_elevs:	list of floats describing the axial elevations of the lattice layers
 	'''
 	
 	def __init__(self, key, name = "", npins = 0,
 				 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
-				 params = {}, stroke = 0.0, maxstep = 0):
+				 params = {}):
 		
 		
 		if axial_elevs or axial_labels:
@@ -375,11 +370,49 @@ class Insert(Assembly):
 		self.axial_elevations = axial_elevs
 		self.axial_labels = axial_labels
 		self.params = params
-		self.stroke = stroke
-		self.maxstep = maxstep
 		
 		self.construct_maps()
+
+
+class Control(Insert):
+		"""
+		Container for information about control rods.
+	
+	An insert_map (attribute of class Core) is used to show where assembly
+	inserts are located within the core; for example, burnable poison assemblies
+	with different numbers of pyrex rods. It can also be used to place objects
+	such as thimble plugs. The description of such inserts is given
+	in the VERA input deck under the [INSERT] block
+	
+	Inputs:
+		key:			str; unique identifier of this insert
+		name:			str; more descriptive name of this insert
+						[Default: empty string]
+		npins:			int; number of pins across the assembly this insert is to be placed in.
+						Must be equal to assembly.npins.
+						[Default: 0]
+		cells:			dictionary of instances of Cell 	{cell.key:Cell}
+		cellmaps:		dictionary of instances of Cellmap 	{???:Cellmap}
+		axial_elevs:	list of floats describing the axial elevations of the lattice layers
+		stroke:			float; Control rod stroke. Distance (cm) between
+						full-insertion and full-withdrawal
+						[Default: 0]
+		maxstep:		int; Total number of steps between full-insertion and full-withdrawal
+						Default: 0]
+		depth:			float; Distance (cm) between the bottom of the Insert at full-insertion
+						and at its current position.
+						[Default: 0]
+		"""
 		
+		def __init__(self, key, name = "", npins = 0,
+					 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
+					 params = {}, stroke = 0.0, maxstep = 0, depth = 0.0):
+		
+		
+			super().__init__(key, name, npins, cells, cellmaps, axial_elevs, axial_labels, params)
+			self.stroke = stroke
+			self.maxstep = maxstep
+			self.depth = depth
 	
 
 

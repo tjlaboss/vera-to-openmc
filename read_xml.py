@@ -75,22 +75,29 @@ class Case(object):
 		
 		# And now, select a state and use its properties
 		#FIXME: Right now, this just selects the first state encountered
-		state = self.states[0]
-		self.materials['mod'] = state.mod
+		self.state = self.states[0]
+		self.materials['mod'] = self.state.mod
+		# Set control rod position
+		for bank in self.state.rodbank.keys():
+			nsteps = self.state.rodbank[bank]
+			print(self.controls)
+			crd = self.controls[bank]
+			crd.depth = (nsteps/crd.maxstep) * self.core.height 
 		
 		#debug
-		print(self.inserts)
+		print(self.inserts, self.controls)
+		
 		
 		# Set all material temperatures based off the STATE block
 		for mat in self.materials.values():
 			if mat.temperature:
 				# Then we know what material temperature to set
 				if mat.temperature == FUELTEMP:
-					mat.temperature = state.tfuel
+					mat.temperature = self.state.tfuel
 				elif mat.temperature == MODTEMP:
-					mat.temperature = state.tinlet
+					mat.temperature = self.state.tinlet
 			else:
-				mat.temperature = state.tinlet
+				mat.temperature = self.state.tinlet
 				warnstr = "Material " + mat.name + " does not have a temperature specified; defaulting to tinlet."
 				warn(warnstr)
 				self.warnings += 1
@@ -400,13 +407,20 @@ class Case(object):
 						self.mc = objects.MonteCarlo(cycles, inactive, particles)
 					
 							
-					elif name in ("INSERTS", "CONTROLS", "DETECTORS"):
+					elif name == "INSERTS":
 						for insert in child:
-							# FIXME: Right now, it's possible for inserts, controls, and detectors
-							# to have the same key, which is not good. Need to find a solution.
 							new_insert = self.__get_insert(insert)
 							self.inserts[new_insert.key] = new_insert
-							#self.inserts[new_insert.name] = new_insert
+							print(new_insert)#debug
+					elif name == "CONTROLS":
+						for insert in child:
+							new_insert = self.__get_insert(insert, is_control = True)
+							self.controls[new_insert.key] = new_insert
+							print(new_insert)#debug
+					elif name == "DETECTORS":
+						for insert in child:
+							new_insert = self.__get_insert(insert)
+							self.detectors[new_insert.key] = new_insert
 							print(new_insert)#debug
 					else:
 						warn("Unexpected ParameterList " + name + " encountered; ignoring.")
@@ -655,13 +669,14 @@ class Case(object):
 		return a_state
 	
 	
-	def __get_insert(self, insert):
+	def __get_insert(self, insert, is_control = False):
 		'''Similar to the other __get_thing() methods
 		
-		Input:
-			insert:		The ParameterList object describing an assembly insert
+		Inputs:
+			insert:			The ParameterList object describing an assembly insert
+			is_control:		Whether to instantiate this as a Control object.
 		Output:
-			an_insert:	instance of objects.Insert
+			an_insert:		instance of objects.Insert
 		'''
 		in_name = insert.attrib["name"].lower()
 		# dictionary of all independent parameters for this assembly
@@ -716,9 +731,12 @@ class Case(object):
 				self.errors += 1
 		
 				
-		
-		an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
-									insert_params, stroke, max_step)
+		if is_control:
+			an_insert = objects.Control(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
+										insert_params, stroke, max_step)
+		else:
+			an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
+										insert_params)
 		return an_insert
 			
 	
