@@ -95,7 +95,8 @@ class MC_Case(Case):
 		"""
 		
 		"""
-		This method iterates through the 
+		This method iterates through the square map of the core and traces out the 
+		boundary of the baffle. Overlaps are OK due to the use of unions 
 		
 		"""
 		baf = self.core.baffle		# instance of objects.Baffle
@@ -131,6 +132,8 @@ class MC_Case(Case):
 					west  = cmap[j][i-1]
 					southeast = cmap[j+1][i+1]
 					southwest = cmap[j+1][i-1]
+					northeast = cmap[j-1][i+1]
+					northwest = cmap[j-1][i-1]
 					
 					
 					# Left side
@@ -178,7 +181,10 @@ class MC_Case(Case):
 						y_bot = y + d1
 						y_top = y + d2
 						if west:
-							x_left = x - d3
+							if northwest:
+								x_left = x - d3
+							else:
+								x_left = x - d2
 						else:
 							x_left = x - d2
 						if east:
@@ -195,7 +201,10 @@ class MC_Case(Case):
 						y_bot = y - d2
 						y_top = y - d1
 						if west:
-							x_left = x - d3
+							if southwest:
+								x_left = x - d3
+							else:
+								x_left = x - d2
 						else:
 							x_left = x - d2
 						if east:
