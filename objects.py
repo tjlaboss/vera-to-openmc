@@ -113,22 +113,19 @@ class State(object):
 		##			[Default: 0.199]
 		name:		str; descriptive title of the state
 					[Default: empty string]
+		rodbank:	dictionary of control rod banks in the format { crd_key : crd_position }
 		params:		catch-all dictionary for the raw parameters from the deck
-		---more to come---
 		 
 	'''
 	def __init__(self, key, tfuel, tinlet, mod,
 					#boron, b10 = 0.199,
-					name = "",
-					bank_labels = (), bank_pos = (),
-					params = {},):
+					name = "", rodbank = {}, params = {},):
 		self.key = key
 		self.tfuel = tfuel
 		self.tinlet = tinlet
 		self.mod = mod
 		
-		self.bank_labels = bank_labels
-		self.bank_pos = bank_pos
+		self.rodbank = rodbank
 		self.params = params
 
 

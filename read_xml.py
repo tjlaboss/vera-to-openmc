@@ -59,7 +59,7 @@ class Case(object):
 		self.assemblies = {}
 		self.inserts = {}
 		self.states = []
-		self.controls = [];	self.detectors = []
+		self.controls = {};	self.detectors = {}
 		
 		
 		# Placeholder for an essential material
@@ -631,6 +631,9 @@ class Case(object):
 			else:
 				state_params[p] = v
 		
+		# Define the rodbank dictionary using 'bank_labels' as keys and 'bank_pos' as values
+		rodbank = dict(zip(bank_labels, bank_pos))
+		
 		# Calculate the actual boron composition, and create
 		# a new VERA material for it.
 		# The following are WEIGHT fractions
@@ -648,7 +651,7 @@ class Case(object):
 		
 		# Instantiate and return the State object
 		a_state = objects.State(key, tfuel, tinlet, mod, name, 
-								bank_labels, bank_pos, state_params)
+								rodbank, state_params)
 		return a_state
 	
 	
