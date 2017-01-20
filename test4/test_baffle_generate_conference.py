@@ -753,7 +753,7 @@ def create_15x15_as_lattice(as1, apitch, mod_mat):
 
 
 
-def plot_everything(pitch, n, width=750, height=750):
+def plot_everything(pitch, n, width=2*750, height=2*750):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
