@@ -228,27 +228,49 @@ class Assembly(object):
 			return blank
 	
 	
-	def add_insert(self, insertion):
-		'''Merge levels
+	def add_insert(self, insertion, depth = 0.0):
+		"""Merge levels
 		
-		Input:
-			insertion:		instance of Insert'''
+		Inputs:
+			insertion:		instance of Insert
+			depth:			for partially withdrawn Inserts (such control rods),
+							the depth at which the Insert begins.
+							[Default: 0]
+		"""
+		
 		
 		# First of all, ignore insertions in the nozzle region
 		# TODO: At a later date, figure out if it is important to model them.
 		# If so, a "nozzle lattice" can be created to handle this.
 		
-		# TODO: This method needs to account for the depth of insertion, for control rods.
-		# The control rod insertion is given in the [STATE] block.
-		
 		na_levels = len(self.axial_elevations) 
 		ni_levels = len(insertion.axial_elevations)
+		if depth:
+			# Truncate at the top of the assembly
+			max_elev = max(insertion.axial_elevations + insertion.axial_elevations)
+			insert_elevations = []
+			insert_labels = insertion.axial_labels[0:1]
+			for i in range(ni_levels):
+				z = insertion.axial_elevations[i] + depth
+				if z < max_elev:
+					insert_elevations.append(z)
+					insert_labels.append(insertion.axial_labels[i+1])
+				else:
+					break
+			ni_levels = len(insert_elevations)
+			#next two lines are debug
+			print("Before:", insertion.axial_elevations, insertion.axial_labels)
+			print("After:", insert_elevations, insert_labels)
+		else:
+			insert_elevations = insertion.axial_elevations
+			insert_labels = insertion.axial_labels
+			
 		# Merge and remove the duplicates
-		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
+		all_elevs = list(set(self.axial_elevations + insert_elevations))
 		all_elevs.sort()
 		all_labels = [None,]*(len(all_elevs) - 1)
 		all_key_maps = dict(self.key_maps)
-		
+	
 		
 		for kk in range(len(all_labels)):
 			z = all_elevs[kk+1]
@@ -264,8 +286,8 @@ class Assembly(object):
 			for k in range(ni_levels-1):
 				# TODO: Account for control rod insertion depth by checking 
 				# whether z > insertion.depth or something
-				if (z == max(insertion.axial_elevations)) or (z <= insertion.axial_elevations[k+1] and z > insertion.axial_elevations[k]):
-					i_label = insertion.axial_labels[k]
+				if (z == max(insert_elevations)) or (z <= insert_elevations[k+1] and z > insert_elevations[k]):
+					i_label = insert_labels[k]
 					imap = insertion.cellmaps[i_label]
 					ikeymap = fill_lattice(imap, insertion.lookup)
 					break
