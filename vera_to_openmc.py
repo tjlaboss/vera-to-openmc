@@ -216,25 +216,48 @@ class MC_Case(Case):
 						south_region = (+left & -right & +bot & -top)
 						master_region.nodes.append(south_region)
 		
-		# Edge cases
-		for j in range(0, n+1):
+			# Edge cases
 			x = (j + 0.5)*pitch - width
 			y = width - (j + 0.5)*pitch
 			
+			
 			# West edge
 			if cmap[j][0]:
+				north = cmap[j-1][0]
+				south = cmap[j+1][0] 
 				xx = -(width - 0.5*pitch)
 				x_left = xx - d2
 				x_right = xx - d1
 				y_bot = y - d2
 				y_top = y + d2
+				
 				(left, right), (bot, top) = self.__get_xyz_planes( \
 					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
 				west_region = (+left & -right & +bot & -top)
 				master_region.nodes.append(west_region)
+				
+				if not north:
+					y_bot = y + d1
+					x_right = xx + d3
+					(right,), (bot,) = self.__get_xyz_planes( \
+						x0s = (x_right,), y0s = (y_bot,))[0:2]
+					north_region = (+left & -right & +bot & -top)
+				master_region.nodes.append(north_region)
+				
+				if not south:
+					y_bot = y - d2
+					y_top = y - d1
+					x_right = xx + d3
+					(right,), (bot, top) = self.__get_xyz_planes( \
+						x0s = (x_right,), y0s = (y_bot, y_top))[0:2]
+					south_region = (+left & -right & +bot & -top)
+					master_region.nodes.append(south_region)
+					
 			
 			# East edge
 			if cmap[j][n]:
+				north = cmap[j-1][n]
+				south = cmap[j+1][n]
 				xx = +(width - 0.5*pitch)
 				x_left = xx + d1
 				x_right = xx + d2
@@ -244,9 +267,28 @@ class MC_Case(Case):
 					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
 				east_region = (+left & -right & +bot & -top)
 				master_region.nodes.append(east_region)
+				
+				if not north:
+					y_bot = y + d1
+					x_left = xx - d3
+					(left,), (bot,) = self.__get_xyz_planes( \
+						x0s = (x_left,), y0s = (y_bot,))[0:2]
+					north_region = (+left & -right & +bot & -top)
+				master_region.nodes.append(north_region)
+				
+				if not south:
+					y_bot = y - d2
+					y_top = y - d1
+					x_left = xx - d3
+					(left,), (bot, top) = self.__get_xyz_planes( \
+						x0s = (x_left,), y0s = (y_bot, y_top))[0:2]
+					south_region = (+left & -right & +bot & -top)
+					master_region.nodes.append(south_region)
 			
 			# North edge
 			if cmap[0][j]:
+				east  = cmap[0][j+1]
+				west  = cmap[0][j-1]
 				yy = +(width - 0.5*pitch)
 				x_left = x - d2
 				x_right = x + d2
@@ -256,9 +298,29 @@ class MC_Case(Case):
 					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
 				north_region = (+left & -right & +bot & -top)
 				master_region.nodes.append(north_region)
+				
+				if not west:
+					x_right = x - d1
+					y_bot = yy - d3
+					(right,), (bot,) = self.__get_xyz_planes( \
+						x0s = (x_right,), y0s = (y_bot,))[0:2]
+					west_region = (+left & -right & +bot & -top)
+					master_region.nodes.append(west_region)
+					
+				if not east:
+					x_left = x + d1
+					x_right = x + d2
+					y_bot = yy - d3
+					(left, right), (bot, top) = self.__get_xyz_planes( \
+						x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+					east_region = (+left & -right & +bot & -top)
+					master_region.nodes.append(east_region)
+					
 			
 			# South edge
 			if cmap[n][j]:
+				east  = cmap[n][j+1]
+				west  = cmap[n][j-1]
 				yy = -(width - 0.5*pitch)
 				x_left = x - d2
 				x_right = x + d2
@@ -268,6 +330,23 @@ class MC_Case(Case):
 					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
 				south_region = (+left & -right & +bot & -top)
 				master_region.nodes.append(south_region)
+				
+				if not west:
+					x_right = x - d1
+					y_top = yy + d3
+					(right,), (top,) = self.__get_xyz_planes( \
+						x0s = (x_right,), y0s = (y_top,))[0:2]
+					west_region = (+left & -right & +bot & -top)
+					master_region.nodes.append(west_region)
+					
+				if not east:
+					x_left = x + d1
+					x_right = x + d2
+					y_top = yy + d3
+					(left, right), (top,) = self.__get_xyz_planes( \
+						x0s = (x_left, x_right), y0s = (y_top,))[0:2]
+					east_region = (+left & -right & +bot & -top)
+					master_region.nodes.append(east_region)
 				
 						
 		# Done iterating.
