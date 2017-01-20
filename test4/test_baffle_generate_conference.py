@@ -5,7 +5,9 @@
 # most of this information from the VERA input deck, but a simplified
 # case with a smaller core is hardcoded below for debugging purposes. 
 
+import sys; sys.path.append('..')
 import openmc
+import vera_to_openmc
 from math import copysign
 
 
@@ -46,9 +48,9 @@ class Simplified_Vera_Core(object):
 				[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 				[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 				[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-				[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 				[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],				
 				[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+				[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
 				[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
 				[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]]
 		return smap
@@ -530,7 +532,7 @@ class Simplified_Vera_Core(object):
 ###################
 
 	
-def test_baffle(baffle_region, baffill, asmbly_lat, bounds):
+def test_baffle(baffle, baffill, asmbly_lat, bounds):
 	'''Test the get_openmc_baffle() function for geometric integrity.
 	
 	Inputs:
@@ -551,11 +553,7 @@ def test_baffle(baffle_region, baffill, asmbly_lat, bounds):
 	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
 	
 	the_baffle = openmc.Cell(101, name = "the baffle")
-	the_baffle.region = baffle_region
-	#the_baffle.region = baffle_cells[0].region
-	#for c in baffle_cells[1:len(baffle_cells)]:
-	#	the_baffle.region = the_baffle.region | c.region
-	#the_baffle.region = the_baffle.region & (+min_z & -max_z)
+	the_baffle.region = baffle.region
 	the_baffle.fill = baffill
 	
 	print(the_baffle)
@@ -616,7 +614,7 @@ def set_cubic_boundaries(pitch, n, bounds=('reflective',)*6):
 
 
 
-def create_openmc_materials():
+def create_openmc_materials(baffill):
 	
 	# Essential materials
 	mod = openmc.Material(name="mod")
@@ -633,7 +631,7 @@ def create_openmc_materials():
 	clad.set_density("g/cc", 7.0)
 	
 	
-	materials = openmc.Materials((mod, fuel, clad))
+	materials = openmc.Materials((mod, fuel, clad, baffill))
 	materials.default_xs = "71c"
 	materials.export_to_xml()
 	
@@ -641,7 +639,7 @@ def create_openmc_materials():
 	
 
 def create_9x9_lattice(materials, pitch):
-	(mod, fuel, clad)  = materials
+	(mod, fuel, clad, baffill)  = materials
 	
 	# Make the pin surfaces
 	ring0 = openmc.ZCylinder(R = 0.5)
@@ -723,7 +721,7 @@ def create_5x5_as_lattice(as1, apitch, mod_mat):
 
 
 
-def create_14x14_as_lattice(as1, apitch, mod_mat):
+def create_15x15_as_lattice(as1, apitch, mod_mat):
 	modcell = openmc.Cell()
 	modcell.fill = mod_mat
 	mmm = openmc.Universe()
@@ -731,7 +729,7 @@ def create_14x14_as_lattice(as1, apitch, mod_mat):
 	
 	cmap = [[mmm, mmm, mmm, mmm, as1, as1, as1, as1, as1, as1, as1, mmm, mmm, mmm, mmm],
 			[mmm, mmm, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, mmm, mmm],
-			[mmm, mmm, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, mmm, mmm],
+			[mmm, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, mmm],
 			[mmm, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, mmm],
 			[as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1],
 			[as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1],
@@ -739,7 +737,8 @@ def create_14x14_as_lattice(as1, apitch, mod_mat):
 			[as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1],
 			[as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1],
 			[as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1],
-			[as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1],				
+			[as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1],
+			[mmm, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, mmm],
 			[mmm, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, mmm],
 			[mmm, mmm, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, as1, mmm, mmm],
 			[mmm, mmm, mmm, mmm, as1, as1, as1, as1, as1, as1, as1, mmm, mmm, mmm, mmm]]
@@ -747,14 +746,14 @@ def create_14x14_as_lattice(as1, apitch, mod_mat):
 	lat14 = openmc.RectLattice(36)
 	lat14.universes = cmap
 	lat14.pitch = (apitch, apitch)
-	lat14.lower_left = [-apitch * 14 / 2.0] * 2
+	lat14.lower_left = [-apitch * 15 / 2.0] * 2
 	lat14.outer = mmm
 	
 	return lat14
 
 
 
-def plot_everything(pitch, n, width=3*750, height=3*750):
+def plot_everything(pitch, n, width=750, height=750):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
@@ -771,19 +770,24 @@ def plot_everything(pitch, n, width=3*750, height=3*750):
 	
 	
 if __name__ == "__main__":
-	mats = create_openmc_materials()
-	(mod, fuel, clad) = mats
+	case = vera_to_openmc.MC_Case("../gold/p7.xml.gold")
 	# Assembly params
 	pitch = 2.0; n = 9
-	core = Simplified_Vera_Core(ppitch = pitch, npins = n)
-	baf = Baffle(gap = 0.19, mat = clad, thick = 2.85)
-	core.baffle = baf
+	core = case.core
+	#core = Simplified_Vera_Core(ppitch = pitch, npins = n)
+	#baf = Baffle(gap = 0.19, mat = clad, thick = 2.85)
+	#core.baffle = baf
+	baf = case.core.baffle
+	baffill = case.get_openmc_material(baf.mat)
+	mats = create_openmc_materials(baffill)
+	(mod, fuel, clad, baffill) = mats
+	
+	
 	asmbly_lat = create_9x9_lattice(mats, pitch)
 	asmbly_cell = openmc.Cell(fill=asmbly_lat)
 	asmbly_uni = openmc.Universe(cells = ((asmbly_cell,)))
 	
-	#core_lat = create_5x5_as_lattice(asmbly_uni, core.pitch, mod)
-	core_lat = create_14x14_as_lattice(asmbly_uni, core.pitch, mod)
+	core_lat = create_15x15_as_lattice(asmbly_uni, core.pitch, mod)
 	print(core.size)
 	
 	
@@ -791,7 +795,7 @@ if __name__ == "__main__":
 	(min_x, max_x, min_y, max_y, min_z, max_z) = edges
 	box = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
 	#baffle_verse = test_baffle(core.get_openmc_baffle(core), baf.mat, asmbly_lat, edges)
-	baffle_verse = test_baffle(core.get_openmc_baffle(core), baf.mat, core_lat, edges)
+	baffle_verse = test_baffle(case.get_openmc_baffle(), baffill, core_lat, edges)
 	
 	
 	# Create Geometry and set root Universe
