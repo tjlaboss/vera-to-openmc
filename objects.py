@@ -375,8 +375,7 @@ class Insert(Assembly):
 
 
 class Control(Insert):
-		"""
-		Container for information about control rods.
+	"""Container for information about control rods.
 	
 	An insert_map (attribute of class Core) is used to show where assembly
 	inserts are located within the core; for example, burnable poison assemblies
@@ -399,20 +398,20 @@ class Control(Insert):
 						[Default: 0]
 		maxstep:		int; Total number of steps between full-insertion and full-withdrawal
 						Default: 0]
-		depth:			float; Distance (cm) between the bottom of the Insert at full-insertion
-						and at its current position.
-						[Default: 0]
-		"""
 		
-		def __init__(self, key, name = "", npins = 0,
-					 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
-					 params = {}, stroke = 0.0, maxstep = 0, depth = 0.0):
+	Other attributes:
+		step_size:		stroke/maxstep
+	"""
 		
-		
-			super().__init__(key, name, npins, cells, cellmaps, axial_elevs, axial_labels, params)
-			self.stroke = stroke
-			self.maxstep = maxstep
-			self.depth = depth
+	def __init__(self, key, name = "", npins = 0,
+				 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
+				 params = {}, stroke = 0.0, maxstep = 0, depth = 0.0):
+	
+	
+		super().__init__(key, name, npins, cells, cellmaps, axial_elevs, axial_labels, params)
+		self.stroke = stroke
+		self.maxstep = maxstep
+		self.step_size = stroke/float(maxstep)
 	
 
 

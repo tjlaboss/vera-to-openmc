@@ -77,12 +77,14 @@ class Case(object):
 		#FIXME: Right now, this just selects the first state encountered
 		self.state = self.states[0]
 		self.materials['mod'] = self.state.mod
+		'''
 		# Set control rod position
 		for bank in self.state.rodbank.keys():
 			nsteps = self.state.rodbank[bank]
 			print(self.controls)
 			crd = self.controls[bank]
 			crd.depth = (nsteps/crd.maxstep) * self.core.height 
+		'''
 		
 		#debug
 		print(self.inserts, self.controls)
