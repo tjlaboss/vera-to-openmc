@@ -88,18 +88,14 @@ class MC_Case(Case):
 	
 	
 	def get_openmc_baffle2(self):
-		"""
-		Re-imagining the baffle construction.
+		"""Create the cells and surfaces for the core baffle.
+		
+		Outputs:
+			baffle_cells:	instance of openmc.Cell describing the baffle plates	
 		"""
 		
 		"""
-		A simpler method that assumes only outer edges, e.g.,
-		
-		   ___					   _____
-		 _|   |_				  |_ 
-		|       |		not		    |
-		|_     _|				   _|
-		  |___|					  |_____
+		This method iterates through the 
 		
 		"""
 		baf = self.core.baffle		# instance of objects.Baffle
@@ -124,8 +120,7 @@ class MC_Case(Case):
 		for j in range(1,n):
 			# For each column (moving horizontally):
 			for i in range(1,n):
-				this = cmap[j][i]
-				if this:
+				if cmap[j][i]:
 					# Positions of surfaces
 					x = (i + 0.5)*pitch - width
 					y = width - (j + 0.5)*pitch
@@ -167,7 +162,7 @@ class MC_Case(Case):
 						else:
 							y_top = y + d2
 						if south:
-							if southwest:
+							if southeast:
 								y_bot = y - d3
 							else:
 								y_bot = y - d2
@@ -212,7 +207,61 @@ class MC_Case(Case):
 						south_region = (+left & -right & +bot & -top)
 						master_region.nodes.append(south_region)
 		
-		
+		# Edge cases
+		for j in range(0, n+1):
+			x = (j + 0.5)*pitch - width
+			y = width - (j + 0.5)*pitch
+			
+			# West edge
+			if cmap[j][0]:
+				xx = -(width - 0.5*pitch)
+				x_left = xx - d2
+				x_right = xx - d1
+				y_bot = y - d2
+				y_top = y + d2
+				(left, right), (bot, top) = self.__get_xyz_planes( \
+					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+				west_region = (+left & -right & +bot & -top)
+				master_region.nodes.append(west_region)
+			
+			# East edge
+			if cmap[j][n]:
+				xx = +(width - 0.5*pitch)
+				x_left = xx + d1
+				x_right = xx + d2
+				y_bot = y - d2
+				y_top = y + d2
+				(left, right), (bot, top) = self.__get_xyz_planes( \
+					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+				east_region = (+left & -right & +bot & -top)
+				master_region.nodes.append(east_region)
+			
+			# North edge
+			if cmap[0][j]:
+				yy = +(width - 0.5*pitch)
+				x_left = x - d2
+				x_right = x + d2
+				y_bot = yy + d1
+				y_top = yy + d2
+				(left, right), (bot, top) = self.__get_xyz_planes( \
+					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+				north_region = (+left & -right & +bot & -top)
+				master_region.nodes.append(north_region)
+			
+			# South edge
+			if cmap[n][j]:
+				yy = -(width - 0.5*pitch)
+				x_left = x - d2
+				x_right = x + d2
+				y_bot = yy - d2
+				y_top = yy - d1
+				(left, right), (bot, top) = self.__get_xyz_planes( \
+					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
+				south_region = (+left & -right & +bot & -top)
+				master_region.nodes.append(south_region)
+				
+						
+		# Done iterating.
 		# Set the baffle material, cell, etc.
 		baffle_cell = openmc.Cell(self.__counter(CELL), "Baffle", self.get_openmc_material(baf.mat), master_region)
 		
