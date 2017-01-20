@@ -846,7 +846,7 @@ class MC_Case(Case):
 	
 	
 	
-	def get_openmc_core(self):
+	def get_openmc_core_lattice(self, blank = "-"):
 		'''Create the reactor core lattice. 
 		
 		This is an extremely important function that hasn't really been written yet.
@@ -863,6 +863,9 @@ class MC_Case(Case):
 		Then zip this lattice up in a universe and return it.
 		Later, that will be placed inside the baffle, and the reactor vessel.
 		
+		Input:
+			blank:			string which represents a location in a core map with no insertion.
+							[Default: "-"]
 		Output:
 			openmc_core:	instance of openmc.RectLattice; the lattice contains [read: will contain]
 							instances of pwr.Assembly
@@ -883,6 +886,9 @@ class MC_Case(Case):
 		# BAD PROBLEM:
 		# FIXME: the insert_map isn't the same size as the shape map!!
 		
+		ins_map = self.core.insert_map.square_map()
+		crd_map = self.core.crd_bank.square_map()
+		det_map = self.core.det_map.square_map()
 		
 		
 		lattice = [[None,]*n]*n
@@ -900,18 +906,41 @@ class MC_Case(Case):
 					
 					print(self.core.insert_map.str_map())
 					print(len(self.core.insert_map), j, i)
-					ins_key = self.core.insert_map.square_map()[j][i]
-					if ins_key != "-":
-						vera_insert = self.inserts[ins_key]
-						vera_asmbly = copy(vera_asmbly)
-						vera_asmbly.add_insert(vera_insert)
-					crd_key = self.core.crd_bank
-					# TODO: add control_map, detector_map
 					
-					new_row[i] = vera_asmbly # REPLACE WITH: this assembly
+					
+					ins_key = ins_map[j][i]
+					crd_key = crd_map[j][i]
+					det_key = det_map[j][i]
+					
+					if (ins_key or crd_key or det_key) != blank:
+						vera_asmbly = copy(vera_asmbly)
+						# Handle each type of insertion differently.
+						# Do we need to rename the assembly here, or is it done in add_insert?
+						if ins_key != blank:
+							vera_ins = self.inserts[ins_key]
+							vera_asmbly.add_insert(vera_ins)
+						if crd_key != blank:
+							vera_crd = self.controls[crd_key]
+							steps = self.state.rodbank[crd_key]
+							depth = steps*vera_crd.step_size
+							vera_asmbly.add_insert(vera_crd, depth)
+						if det_key != blank:
+							# Is it any different than a regular insert?
+							vera_det = self.detectors[det_key]
+							vera_asmbly.add_insert(vera_det)
+					
+					# TODO: Verify if there is renaming to be done
+					print(vera_asmbly)
+					as_key = vera_asmbly.name
+					if as_key not in self.assemblies:
+						self.assemblies[as_key]
+					openmc_assembly = self.get_openmc_assembly(vera_asmbly)
+					
+					new_row[i] = openmc_assembly.universe
 				else:
 					# Then install the moderator universe instead
-					new_row[i] = 0 # REPLACE WITH: that universe
+					#new_row[i] = 0 # REPLACE WITH: that universe
+					new_row[i] = self.mod_verse
 			lattice[j] = new_row
 			
 		return lattice
