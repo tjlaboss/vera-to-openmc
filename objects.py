@@ -729,6 +729,16 @@ class Core(object):
 			return which + " is not a valid option."
 
 
+class Nozzle2(object):
+	"""Attempt 2 at creating a pwr nozzle
+		
+	"""
+	def __init__(self, height, material, name = "nozzle"):
+		self.height = height
+		self.name = name
+		self.material = material
+
+
 class Reflector(object):
 	'''Inputs:
 		mat:	string; key of an instance of Material or Mixture

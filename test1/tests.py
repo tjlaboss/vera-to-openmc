@@ -218,11 +218,13 @@ def test_core_lattice(case_file = "../gold/p7.xml.gold"):
 	case = vera_to_openmc.MC_Case(case_file)
 	lat = case.get_openmc_core_lattice()
 	apitch = case.core.pitch
+	r = apitch*case.core.size
 	
-	plot_lattice(apitch, case.core.size)
-	bounds = set_cubic_boundaries(apitch)
+	plot_lattice(apitch, case.core.size, z = 75)
+	zrange_total = [20, 380]
+	bounds = set_cubic_boundaries(r, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
-	return case, lat, case.core.size*apitch, apitch, case.core.size, bounds, [0.0, 1.0]
+	return case, lat, r, apitch, case.core.size, bounds, zrange_total
 
 
 
@@ -253,7 +255,7 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'Plot-materials-xy'
 	plot.origin = [0, 0, z]
-	plot.width = [pitch - .01, pitch - .01]
+	plot.width = [npins*pitch - .01,]*2
 	plot.pixels = [width, height]
 	plot.color = 'mat'
 	# Instantiate a Plots collection and export to "plots.xml"

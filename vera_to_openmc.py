@@ -7,6 +7,7 @@ from math import sqrt, copysign
 from copy import copy
 from read_xml import Case
 from functions import fill_lattice, clean
+from objects import Nozzle2 #debug
 import pwr
 from pwr import SURFACE, CELL, MATERIAL, UNIVERSE	# Global constants for counters
 
@@ -486,15 +487,6 @@ class MC_Case(Case):
 			if material + suffix in self.materials:
 				material += suffix
 				break
-
-		
-		#material += asname + inname
-		
-		
-		# debug
-		if inname:
-			print(material, asname, inname)
-		
 		
 		if material in self.openmc_materials:
 			# Look it up as normal
@@ -526,9 +518,6 @@ class MC_Case(Case):
 				#	openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
 					
 			self.openmc_materials[material] = openmc_material
-			
-			#debug
-			print(openmc_material)
 		
 		return openmc_material
 	
@@ -712,7 +701,7 @@ class MC_Case(Case):
 					#lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
 					#					counter = self.counter, name = "Lower Nozzle")
 					#self.openmc_materials[lnozmat.name] = lnozmat
-					lnoz = pwr.Nozzle2(height, lnozmat, "Lower Nozzle")
+					lnoz = Nozzle2(height, lnozmat, "Lower Nozzle")
 					vera_asmbly.pwr_nozzles["lower"] = lnoz
 				else:
 					lnoz = vera_asmbly.pwr_nozzles["lower"]
@@ -726,7 +715,7 @@ class MC_Case(Case):
 					#unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
 					#					counter = self.counter, name = "Upper Nozzle")
 					#self.openmc_materials[unozmat.name] = unozmat
-					unoz = pwr.Nozzle2(height, unozmat, "Upper Nozzle") 
+					unoz = Nozzle2(height, unozmat, "Upper Nozzle") 
 					vera_asmbly.pwr_nozzles["upper"] = unoz
 				else:
 					unoz = vera_asmbly.pwr_nozzles["upper"]
