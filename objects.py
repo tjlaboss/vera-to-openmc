@@ -277,7 +277,7 @@ class Assembly(object):
 				# Then we've got an insertion acting here.
 				new_label = a_label + '+' + i_label
 				lamij = lambda i, j: self.get_cell_insert(insertion, imap, amap, i, j)
-				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij, dtype = str)
+				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij)
 				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion

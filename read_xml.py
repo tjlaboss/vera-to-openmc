@@ -78,9 +78,6 @@ class Case(object):
 		state = self.states[0]
 		self.materials['mod'] = state.mod
 		
-		#debug
-		print(self.inserts)
-		
 		# Set all material temperatures based off the STATE block
 		for mat in self.materials.values():
 			if mat.temperature:
