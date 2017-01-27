@@ -68,9 +68,7 @@ class Assembly(object):
 							{'orig. universe id': gridded instance of openmc.Universe}
 		gridded_lattices:	dictionary of lattices  which have a gridded version, in the following format:
 							{'orig. universe id': gridded instance of openmc.RectLattice}
-		assembly:			instance of openmc.Universe.
-							the whole reason you instantiated THIS object.
-							the OpenMC representation of the fuel assembly
+		universe:			instance of openmc.Universe; the OpenMC representation of the fuel assembly
 	'''
 
 	def __init__(self, 	key = "", 		name = "", 			universe_id = None,
@@ -251,10 +249,10 @@ class Assembly(object):
 			uid = self.universe_id
 		else:
 			uid = self.counter.add_universe()
-		self.assembly = openmc.Universe(uid, name = self.name)
-		self.assembly.add_cells(self.openmc_cells)
+		self.universe = openmc.Universe(uid, name = self.name)
+		self.universe.add_cells(self.openmc_cells)
 		
-		return self.assembly
+		return self.universe
 
 
 
