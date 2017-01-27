@@ -508,8 +508,9 @@ class MC_Case(Case):
 					else:
 						# Element.expand() breaks an element into its constituent nuclides
 						elem = openmc.Element(ename)
-						for n, w in elem.expand():
-							openmc_material.add_nuclide(n, frac*w, 'wo')
+						for nuclist in elem.expand(frac, 'wo'):
+							n, w = nuclist[0:2]
+							openmc_material.add_nuclide(n, w, 'wo')
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
 				# Shouldn't be needed: the parsed XML should already be in weight frac
