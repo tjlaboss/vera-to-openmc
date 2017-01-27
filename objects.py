@@ -121,9 +121,9 @@ class State(object):
 	"""
 	
 	def __init__(self, key, tfuel, tinlet, mod,
-		# boron, b10 = 0.199,
-		bank_labels = (), bank_pos = (),
-		params = {}, ):
+	             # boron, b10 = 0.199,
+	             bank_labels = (), bank_pos = (),
+	             params = {}, ):
 		self.key = key
 		self.tfuel = tfuel
 		self.tinlet = tinlet
@@ -274,7 +274,7 @@ class Assembly(object):
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
 				new_label = a_label + '+' + i_label
-				lamij = lambda i, j:self.get_cell_insert(insertion, imap, amap, i, j)
+				lamij = lambda i, j: self.get_cell_insert(insertion, imap, amap, i, j)
 				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij, dtype = str)
 				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
