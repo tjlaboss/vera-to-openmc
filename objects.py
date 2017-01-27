@@ -2,10 +2,12 @@
 #
 # Module containing useful objects for read_xml.py
 
+import numpy
 from math import sqrt
+from copy import copy
 from functions import *
 from openmc.data import atomic_mass
-from copy import copy
+
 
 FUELTEMP = -1; MODTEMP = -2
 
@@ -60,7 +62,7 @@ class Material(object):
 	
 		if total_wt <= 0:
 			# already in atomic fraction
-			return 
+			return
 		else:
 			for iso in self.isotopes:
 				total_at += self.isotopes[iso] / atomic_mass(iso)
@@ -244,7 +246,7 @@ class Assembly(object):
 		# TODO: This method needs to account for the depth of insertion, for control rods.
 		# The control rod insertion is given in the [STATE] block.
 		
-		na_levels = len(self.axial_elevations) 
+		na_levels = len(self.axial_elevations)
 		ni_levels = len(insertion.axial_elevations)
 		# Merge and remove the duplicates
 		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
@@ -259,7 +261,7 @@ class Assembly(object):
 			i_label = None
 			# See where we are
 			for k in range(na_levels-1):
-				if (z >= max(self.axial_elevations)) or (z <= self.axial_elevations[k+1] and z > self.axial_elevations[k]):
+				if (z >= max(self.axial_elevations)) or (self.axial_elevations[k+1] >= z > self.axial_elevations[k]):
 					a_label = self.axial_labels[k]
 					amap = self.cellmaps[a_label]
 					akeymap = fill_lattice(amap, self.lookup)
@@ -267,7 +269,8 @@ class Assembly(object):
 			for k in range(ni_levels-1):
 				# TODO: Account for control rod insertion depth by checking 
 				# whether z > insertion.depth or something
-				if (z == max(insertion.axial_elevations)) or (z <= insertion.axial_elevations[k+1] and z > insertion.axial_elevations[k]):
+				if (z == max(insertion.axial_elevations)) or (
+						insertion.axial_elevations[k+1] >= z > insertion.axial_elevations[k]):
 					i_label = insertion.axial_labels[k]
 					imap = insertion.cellmaps[i_label]
 					ikeymap = fill_lattice(imap, insertion.lookup)
@@ -277,7 +280,7 @@ class Assembly(object):
 				# Then we've got an insertion acting here.
 				new_label = a_label + '+' + i_label
 				lamij = lambda i,j: self.get_cell_insert(insertion, imap, amap, i, j)
-				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij)
+				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij, dtype = str)
 				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion
@@ -318,7 +321,6 @@ class Assembly(object):
 		
 		akey = amap[i][j]		# key of the original pin cell
 		ikey = imap[i][j]		# key of the Insert cell
-		
 		
 		if ikey == blank:
 			return akey
@@ -398,10 +400,10 @@ class SpacerGrid(object):
 		'''
 	
 	def __init__(self, name, height, mass, label, material):
-		self.name = name		
-		self.height = height	
-		self.mass = mass		
-		self.label = label		
+		self.name = name
+		self.height = height
+		self.mass = mass
+		self.label = label
 		self.material = material
 		self.thickness = 0	# to be set later
 		
@@ -420,14 +422,21 @@ class CoreMap(object):
 		label:		string containing the unique Assembly identifier
 	'''
 	def __init__(self, cell_map, name = "", label = ""):
-		self.name = name 
+		self.name = name
 		self.label = label
 		if isinstance(cell_map[0], list):
 			# If you feed it a square map:
+			self.n = len(cell_map[0])
 			self.cell_map = []
 			for row in cell_map:
 				self.cell_map += row
+		elif isinstance(cell_map, numpy.ndarray):
+			self.n = len(cell_map)
+			self.cell_map = []
+			for row in cell_map:
+				self.cell_map += list(row)
 		else:
+			self.n = int(sqrt(len(cell_map)))
 			self.cell_map = cell_map
 	
 	def __str__(self):
@@ -452,10 +461,11 @@ class CoreMap(object):
 	
 	def square_map(self):
 		'''Return the cell map as a square array'''
-		n = int(sqrt(len(self.cell_map)))
+		n = self.n
 		smap = [['',]*n, ]*n
-		for row in range(n):
-			smap[row] = self.cell_map[row*n:(row+1)*n]
+		#smap = numpy.empty((self.n, self.n), dtype = str)
+		for row in range(self.n):
+			smap[row] = self.cell_map[row*self.n:(row+1)*self.n]
 		return smap
 	
 	def str_map(self):
@@ -556,7 +566,7 @@ class Core(object):
 
 	def __init__(self, pitch, size, height, shape, asmbly, params, #rpower, rflow,
 				 bc = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"},
-				 bot_refl = None, top_refl = None, vessel_radii = [], vessel_mats = [], 
+				 bot_refl = None, top_refl = None, vessel_radii = [], vessel_mats = [],
 				 baffle = {}, control_bank = [], control_map = [], insert_map = [], detector_map = []):
 		
 		self.pitch = pitch
@@ -614,18 +624,16 @@ class Core(object):
 			space = space[0]
 		# Create a new blank map for the assembly layout
 		n = self.size
-		amap = [['',]*n, ]*n
+		amap = numpy.array((n, n), dtype = str)
 		j = 0
 		for row in range(n):
-			new_row = ['']*n
 			for col in range(n):
 				a = self.shape.square_map()[row][col]
 				if a == 0:
-					new_row[col] = space
+					amap[row, col] = space
 				else:
-					new_row[col] = self.asmbly.cell_map[j]
+					amap[row, col] = self.asmbly.cell_map[j]
 					j += 1
-			amap[row] = new_row
 		return amap
 		
 		
@@ -679,6 +687,7 @@ class Reflector(object):
 		self.material = material
 		self.thick = thick
 		self.name = name
+		
 	def __str__(self):
 		return self.name + " Reflector"
 
