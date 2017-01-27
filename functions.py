@@ -72,34 +72,34 @@ def replace_lattice(new_keys, original, lam = None, n = 0, dtype = object, blank
 	"""Same as fill_lattice, but instead of performing a function on the key,
 	substitutes the key from 'new_keys' into 'original' unless the key=='blank'."""
 	
-	print("This is actually executing? ")
-	
 	if not n:
 		n = len(original)
 	if not lam:
-		lam = lambda i, j:new_keys[i][j]
-	
-	lattice = [[None, ] * n] * n
+		lam = lambda i, j: new_keys[i][j]
+		
+	lattice = numpy.empty((n, n), dtype)
 	for i in range(n):
-		new_row = [None, ] * n
 		for j in range(n):
 			k = new_keys[i][j]
 			if k == blank:
-				new_row[j] = original[i][j]
+				lattice[j, i] = original[i][j]
 			else:
-				new_row[j] = lam(i, j)
-		lattice[i] = new_row
+				lattice[j, i] = lam(i, j)
 	
 	return lattice
 
 
 def set_nuclide_xs(material, xstring):
-	'''Set the cross section for each nuclide of a material.
+	"""Set the cross section for each nuclide of a material.
+	
+	This function has more or less been deprecated and may be removed
+	in future releases without notice.
+	
 	Inputs:
 		material:		instance of openmc.Material
 		xstring:		string; identifier of the cross section to use
 	Outputs:
-		None: modifies the Material directly'''
+		None: modifies the Material directly"""
 	for n in material.nuclides:
 		n[0].xs = xstring
 
