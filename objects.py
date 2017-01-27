@@ -122,12 +122,14 @@ class State(object):
 	
 	def __init__(self, key, tfuel, tinlet, mod,
 	             # boron, b10 = 0.199,
+	             name = "",
 	             bank_labels = (), bank_pos = (),
 	             params = {}, ):
 		self.key = key
 		self.tfuel = tfuel
 		self.tinlet = tinlet
 		self.mod = mod
+		self.name = name
 		
 		self.bank_labels = bank_labels
 		self.bank_pos = bank_pos
@@ -206,7 +208,7 @@ class Assembly(object):
 		
 		self.key_maps = {}
 		for cmap in self.cellmaps:
-			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap], name = self.name + '-' + cmap, label = cmap)
+			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap].cell_map, name = self.name + '-' + cmap, label = cmap)
 			self.key_maps[cmap] = CoreMap(fill_lattice(self.cellmaps[cmap], self.lookup, self.npins),
 			                              name = self.name + "-" + cmap + " (keymap)", label = cmap)
 	
@@ -413,6 +415,7 @@ class CoreMap(object):
 	def __init__(self, cell_map, name = "", label = ""):
 		self.name = name
 		self.label = label
+		
 		if isinstance(cell_map[0], list):
 			# If you feed it a square map:
 			self.n = len(cell_map[0])
@@ -424,6 +427,9 @@ class CoreMap(object):
 			self.cell_map = []
 			for row in cell_map:
 				self.cell_map += list(row)
+		elif isinstance(cell_map, CoreMap):
+			self.n = cell_map.n
+			self.cell_map = cell_map.cell_map
 		else:
 			self.n = int(sqrt(len(cell_map)))
 			self.cell_map = cell_map
@@ -435,7 +441,7 @@ class CoreMap(object):
 		return rep
 	
 	def __len__(self):
-		return len(self.square_map())
+		return self.n
 	
 	def __iter__(self):
 		for i in self.square_map():
@@ -451,10 +457,11 @@ class CoreMap(object):
 	def square_map(self):
 		"""Return the cell map as a square array"""
 		n = self.n
-		smap = [['', ] * n, ] * n
-		# smap = numpy.empty((self.n, self.n), dtype = str)
-		for row in range(self.n):
-			smap[row] = self.cell_map[row * self.n:(row + 1) * self.n]
+		smap = numpy.empty((n, n), dtype = object)
+		for j in range(self.n):
+			for i in range(self.n):
+				k = n*j + i
+				smap[j, i] = self.cell_map[k]
 		return smap
 	
 	def str_map(self):
