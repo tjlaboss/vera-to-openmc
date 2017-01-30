@@ -38,21 +38,11 @@ Full-core example inputs.
 ------
 
 #### `pwr*`
-Directory containing the following:
-
-#### `__init__.py`
-Initializer for proposed openmc.pwr module
-
-#### `assembly.py`:
-Under active development. Module to generate a complete OpenMC fuel assembly geometry.
+Directory containing the pwr module
 
 ------
 
 #### `test*`
-Directories containing the following tests:
+Directories containing many tests, the only important one being:
 ##### - `tests.py`
-Very simple test suite for a pin cell, assembly, and full core
-##### - `test_core.py`
-Test for a full-core problem, such as p7
-##### - `test_pwr_assembly.py`
-Test for the module `PWR_assembly.py`
+Very simple test suite for a pin cell, lattice, assembly, and full core.

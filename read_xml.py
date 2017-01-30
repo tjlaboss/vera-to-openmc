@@ -86,10 +86,6 @@ class Case(object):
 			crd.depth = (nsteps/crd.maxstep) * self.core.height 
 		'''
 		
-		#debug
-		print(self.inserts, self.controls)
-		
-		
 		# Set all material temperatures based off the STATE block
 		for mat in self.materials.values():
 			if mat.temperature:
@@ -768,13 +764,13 @@ class Case(object):
 		return a_grid
 	
 	def __get_map(self, cmap):
-		'''Same as self.__get_grid, but for a cellmap
-		
+		"""
 		Inputs:
 			cmap: The ParameterList object describing a cell map
 		
 		Outputs:
-			a_map: Instance of the CoreMap object populated with the properties from the XML.'''
+			a_map: Instance of the CoreMap object populated with the properties from the XML.
+		"""
 		
 		# Initialize the 3 cell map properties
 		name = cmap.attrib["name"]
@@ -792,14 +788,13 @@ class Case(object):
 				warn("Warning: unused property " + p + "in" + name)
 				self.warnings += 1
 		
-		
 		# Instantiate a new material and add it to the dictionary
 		a_cell_map = objects.CoreMap(map_itself, name, label)
 		return a_cell_map
 	
 	
 	def __get_cell(self, cell, asname):
-		'''Reads the CELL block
+		"""Reads the CELL block
 		
 		Inputs:
 			cell:		The ParameterList object describing a cell
@@ -807,7 +802,7 @@ class Case(object):
 		
 		Outputs:
 			TBD
-		'''
+		"""
 		
 		'''Cell cards are used to describe pin cells. A pin cell is defined as a configuration of concentric
 		cylinders (or rings) centered in a square region of coolant. Cell configurations can be used to
@@ -823,7 +818,6 @@ class Case(object):
 		name = cell.attrib["name"] + '-' + asname
 		num_rings = 0; radii = []; mats = []; label = "" 
 
-		
 		for prop in cell:
 			p = prop.attrib["name"]
 			v = prop.attrib["value"]
@@ -852,7 +846,6 @@ class Case(object):
 		if len(mats) != num_rings:
 			print("Error: there are", num_rings, "rings of", name, "but", len(mats), "materials were provided!", '(' + asname + ')')
 			self.errors += 1
-			
 			
 		a_cell = objects.Cell(name, num_rings, radii, mats, label, asname)
 		return a_cell

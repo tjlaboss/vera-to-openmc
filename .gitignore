@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 /geometry.xml
 /materials.xml
 /plots.xml
 /settings.xml
-*.pyc
-=======
+__pycache__
 *.pyc
 README.md
 
->>>>>>> a77006970af3d444d0681e61580378cfab015483
