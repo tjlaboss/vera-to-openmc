@@ -3,19 +3,13 @@
 # Takes a VERA case and attempts to construct 
 # the required files for an OpenMC input.
 
-from math import sqrt, copysign
 from copy import copy
 from read_xml import Case
 from functions import fill_lattice, clean
-from objects import Nozzle2 #debug
+import objects
+import openmc
 import pwr
-from pwr import SURFACE, CELL, MATERIAL, UNIVERSE	# Global constants for counters
-
-try:
-	import openmc
-except ImportError:
-	raise SystemExit("Error: Cannot import openmc. You will not be able to generate OpenMC objects.")
-
+from pwr import SURFACE, CELL, MATERIAL, UNIVERSE, TALLY	# Global constants for counters
 
 
 class MC_Case(Case):
@@ -45,12 +39,11 @@ class MC_Case(Case):
 		# Create an infinite cell/universe of moderator
 		self.mod_cell = openmc.Cell(100, name = "Infinite Mod Cell", fill = self.mod)
 		self.mod_verse = openmc.Universe(100, name = "Infinite Mod Universe", cells = (self.mod_cell,))
-		
 	
 	def __counter(self, TYPE):
 		"""Get the next cell/surface/material/universe number, and update the counter.
 		Input:
-			count:		CELL, SURFACE, MATERIAL, or UNIVERSE
+			count:		CELL, SURFACE, MATERIAL, UNIVERSE, or TALLY
 		Output:
 			integer representing the next cell/surface/material/universe ID"""
 		
@@ -90,10 +83,12 @@ class MC_Case(Case):
 	
 	
 	def get_openmc_baffle(self):
-		"""Create the cells and surfaces for the core baffle.
+		"""
 		
-		Outputs:
-			baffle_cells:	instance of openmc.Cell describing the baffle plates	
+		This has been deprecated.
+		
+		FIXME: Need to replace with pwr.baffle
+		
 		"""
 		
 		"""
@@ -980,8 +975,6 @@ if __name__ == "__main__":
 		if child.tag == "ParameterList":
 			print(child.attrib["name"])
 			
-	print
-	
 	#print test_case.describe()
 	all_pins = []
 	for a in test_case.assemblies.values():
@@ -1019,7 +1012,7 @@ if __name__ == "__main__":
 	#print(last_cell.region.surface())
 	
 	
-	core_lattice = test_case.get_openmc_core()
+	core_lattice = test_case.get_openmc_core_lattice()
 	
 	
 	
