@@ -12,7 +12,7 @@
 
 import xml.etree.ElementTree as ET
 from warnings import warn
-from functions import clean, calc_u234_u236_enrichments
+from functions import clean, calc_u234_u236_enrichments, shape
 import objects
 from objects import FUELTEMP, MODTEMP
 from openmc.data import atomic_mass
@@ -59,7 +59,7 @@ class Case(object):
 		self.assemblies = {}
 		self.inserts = {}
 		self.states = []
-		self.controls = [];	self.detectors = []
+		self.controls = {};	self.detectors = {}
 		
 		
 		# Placeholder for an essential material
@@ -75,19 +75,27 @@ class Case(object):
 		
 		# And now, select a state and use its properties
 		#FIXME: Right now, this just selects the first state encountered
-		state = self.states[0]
-		self.materials['mod'] = state.mod
+		self.state = self.states[0]
+		self.materials['mod'] = self.state.mod
+		'''
+		# Set control rod position
+		for bank in self.state.rodbank.keys():
+			nsteps = self.state.rodbank[bank]
+			print(self.controls)
+			crd = self.controls[bank]
+			crd.depth = (nsteps/crd.maxstep) * self.core.height 
+		'''
 		
 		# Set all material temperatures based off the STATE block
 		for mat in self.materials.values():
 			if mat.temperature:
 				# Then we know what material temperature to set
 				if mat.temperature == FUELTEMP:
-					mat.temperature = state.tfuel
+					mat.temperature = self.state.tfuel
 				elif mat.temperature == MODTEMP:
-					mat.temperature = state.tinlet
+					mat.temperature = self.state.tinlet
 			else:
-				mat.temperature = state.tinlet
+				mat.temperature = self.state.tinlet
 				warnstr = "Material " + mat.name + " does not have a temperature specified; defaulting to tinlet."
 				warn(warnstr)
 				self.warnings += 1
@@ -171,17 +179,15 @@ class Case(object):
 						# 	rated_flow, rated_power, and shape
 						
 						# Initialize variables to be passed to the Core instance
-						pitch = 0.0; 	asmbly = []; shape = [];
+						pitch = 0.0; 	asmbly = []; shape_map = [];
 						core_size = 0; 	core_height = 0.0;  
 						bcs = {"bot":"vacuum",	"rad":"vacuum",	"top":"vacuum"}
 						baffle = {}; lower = {}; upper = {}; lower_refl = None; upper_refl = None
 						radii = []; mats = [] 
 						insert_cellmap = [];	detector_cellmap = []
-						# NOTE: the bank_cellmap can probably be safely removed.
 						control_cellmap = [];	control_bank_cellmap = []  
 						
 						# Unpack these variables from core_params
-						# Delete them from the dict, and pass the remaining params on to objects.Core
 						for p in core_params:
 							v = core_params[p]
 							if p == "apitch":
@@ -189,7 +195,7 @@ class Case(object):
 							elif p == "assm_map":
 								asmbly = clean(v, str)
 							elif p == "shape":
-								shape = clean(v, int)
+								shape_map = objects.CoreMap(clean(v, int), "Core shape map")
 							elif p == "core_size":
 								core_size = int(v)
 							elif p == "height":
@@ -253,24 +259,21 @@ class Case(object):
 								radii = clean(v, float)
 							elif p == "vessel_mats":
 								mats = clean(v, str)
-							else:
-								# Don't delete it from the misc params
-								continue
-							#del core_params[p]
 						
 						
-						# Generate some core maps from the ugly cellmaps
+						# Take the ugly cellmaps, shape them to match the core shape,
+						# and then turn them into nice CoreMaps.
 						if insert_cellmap:
-							insert_map = objects.CoreMap(insert_cellmap, "Core insertion map")
+							insert_map = objects.CoreMap(shape(insert_cellmap, shape_map), "Core insertion map")
 						else:	insert_map = None
 						if control_bank_cellmap:
-							control_bank = objects.CoreMap(control_bank_cellmap, "Control rod location map")
+							control_bank = objects.CoreMap(shape(control_bank_cellmap, shape_map), "Control rod bank map")
 						else:	control_bank = None
 						if control_cellmap:
-							control_map = objects.CoreMap(control_cellmap, "Control rod insertion map")
+							control_map = objects.CoreMap(shape(control_cellmap, shape_map), "Control rod location map")
 						else:	control_map = None
 						if detector_cellmap:
-							detector_map = objects.CoreMap(detector_cellmap, "Detector location map")
+							detector_map = objects.CoreMap(shape(detector_cellmap, shape_map), "Detector location map")
 						else:	detector_map = None
 							
 							
@@ -278,7 +281,7 @@ class Case(object):
 						if len(radii) != len(mats):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
 							self.errors += 1
-						self.core = objects.Core(pitch, core_size, core_height, shape, asmbly, core_params,
+						self.core = objects.Core(pitch, core_size, core_height, shape_map, asmbly, core_params,
 												 bcs, lower_refl, upper_refl, radii, mats, baffle,
 												 control_bank, control_map, insert_map, detector_map)
 								
@@ -397,10 +400,18 @@ class Case(object):
 						self.mc = objects.MonteCarlo(cycles, inactive, particles)
 					
 							
-					elif name in ("INSERTS", "CONTROLS", "DETECTORS"):
+					elif name == "INSERTS":
 						for insert in child:
 							new_insert = self.__get_insert(insert)
 							self.inserts[new_insert.key] = new_insert
+					elif name == "CONTROLS":
+						for insert in child:
+							new_insert = self.__get_insert(insert, is_control = True)
+							self.controls[new_insert.key] = new_insert
+					elif name == "DETECTORS":
+						for insert in child:
+							new_insert = self.__get_insert(insert)
+							self.detectors[new_insert.key] = new_insert
 					else:
 						warn("Unexpected ParameterList " + name + " encountered; ignoring.")
 				
@@ -624,6 +635,9 @@ class Case(object):
 			else:
 				state_params[p] = v
 		
+		# Define the rodbank dictionary using 'bank_labels' as keys and 'bank_pos' as values
+		rodbank = dict(zip(bank_labels, bank_pos))
+		
 		# Calculate the actual boron composition, and create
 		# a new VERA material for it.
 		# The following are WEIGHT fractions
@@ -641,17 +655,18 @@ class Case(object):
 		
 		# Instantiate and return the State object
 		a_state = objects.State(key, tfuel, tinlet, mod, name, 
-								bank_labels, bank_pos, state_params)
+								rodbank, state_params)
 		return a_state
 	
 	
-	def __get_insert(self, insert):
+	def __get_insert(self, insert, is_control = False):
 		'''Similar to the other __get_thing() methods
 		
-		Input:
-			insert:		The ParameterList object describing an assembly insert
+		Inputs:
+			insert:			The ParameterList object describing an assembly insert
+			is_control:		Whether to instantiate this as a Control object.
 		Output:
-			an_insert:	instance of objects.Insert
+			an_insert:		instance of objects.Insert
 		'''
 		in_name = insert.attrib["name"].lower()
 		# dictionary of all independent parameters for this assembly
@@ -706,9 +721,12 @@ class Case(object):
 				self.errors += 1
 		
 				
-		
-		an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
-									insert_params, stroke, max_step)
+		if is_control:
+			an_insert = objects.Control(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
+										insert_params, stroke, max_step)
+		else:
+			an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
+										insert_params)
 		return an_insert
 			
 	

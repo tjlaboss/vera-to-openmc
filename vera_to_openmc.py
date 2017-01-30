@@ -7,6 +7,7 @@ from math import sqrt, copysign
 from copy import copy
 from read_xml import Case
 from functions import fill_lattice, clean
+from objects import Nozzle2 #debug
 import pwr
 from pwr import SURFACE, CELL, MATERIAL, UNIVERSE	# Global constants for counters
 
@@ -27,10 +28,11 @@ class MC_Case(Case):
 		self.openmc_surfaces = []
 		self.openmc_materials = {}
 		self.openmc_pincells = {}
+		self.openmc_assemblies = {}
 		
 		# ID Counter
-		# Starting at 9 makes all IDs double digits
-		self.counter = pwr.Counter(9, 9, 9, 9)
+		# Starting at 99 makes all IDs triple digits
+		self.counter = pwr.Counter(99, 99, 99, 99)
 		
 		
 		# Create the essential moderator material
@@ -41,8 +43,8 @@ class MC_Case(Case):
 		self.mod.add_s_alpha_beta("c_H_in_H2O")
 		
 		# Create an infinite cell/universe of moderator
-		self.mod_cell = openmc.Cell(1, name = "Infinite Mod Cell", fill = self.mod)
-		self.mod_verse = openmc.Universe(1, name = "Infinite Mod Universe", cells = (self.mod_cell,))
+		self.mod_cell = openmc.Cell(100, name = "Infinite Mod Cell", fill = self.mod)
+		self.mod_verse = openmc.Universe(100, name = "Infinite Mod Universe", cells = (self.mod_cell,))
 		
 	
 	def __counter(self, TYPE):
@@ -486,7 +488,6 @@ class MC_Case(Case):
 				material += suffix
 				break
 		
-		
 		if material in self.openmc_materials:
 			# Look it up as normal
 			openmc_material = self.openmc_materials[material]
@@ -559,7 +560,7 @@ class MC_Case(Case):
 							break # from the "for s in" loop
 				if not surf_id:
 					# Generate new surface and get its surf_id
-					s = openmc.ZCylinder(self.__counter(SURFACE), "transmission", 0, 0, r)
+					s = openmc.ZCylinder(self.counter.add_surface(), "transmission", 0, 0, r)
 					# Add the new surfaces to the registry
 					self.openmc_surfaces.append(s)
 					
@@ -587,13 +588,13 @@ class MC_Case(Case):
 			# end of "for ring" loop
 			
 			# Then add the moderator outside the pincell
-			mod_cell = openmc.Cell(self.__counter(CELL), vera_cell.name + "-Mod")
+			mod_cell = openmc.Cell(self.counter.add_cell(), vera_cell.name + "-Mod")
 			mod_cell.fill = self.mod
 			mod_cell.region = +last_s
 			openmc_cells.append(mod_cell)
 			
 			# Create a new universe in which the pin cell exists 
-			pincell_universe = openmc.Universe(self.__counter(UNIVERSE), vera_cell.name + "-verse")
+			pincell_universe = openmc.Universe(self.counter.add_universe(), vera_cell.name + "-verse")
 			pincell_universe.add_cells(openmc_cells)
 			
 			# Initialize a useful dictionary to keep track of versions of
@@ -616,9 +617,6 @@ class MC_Case(Case):
 		Outputs:
 			openmc_asmblies:	list of instance of openmc.RectLattice
 		'''
-		
-		
-		ps = vera_asmbly.params
 		pitch = vera_asmbly.pitch
 		npins = vera_asmbly.npins
 		# Look for optional parameters available from vera_asmbly.params
@@ -651,11 +649,8 @@ class MC_Case(Case):
 	
 	
 	
-		
-	
-	
 	def get_openmc_assembly(self, vera_asmbly):
-		'''Creates an OpenMC fuel assembly, complete with lattices
+		"""Creates an OpenMC fuel assembly, complete with lattices
 		of fuel pins and spacer grids, that should be equivalent to what
 		is constructed by VERA.
 		
@@ -663,73 +658,112 @@ class MC_Case(Case):
 			vera_asmbly:		instance of objects.Assembly
 		
 		Outputs:
-			openmc_asmbly:		instance of openmc.Universe containing
-								the lattices, spacers, and such
-		'''
-		
-		ps = vera_asmbly.params
-		pitch = vera_asmbly.pitch
-		npins = vera_asmbly.npins
-		
-		# Initiate and describe the Assembly
-		pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.__counter(UNIVERSE), pitch, npins)
-		pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
-		pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
-		pwr_asmbly.mod = self.mod
-		pwr_asmbly.counter = self.counter
-		
-		# FIXME: Handle spacer grids
-		if vera_asmbly.spacergrids:
-			pwr_spacergrids = {}
-			# Translate from VERA to pwr 
-			for gkey in vera_asmbly.spacergrids:
-				g = vera_asmbly.spacergrids[gkey]
-				mat = self.get_openmc_material(g.material)
-				grid = pwr.SpacerGrid(gkey, g.height, g.mass, mat, pitch, npins)
-				pwr_spacergrids[gkey] = grid
+			pwr_asmbly:			instance of pwr.Assembly containing the lattices, spacers, and such. 
+								pwr_asmbly.universe is the instance of openmc.Universe modeling
+								the fuel assembly.
+		"""
+		key = vera_asmbly.name
+		if key in self.openmc_assemblies:
+			return self.openmc_assemblies[key]
+		else:
 			
-			pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: pwr_spacergrids[key] )
-			pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
+			ps = vera_asmbly.params
+			pitch = vera_asmbly.pitch
+			npins = vera_asmbly.npins
+			
+			# Initiate and describe the Assembly
+			pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.counter.add_universe(), pitch, npins)
+			pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
+			pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
+			pwr_asmbly.mod = self.mod
+			pwr_asmbly.counter = self.counter
+			
+			if vera_asmbly.spacergrids:
+				if not vera_asmbly.pwr_spacers:
+					# Translate from VERA to pwr 
+					for gkey in vera_asmbly.spacergrids:
+						g = vera_asmbly.spacergrids[gkey]
+						mat = self.get_openmc_material(g.material)
+						grid = pwr.SpacerGrid(gkey, g.height, g.mass, mat, pitch, npins)
+						vera_asmbly.pwr_spacers[gkey] = grid
+				# Otherwise, we should already have a dictionary of them.
+				
+				pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: vera_asmbly.pwr_spacers[key] )
+				pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
+			
+			# Handle nozzles
+			
+			if "lower_nozzle_comp" in ps:
+				if "lower" not in vera_asmbly.pwr_nozzles:
+					nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
+					mass = float(ps["lower_nozzle_mass"])
+					height = float(ps["lower_nozzle_height"])
+					lnozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch, "lower-nozzle-mat")
+					#lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
+					#					counter = self.counter, name = "Lower Nozzle")
+					#self.openmc_materials[lnozmat.name] = lnozmat
+					lnoz = Nozzle2(height, lnozmat, "Lower Nozzle")
+					vera_asmbly.pwr_nozzles["lower"] = lnoz
+				else:
+					lnoz = vera_asmbly.pwr_nozzles["lower"]
+				pwr_asmbly.lower_nozzle = lnoz
+			if "upper_nozzle_comp" in ps:
+				if "upper" not in vera_asmbly.pwr_nozzles:
+					nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
+					mass = float(ps["upper_nozzle_mass"])
+					height = float(ps["upper_nozzle_height"])
+					unozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch, "upper-nozzle-mat")
+					#unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
+					#					counter = self.counter, name = "Upper Nozzle")
+					#self.openmc_materials[unozmat.name] = unozmat
+					unoz = Nozzle2(height, unozmat, "Upper Nozzle") 
+					vera_asmbly.pwr_nozzles["upper"] = unoz
+				else:
+					unoz = vera_asmbly.pwr_nozzles["upper"]
+				pwr_asmbly.upper_nozzle = unoz
+			
+			'''	Worth noting about the nozzles:
 		
-		# Handle nozzles
-		if "lower_nozzle_comp" in ps:
-			nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
-			mass = float(ps["lower_nozzle_mass"])
-			height = float(ps["lower_nozzle_height"])
-			lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
-								counter = self.counter, name = "Lower Nozzle")
-			lnozmat = lnoz.get_nozzle_material()
-			self.openmc_materials[lnozmat.name] = lnozmat
-			pwr_asmbly.lower_nozzle = lnoz
-		if "upper_nozzle_comp" in ps:
-			nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
-			mass = float(ps["upper_nozzle_mass"])
-			height = float(ps["upper_nozzle_height"])
-			unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
-								counter = self.counter, name = "Upper Nozzle")
-			unozmat = unoz.get_nozzle_material()
-			self.openmc_materials[unozmat.name] = unozmat
-			pwr_asmbly.upper_nozzle = unoz
-		
-		'''	Worth noting about the nozzles:
+				== Analysis of the BEAVRS Benchmark Using MPACT ==
+			A major difference between the model and the benchmark specification is the treatment of 
+			the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled 
+			with a considerable amount of stainless steel. The authors discerned that 
+			the benchmark is specifying up to 10 times the amount of steel that is in the nozzle and
+			core plate region. Instead of using this amount of steel, a Westinghouse optimized fuel
+			assembly (OFA) design found in Technical Report ML033530020 is used for the upper and
+			lower reflector regions.
+											--CASL-U-2015-0183-000	'''
+			
+			
+			# Where the magic happens
+			pwr_asmbly.build()
+			self.openmc_assemblies[key] = pwr_asmbly
+			
+				
+			return pwr_asmbly
 	
-			== Analysis of the BEAVRS Benchmark Using MPACT ==
-		A major difference between the model and the benchmark specification is the treatment of 
-		the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled 
-		with a considerable amount of stainless steel. The authors discerned that 
-		the benchmark is specifying up to 10 times the amount of steel that is in the nozzle and
-		core plate region. Instead of using this amount of steel, a Westinghouse optimized fuel
-		assembly (OFA) design found in Technical Report ML033530020 is used for the upper and
-		lower reflector regions.
-										--CASL-U-2015-0183-000	'''
+	
+	def get_nozzle_mixture(self, height, mass, nozzle_mat, mod_mat, npins, pitch, name = "nozzle-material"):
+		"""Get the mixture for a nozzle. 
 		
+		Inputs:
 		
-		# Where the magic happens
-		pwr_asmbly.build()
-		#openmc_asmbly_builder = pwr_asmbly.build()
+		Output:
+			new_mixture:		instance of pwr.Mixture
+		"""
+		if name in self.openmc_materials:
+			return self.openmc_materials[name]
+		else:
+			v = (npins*pitch)**2 * height
+			mat_vol = mass / nozzle_mat.density
+			mod_vol = v - mat_vol
+			vfracs = [mat_vol / v, mod_vol / v]
+			new_mixture = pwr.Mixture((nozzle_mat, mod_mat), vfracs,
+			                name = name, material_id = self.counter.add_material())
+			self.openmc_materials[name] = new_mixture
+			return new_mixture
 		
-			
-		return pwr_asmbly
+	
 	
 	
 	def get_openmc_reactor_vessel(self):
@@ -753,11 +787,11 @@ class MC_Case(Case):
 		core_cells = []
 		
 		# Create the top and bottom planes of the core and core plate
-		plate_bot = openmc.ZPlane(self.__counter(SURFACE),
+		plate_bot = openmc.ZPlane(self.counter.add_surface(),
 							z0 = -self.core.bot_refl.thick, boundary_type = self.core.bc["bot"])
-		core_bot = openmc.ZPlane(self.__counter(SURFACE), z0 = 0.0)
-		core_top = openmc.ZPlane(self.__counter(SURFACE), z0 = self.core.height)
-		plate_top = openmc.ZPlane(self.__counter(SURFACE),
+		core_bot = openmc.ZPlane(self.counter.add_surface(), z0 = 0.0)
+		core_top = openmc.ZPlane(self.counter.add_surface(), z0 = self.core.height)
+		plate_top = openmc.ZPlane(self.counter.add_surface(),
 							z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
 		
 		# Create the concentric cylinders of the vessel
@@ -765,10 +799,10 @@ class MC_Case(Case):
 			r = self.core.vessel_radii[ring]
 			m = self.core.vessel_mats[ring]
 			
-			s = openmc.ZCylinder(self.__counter(SURFACE), R = r)
+			s = openmc.ZCylinder(self.self.counter.add_surface(), R = r)
 			
 			cell_name = "Vessel_" + str(ring)
-			new_cell = openmc.Cell(self.__counter(CELL), cell_name)
+			new_cell = openmc.Cell(self.self.counter.add_cell(), cell_name)
 			
 			if ring == 0:
 				# For the center ring,
@@ -841,7 +875,7 @@ class MC_Case(Case):
 	
 	
 	
-	def get_openmc_core(self):
+	def get_openmc_core_lattice(self, blank = "-"):
 		'''Create the reactor core lattice. 
 		
 		This is an extremely important function that hasn't really been written yet.
@@ -858,6 +892,9 @@ class MC_Case(Case):
 		Then zip this lattice up in a universe and return it.
 		Later, that will be placed inside the baffle, and the reactor vessel.
 		
+		Input:
+			blank:			string which represents a location in a core map with no insertion.
+							[Default: "-"]
 		Output:
 			openmc_core:	instance of openmc.RectLattice; the lattice contains [read: will contain]
 							instances of pwr.Assembly
@@ -865,24 +902,20 @@ class MC_Case(Case):
 		shape, asmap = self.core.square_maps(space = "")
 		n = len(shape)
 		halfwidth = self.core.pitch * n / 2.0
-		as_min_x = pwr.get_plane(self.openmc_surfaces, self.__counter, 'x', -halfwidth)
-		as_max_x = pwr.get_plane(self.openmc_surfaces, self.__counter, 'x', +halfwidth)
-		as_min_y = pwr.get_plane(self.openmc_surfaces, self.__counter, 'y', -halfwidth)
-		as_may_x = pwr.get_plane(self.openmc_surfaces, self.__counter, 'y', +halfwidth)
-		
 		
 		openmc_core = openmc.RectLattice(self.__counter(UNIVERSE), "Core Lattice")
 		openmc_core.pitch = (self.core.pitch, self.core.pitch)
 		openmc_core.lower_left = [-halfwidth * n / 2.0] * 2
+		openmc_core.outer = self.mod_verse
 		
-		# BAD PROBLEM:
-		# FIXME: the insert_map isn't the same size as the shape map!!
-		
-		
+		ins_map = self.core.insert_map.square_map()
+		det_map = self.core.detector_map.square_map()
+		crd_map = self.core.control_map.square_map()
+		crd_bank_map = self.core.control_bank.square_map()
 		
 		lattice = [[None,]*n]*n
 		
-		# Note: For efficiency, see if I can replace this with functions.fill_lattice()
+		print("Generating core (this may take a while)...")
 		for j in range(n):
 			new_row = [None,]*n
 			for i in range(n):
@@ -890,22 +923,44 @@ class MC_Case(Case):
 				if shape[j][i]:
 					askey = asmap[j][i].lower()
 					vera_asmbly = self.assemblies[askey]
-					print(self.core.insert_map.str_map())
-					print(len(self.core.insert_map), j, i)
-					inkey = self.core.insert_map.square_map()[j][i]
-					if inkey != "-":
-						vera_insert = self.inserts[inkey]
-						vera_asmbly = copy(vera_asmbly)
-						vera_asmbly.add_insert(vera_insert)
-					# TODO: add control_map, detector_map
 					
-					new_row[i] = vera_asmbly # REPLACE WITH: this assembly
+					ins_key = ins_map[j][i]
+					det_key = det_map[j][i]
+					crd_key = crd_map[j][i]
+					crd_bank_key = crd_bank_map[j][i]
+					
+					if (ins_key or crd_key or det_key) != blank:
+						vera_asmbly = copy(vera_asmbly)
+						# Handle each type of insertion differently.
+						if ins_key != blank:
+							vera_ins = self.inserts[ins_key]
+							vera_asmbly.add_insert(vera_ins)
+							vera_asmbly.name += "+" + vera_ins.name
+						if crd_key != blank:
+							vera_crd = self.controls[crd_key]
+							steps = self.state.rodbank[crd_bank_key]
+							depth = steps*vera_crd.step_size
+							vera_asmbly.add_insert(vera_crd, depth)
+							vera_asmbly.name += "+" + vera_crd.name
+						if det_key != blank:
+							# Is it any different than a regular insert?
+							vera_det = self.detectors[det_key]
+							vera_asmbly.add_insert(vera_det)
+							vera_asmbly.name += "+" + vera_det.name
+					
+					openmc_assembly = self.get_openmc_assembly(vera_asmbly)
+					
+					new_row[i] = openmc_assembly.universe
 				else:
 					# Then install the moderator universe instead
-					new_row[i] = 0 # REPLACE WITH: that universe
+					#new_row[i] = 0 # REPLACE WITH: that universe
+					new_row[i] = self.mod_verse
 			lattice[j] = new_row
-			
-		return lattice
+		
+		
+		openmc_core.universes = lattice
+		
+		return openmc_core
 	
 	
 	

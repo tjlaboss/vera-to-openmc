@@ -115,8 +115,8 @@ class State(object):
 		##			[Default: 0.199]
 		name:		str; descriptive title of the state
 					[Default: empty string]
+		rodbank:	dictionary of control rod banks in the format { crd_key : crd_position }
 		params:		catch-all dictionary for the raw parameters from the deck
-		---more to come---
 		 
 	"""
 	
@@ -131,8 +131,7 @@ class State(object):
 		self.mod = mod
 		self.name = name
 		
-		self.bank_labels = bank_labels
-		self.bank_pos = bank_pos
+		self.rodbank = rodbank
 		self.params = params
 
 
@@ -180,8 +179,12 @@ class Assembly(object):
 		cells:			Dictionary of Cell objects in this assembly {cell.key:cell}
 		params:			Dictionary of all the other parameters provided
 						in the Assembly block
-		cellmaps: 		Dictionary of CellMap objects
+		cellmaps: 		Dictionary of CellMap objects containing the original cell maps
 		spacergrids:	Dictionary of SpacerGrid objects
+	Other attributes:
+		key_maps:		Dictionary of CellMap objects containing the unique Cell keys
+		pwr_nozzles:	Dictionary of pwr.Nozzle instances which have been created for this
+		pwr_spacers: 	Dictionary of pwr.SpacerGrid instances which have been created for this
 	"""
 	
 	def __init__(self, name, cells, params = {}, cellmaps = {}, spacergrids = {}):  # more inputs to come
@@ -197,6 +200,9 @@ class Assembly(object):
 		self.axial_elevations = clean(params["axial_elevations"], float)
 		self.pitch = float(params["ppitch"])
 		self.npins = int(params["num_pins"])
+		
+		self.pwr_spacers = {}
+		self.pwr_nozzles = {}
 		
 		self.construct_maps()
 	
@@ -231,11 +237,15 @@ class Assembly(object):
 		else:
 			return blank
 	
-	def add_insert(self, insertion):
+	def add_insert(self, insertion, depth = 0.0):
 		"""Merge levels
 		
-		Input:
-			insertion:		instance of Insert"""
+		Inputs:
+			insertion:		instance of Insert
+			depth:			for partially withdrawn Inserts (such control rods),
+							the depth at which the Insert begins.
+							[Default: 0]
+		"""
 		
 		# First of all, ignore insertions in the nozzle region
 		# TODO: At a later date, figure out if it is important to model them.
@@ -243,11 +253,31 @@ class Assembly(object):
 		
 		# TODO: This method needs to account for the depth of insertion, for control rods.
 		# The control rod insertion is given in the [STATE] block.
-		
-		na_levels = len(self.axial_elevations)
+		na_levels = len(self.axial_elevations) 
 		ni_levels = len(insertion.axial_elevations)
+		if depth:
+			# Truncate at the top of the assembly
+			max_elev = max(insertion.axial_elevations + insertion.axial_elevations)
+			insert_elevations = []
+			insert_labels = insertion.axial_labels[0:1]
+			for i in range(ni_levels):
+				z = insertion.axial_elevations[i] + depth
+				if z < max_elev:
+					insert_elevations.append(z)
+					insert_labels.append(insertion.axial_labels[i+1])
+				else:
+					break
+			ni_levels = len(insert_elevations)	
+			#next two lines are debug
+			print("Before:", insertion.axial_elevations, insertion.axial_labels)
+			print("After:", insert_elevations, insert_labels)
+		else:
+			insert_elevations = insertion.axial_elevations
+			insert_labels = insertion.axial_labels
+		
+		
 		# Merge and remove the duplicates
-		all_elevs = list(set(self.axial_elevations + insertion.axial_elevations))
+		all_elevs = list(set(self.axial_elevations + insert_elevations))
 		all_elevs.sort()
 		all_labels = [None, ] * (len(all_elevs) - 1)
 		all_key_maps = dict(self.key_maps)
@@ -260,30 +290,30 @@ class Assembly(object):
 			for k in range(na_levels - 1):
 				if (z >= max(self.axial_elevations)) or (self.axial_elevations[k + 1] >= z > self.axial_elevations[k]):
 					a_label = self.axial_labels[k]
-					amap = self.cellmaps[a_label]
-					akeymap = fill_lattice(amap, self.lookup)
+					akeymap = self.key_maps[a_label]
 					break
-			for k in range(ni_levels - 1):
-				# TODO: Account for control rod insertion depth by checking 
-				# whether z > insertion.depth or something
-				if (z == max(insertion.axial_elevations)) or (
-								insertion.axial_elevations[k + 1] >= z > insertion.axial_elevations[k]):
-					i_label = insertion.axial_labels[k]
-					imap = insertion.cellmaps[i_label]
-					ikeymap = fill_lattice(imap, insertion.lookup)
+				elif z == min(self.axial_elevations):
+					a_label = self.axial_labels[0]
+					akeymap = self.key_maps[a_label]
+					break
+				
+			for k in range(ni_levels-1):
+				if (z == max(insert_elevations)) or (z <= insert_elevations[k+1] and z > insert_elevations[k]):
+					i_label = insert_labels[k]
+					ikeymap = insertion.key_maps[i_label]
 					break
 			# Now we know the label of this level in self (assembly) and insertion
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
 				new_label = a_label + '+' + i_label
-				lamij = lambda i, j: self.get_cell_insert(insertion, imap, amap, i, j)
-				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = lamij)
+				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap)
 				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion
-				new_lattice = fill_lattice(amap, self.lookup, self.npins)
+				new_lattice = self.key_maps[a_label]
 				new_map = CoreMap(new_lattice, name = a_label + " (keymap)", label = a_label)
 			else:
+				print("z:", z, "\ta_label:", a_label, "\ti_label:", i_label)
 				errstr = "Something went wrong. There should be an Assembly level here, but there isn't.\n"
 				errstr += "z = " + str(z) + "\ta_label = " + a_label + "\ti_label = " + i_label
 				raise IndexError(errstr)
@@ -349,17 +379,13 @@ class Insert(Assembly):
 						[Default: 0]
 		cells:			dictionary of instances of Cell 	{cell.key:Cell}
 		cellmaps:		dictionary of instances of Cellmap 	{???:Cellmap}
-		axial_elevs:	list of floats describing
-		stroke:			float; Control rod stroke. Distance (cm) between
-						full-insertion and full-withdrawal
-						[Only used for CONTROL inserts]  [Default: 0]
-		maxstep:		int; Total number of steps between full-insertion and full-withdrawal
-						[Only used for CONTROL inserts] [Default: 0]
+		axial_elevs:	list of floats describing the axial elevations of the lattice layers
 	"""
 	
 	def __init__(self, key, name = "", npins = 0,
-	             cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
-	             params = {}, stroke = 0.0, maxstep = 0):
+				 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
+				 params = {}):
+		
 		
 		if axial_elevs or axial_labels:
 			assert (len(axial_elevs) == len(axial_labels) + 1), \
@@ -373,10 +399,48 @@ class Insert(Assembly):
 		self.axial_elevations = axial_elevs
 		self.axial_labels = axial_labels
 		self.params = params
-		self.stroke = stroke
-		self.maxstep = maxstep
 		
 		self.construct_maps()
+
+    
+class Control(Insert):
+	"""Container for information about control rods.
+	
+	An insert_map (attribute of class Core) is used to show where assembly
+	inserts are located within the core; for example, burnable poison assemblies
+	with different numbers of pyrex rods. It can also be used to place objects
+	such as thimble plugs. The description of such inserts is given
+	in the VERA input deck under the [INSERT] block
+	
+	Inputs:
+		key:			str; unique identifier of this insert
+		name:			str; more descriptive name of this insert
+						[Default: empty string]
+		npins:			int; number of pins across the assembly this insert is to be placed in.
+						Must be equal to assembly.npins.
+						[Default: 0]
+		cells:			dictionary of instances of Cell 	{cell.key:Cell}
+		cellmaps:		dictionary of instances of Cellmap 	{???:Cellmap}
+		axial_elevs:	list of floats describing the axial elevations of the lattice layers
+		stroke:			float; Control rod stroke. Distance (cm) between
+						full-insertion and full-withdrawal
+						[Default: 0]
+		maxstep:		int; Total number of steps between full-insertion and full-withdrawal
+						Default: 0]
+		
+	Other attributes:
+		step_size:		stroke/maxstep
+	"""
+		
+	def __init__(self, key, name = "", npins = 0,
+				 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
+				 params = {}, stroke = 0.0, maxstep = 0, depth = 0.0):
+	
+	
+		super().__init__(key, name, npins, cells, cellmaps, axial_elevs, axial_labels, params)
+		self.stroke = stroke
+		self.maxstep = maxstep
+		self.step_size = stroke/float(maxstep)
 
 
 class SpacerGrid(object):
@@ -407,11 +471,11 @@ class CoreMap(object):
 	Inputs: 
 		cell_map: 	List of integers or strings describing the assembly layout
 					You can also give it a square_map, and it will process it appropriately
-	Optional:
 		name: 		String containing the descriptive Assembly name
+					[Default: empty string]
 		label:		string containing the unique Assembly identifier
+					[Default: empty string]	
 	"""
-	
 	def __init__(self, cell_map, name = "", label = ""):
 		self.name = name
 		self.label = label
@@ -534,9 +598,8 @@ class Core(object):
 		size:		int; 	number of assemblies across one axis of the full core
 		height:		float;	total axial distance (cm) from the bottom core plate
 					to the top core plate, excluding plate thickness
-		shape:		list of integers containing a map of the shape of the core,
-					which is converted to an instance of CoreMap. (Alternatively,
-					an instance of CoreMap may be directly specified.)
+		shape_map:	list or CoreMap of integers containing a map of the shape of the core.
+					If a list is given, it will be transformed into a CoreMap.
 					A 1 marks a valid assembly location; a 0, an invalid location
 		asmbly:		list of strings containing a map of the fuel assemblies in the core, 
 					which may be specified or converted as above. **Must conform to self.shape**
@@ -662,6 +725,16 @@ class Core(object):
 			return (self.shape.str_map(), self.__asmbly_str_map(space))
 		else:
 			return which + " is not a valid option."
+
+
+class Nozzle2(object):
+	"""Attempt 2 at creating a pwr nozzle
+		
+	"""
+	def __init__(self, height, material, name = "nozzle"):
+		self.height = height
+		self.name = name
+		self.material = material
 
 
 class Reflector(object):
