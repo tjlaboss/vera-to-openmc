@@ -46,6 +46,7 @@ class MC_Case(Case):
 		self.mod_cell = openmc.Cell(100, name = "Infinite Mod Cell", fill = self.mod)
 		self.mod_verse = openmc.Universe(100, name = "Infinite Mod Universe", cells = (self.mod_cell,))
 	
+	
 	def __counter(self, TYPE):
 		"""Get the next cell/surface/material/universe number, and update the counter.
 		Input:
@@ -73,46 +74,14 @@ class MC_Case(Case):
 		if dim in ("x", "xp", "xplane"):
 			surfdict = self.openmc_xplanes
 		elif dim in ("y", "yp", "yplane"):
-			surfdict = self.openmc_xplanes
+			surfdict = self.openmc_yplanes
 		elif dim in ("z", "zp", "zplane"):
-			surfdict = self.openmc_xplanes
+			surfdict = self.openmc_zplanes
 		elif dim in ("r", "cyl", "cylinder", "zcylinder"):
-			surfdict = self.openmc_xplanes
+			surfdict = self.openmc_cylinders
 		else:
 			raise AssertionError(str(dim) + " is not an acceptable Surface type.")
-		return pwr.add_surface(self.counter, surfdict, dim, coeff, rd)
-		
-	
-		
-	def __get_xyz_planes(self, x0s = (), y0s = (), z0s = (), rd = 5):
-		"""
-		Inputs:
-			x0s:		list or tuple of x0's to check for; default is empty tuple
-			y0s:		same for y0's
-			z0s:		same for z0's
-			rd:			integer; number of digits to round to when comparing surface
-						equality. Default is 5
-		Outputs:
-			xlist:		list of instances of openmc.XPlane, of length len(x0s)
-			ylist:		ditto, for openmc.YPlane, y0s
-			zlist:		ditto, for openmc.ZPlane, z0s
-		"""
-		nx = len(x0s)
-		ny = len(y0s)
-		nz = len(z0s)
-		xlist = [None,]*nx
-		ylist = [None,]*ny
-		zlist = [None,]*ny
-		
-		for i in range(nx):
-			xlist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'x', x0s[i], eps = rd)
-		for i in range(ny):
-			ylist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'y', y0s[i], eps = rd)
-		for i in range(nz):
-			zlist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'z', z0s[i], eps = rd)
-		
-		return xlist, ylist, zlist
-	
+		return pwr.get_surface(self.counter, surfdict, dim, coeff, rd)
 	
 	
 	def get_openmc_baffle(self):
@@ -516,32 +485,6 @@ class MC_Case(Case):
 		openmc_vessel.add_cells(core_cells)
 		
 		return openmc_vessel, inside_cell, inside_fill, outer_surfs
-			
-	
-	def add_insert(self, base_lattice, insert):
-		"""Insert a burnable poision, thimble plug, or other arbitrary object to a lattice.
-		
-		Inputs:
-			base_lattice:		instance of openmc.RectLattice
-			insert:				instance of objects.Insert with the same
-								number of pins as base_lattice
-		
-		Outputs:
-			new_lattice:		instance of openmc.RectLattice with some cells replaced
-		"""
-		n = insert.npins
-		x = base_lattice.size[0]
-		y = base_lattice.size[1]
-		assert(n == x and n == y), \
-			"'base_lattice' must be exactly " + str(n) + "x" + str(n) + " pins."
-		
-		
-		
-		
-		return None
-	
-	
-	
 	
 	
 	
