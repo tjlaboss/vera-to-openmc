@@ -292,6 +292,9 @@ class MC_Case(Case):
 			
 			# Initiate and describe the Assembly
 			pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.counter.add_universe(), pitch, npins)
+			pwr_asmbly.xplanes = self.openmc_xplanes
+			pwr_asmbly.yplanes = self.openmc_yplanes
+			pwr_asmbly.zplanes = self.openmc_zplanes
 			pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
 			pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
 			pwr_asmbly.mod = self.mod
