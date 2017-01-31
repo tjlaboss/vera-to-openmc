@@ -20,6 +20,12 @@ class MC_Case(Case):
 		super(MC_Case, self).__init__(source_file)
 		
 		self.openmc_surfaces = []
+		# The following dictionaries use key-value pairs of 'coefficient':openmc.Surface
+		self.openmc_xplanes ={}         # {str(x0):openmc.XPlane)
+		self.openmc_yplanes ={}         # {str(y0):openmc.YPlane)
+		self.openmc_zplanes ={}         # {str(z0):openmc.ZPlane)
+		self.openmc_cylinders ={}       # {str(R):openmc.Cylinder)
+		
 		self.openmc_materials = {}
 		self.openmc_pincells = {}
 		self.openmc_assemblies = {}
@@ -51,6 +57,32 @@ class MC_Case(Case):
 		return self.counter.count(TYPE)
 	
 	
+	def __get_surface(self, dim, coeff, rd = 5):
+		"""Wrapper for pwr.get_surface()
+		
+		Inputs:
+			:param dim:             str; dimension or surface type. Case insensitive.
+			:param coeff:           float; Value of the coefficent (such as x0 or R) for the surface type
+			:param rd:              int; number of decimal places to round to. If the coefficient for a surface matches
+									up to 'rd' decimal places, they are considered equal.
+									[Default: 5]
+		Output:
+			:return openmc_surf:
+		"""
+		dim = dim.lower()
+		if dim in ("x", "xp", "xplane"):
+			surfdict = self.openmc_xplanes
+		elif dim in ("y", "yp", "yplane"):
+			surfdict = self.openmc_xplanes
+		elif dim in ("z", "zp", "zplane"):
+			surfdict = self.openmc_xplanes
+		elif dim in ("r", "cyl", "cylinder", "zcylinder"):
+			surfdict = self.openmc_xplanes
+		else:
+			raise AssertionError(str(dim) + " is not an acceptable Surface type.")
+		return pwr.add_surface(self.counter, surfdict, dim, coeff, rd)
+		
+	
 		
 	def __get_xyz_planes(self, x0s = (), y0s = (), z0s = (), rd = 5):
 		"""
@@ -80,6 +112,9 @@ class MC_Case(Case):
 			zlist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'z', z0s[i], eps = rd)
 		
 		return xlist, ylist, zlist
+	
+	
+	def __get_
 	
 	
 	def get_openmc_baffle(self):
@@ -697,7 +732,7 @@ class MC_Case(Case):
 					#lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
 					#					counter = self.counter, name = "Lower Nozzle")
 					#self.openmc_materials[lnozmat.name] = lnozmat
-					lnoz = Nozzle2(height, lnozmat, "Lower Nozzle")
+					lnoz = objects.Nozzle(height, lnozmat, "Lower Nozzle")
 					vera_asmbly.pwr_nozzles["lower"] = lnoz
 				else:
 					lnoz = vera_asmbly.pwr_nozzles["lower"]
@@ -711,7 +746,7 @@ class MC_Case(Case):
 					#unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
 					#					counter = self.counter, name = "Upper Nozzle")
 					#self.openmc_materials[unozmat.name] = unozmat
-					unoz = Nozzle2(height, unozmat, "Upper Nozzle")
+					unoz = objects.Nozzle(height, unozmat, "Upper Nozzle")
 					vera_asmbly.pwr_nozzles["upper"] = unoz
 				else:
 					unoz = vera_asmbly.pwr_nozzles["upper"]
