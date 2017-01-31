@@ -58,12 +58,14 @@ class MC_Case(Case):
 		return self.counter.count(TYPE)
 	
 	
-	def __get_surface(self, dim, coeff, rd = 5):
+	def __get_surface(self, dim, coeff, name = "", rd = 5):
 		"""Wrapper for pwr.get_surface()
 		
 		Inputs:
 			:param dim:             str; dimension or surface type. Case insensitive.
 			:param coeff:           float; Value of the coefficent (such as x0 or R) for the surface type
+			:param name:            str; name to be assigned to the new surface (if one is generated)
+									[Default: empty string]
 			:param rd:              int; number of decimal places to round to. If the coefficient for a surface matches
 									up to 'rd' decimal places, they are considered equal.
 									[Default: 5]
@@ -81,7 +83,8 @@ class MC_Case(Case):
 			surfdict = self.openmc_cylinders
 		else:
 			raise AssertionError(str(dim) + " is not an acceptable Surface type.")
-		return pwr.get_surface(self.counter, surfdict, dim, coeff, rd)
+		openmc_surf = pwr.get_surface(self.counter, surfdict, dim, coeff, name, rd)
+		return openmc_surf
 	
 	
 	def get_openmc_baffle(self):
@@ -191,20 +194,7 @@ class MC_Case(Case):
 			for ring in range(vera_cell.num_rings):
 				r = vera_cell.radii[ring]
 				name = vera_cell.name + "-ring" + str(ring)
-				# Check if the outer bounding surface exists
-				surf_id = None
-				for s in self.openmc_surfaces:
-					if s.type == "z-cylinder":
-						if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
-							# Then the cylinder is the same
-							surf_id = s.id
-							break # from the "for s in" loop
-				if not surf_id:
-					# Generate new surface and get its surf_id
-					s = openmc.ZCylinder(self.counter.add_surface(), "transmission", 0, 0, r)
-					# Add the new surfaces to the registry
-					self.openmc_surfaces.append(s)
-					
+				s = self.__get_surface("cylinder", r, name = name)
 				# Otherwise, the surface s already exists
 				# Proceed to define the cell inside that surface:
 				new_cell = openmc.Cell(self.counter.add_cell(), name)
