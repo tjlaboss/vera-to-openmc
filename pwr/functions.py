@@ -2,30 +2,31 @@
 #
 # Container for useful functions for the pwr module
 
-from pwr.settings import SURFACE, CELL, MATERIAL, UNIVERSE
 import openmc
 import copy
 
 
 def duplicate(orig, counter):
-	'''Copy an OpenMC object, except for a new id
+	"""Copy an OpenMC object, except for a new id
 
 	Input:
-		orig: 		instance of openmc.(Surface, Cell, Material, or Universe)
+		orig: 		instance of openmc.(Surface, Cell, Material, Universe, or Tally)
 		counter:	instance of Counter
 
 	Output:
 		dupl: 		same as 'orig', but with a different instance.id
-	'''
+	"""
 	dup = copy.copy(orig)
 	if isinstance(orig, openmc.Surface):
-		dup.id = counter.count(SURFACE)
+		dup.id = counter.add_surface()
 	elif isinstance(orig, openmc.Cell):
-		dup.id = counter.count(CELL)
+		dup.id = counter.add_cell()
 	elif isinstance(orig, openmc.Material):
-		dup.id = counter.count(MATERIAL)
+		dup.id = counter.add_material()
 	elif isinstance(orig, openmc.Universe):
-		dup.id = counter.count(UNIVERSE)
+		dup.id = counter.add_universe()
+	elif isinstance(orig, openmc.Tally):
+		dup.id = counter.add_tally()
 	else:
 		name = orig.__class__.__name__
 		raise TypeError(str(orig) + " is an instance of " + name +
