@@ -9,7 +9,6 @@ from functions import fill_lattice, clean
 import objects
 import openmc
 import pwr
-from pwr import SURFACE, CELL, MATERIAL, UNIVERSE, TALLY	# Global constants for counters
 
 
 class MC_Case(Case):
@@ -45,18 +44,7 @@ class MC_Case(Case):
 		# Create an infinite cell/universe of moderator
 		self.mod_cell = openmc.Cell(100, name = "Infinite Mod Cell", fill = self.mod)
 		self.mod_verse = openmc.Universe(100, name = "Infinite Mod Universe", cells = (self.mod_cell,))
-	
-	
-	def __counter(self, TYPE):
-		"""Get the next cell/surface/material/universe number, and update the counter.
-		Input:
-			count:		CELL, SURFACE, MATERIAL, UNIVERSE, or TALLY
-		Output:
-			integer representing the next cell/surface/material/universe ID"""
 		
-		# Quick fix
-		return self.counter.count(TYPE)
-	
 	
 	def __get_surface(self, dim, coeff, name = "", rd = 5):
 		"""Wrapper for pwr.get_surface()
@@ -139,7 +127,7 @@ class MC_Case(Case):
 			# Then the material doesn't exist yet in OpenMC form
 			# Generate it and add it to the index 
 			vera_mat = self.materials[material]
-			openmc_material = openmc.Material(self.__counter(MATERIAL), material)
+			openmc_material = openmc.Material(self.counter.add_material(), material)
 			openmc_material.set_density("g/cc", vera_mat.density)
 			openmc_material.temperature = vera_mat.temperature
 			for nuclide in sorted(vera_mat.isotopes):
@@ -263,7 +251,7 @@ class MC_Case(Case):
 			cell_verses[vera_cell.key] = c
 		
 		for latname in vera_asmbly.axial_labels:
-			lattice = openmc.RectLattice(self.__counter(UNIVERSE), latname)
+			lattice = openmc.RectLattice(self.counter.add_universe(), latname)
 			lattice.pitch = (pitch, pitch)
 			lattice.lower_left = [-pitch * float(npins) / 2.0] * 2
 			# And populate with universes from cell_verses
@@ -418,6 +406,7 @@ class MC_Case(Case):
 		core_cells = []
 		
 		# Create the top and bottom planes of the core and core plate
+		# Intentionally does not use self.__get_surface() due to specific boundary conditions.
 		plate_bot = openmc.ZPlane(self.counter.add_surface(),
 							z0 = -self.core.bot_refl.thick, boundary_type = self.core.bc["bot"])
 		core_bot = openmc.ZPlane(self.counter.add_surface(), z0 = 0.0)
@@ -449,29 +438,29 @@ class MC_Case(Case):
 				core_cells.append(new_cell)
 		
 		# And finally, the outermost ring
-		s = openmc.ZCylinder(self.__counter(SURFACE), R = max(self.core.vessel_radii), boundary_type = self.core.bc["rad"])
-		new_cell = openmc.Cell(self.__counter(CELL), "Vessel-Outer")
+		s = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii), boundary_type = self.core.bc["rad"])
+		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
 		new_cell.region = -s    & +plate_bot & -plate_top
 		core_cells.append(new_cell)
 		
 		# Add the core plates
 		top_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[top_plate_mat.name] = top_plate_mat
-		top_plate_cell = openmc.Cell(self.__counter(CELL), "Top core plate")
+		top_plate_cell = openmc.Cell(self.counter.add_cell(), "Top core plate")
 		top_plate_cell.region = -vessel_surf & + core_top & -plate_top
 		top_plate_cell.fill = top_plate_mat
 		core_cells.append(top_plate_cell)
 		
 		bot_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[bot_plate_mat.name] = bot_plate_mat
-		bot_plate_cell = openmc.Cell(self.__counter(CELL), "Bot core plate")
+		bot_plate_cell = openmc.Cell(self.counter.add_cell(), "Bot core plate")
 		bot_plate_cell.region = -vessel_surf & + core_bot & -plate_bot
 		bot_plate_cell.fill = bot_plate_mat
 		core_cells.append(bot_plate_cell)
 		
 		outer_surfs = (vessel_surf, plate_bot, plate_top)
 		
-		openmc_vessel = openmc.Universe(self.__counter(UNIVERSE), "Reactor Vessel")
+		openmc_vessel = openmc.Universe(self.counter.add_universe(), "Reactor Vessel")
 		openmc_vessel.add_cells(core_cells)
 		
 		return openmc_vessel, inside_cell, inside_fill, outer_surfs
@@ -508,7 +497,7 @@ class MC_Case(Case):
 		n = len(shape)
 		halfwidth = self.core.pitch * n / 2.0
 		
-		openmc_core = openmc.RectLattice(self.__counter(UNIVERSE), "Core Lattice")
+		openmc_core = openmc.RectLattice(self.counter.add_universe(), "Core Lattice")
 		openmc_core.pitch = (self.core.pitch, self.core.pitch)
 		openmc_core.lower_left = [-halfwidth * n / 2.0] * 2
 		openmc_core.outer = self.mod_verse
