@@ -3,7 +3,7 @@
 # Module containing the classes and methods for modeling of PWR spacer grids,
 # for use in the Assembly class (assembly.py)
 
-from pwr.functions import duplicate, get_plane
+from pwr.functions import duplicate, get_surface
 import openmc
 from math import sqrt
 
@@ -66,7 +66,7 @@ class SpacerGrid(object):
 		return name
 
 
-def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
+def add_spacer_to(pincell, pitch, t, material, counter, xplanes, yplanes):
 	'''Given a pincell to be placed in a lattice, add
 	the spacer grid to the individual cell.
 	
@@ -78,7 +78,12 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 					two pincells (HALF the total thickness)
 		material:	instance of openmc.Material from which the spacer is made
 		counter:	instance of Counter to keep track of universe numbers
-		surflist:	list of existing OpenMC surfaces. [Default: empty list]
+		xplanes:	dictionary of existing instances of openmc.XPlane, of the format
+					{str(x0):xplane}    [Default: empty dictionary]
+					This is optional, but strongly recommended if you are adding
+					spacers to more than one pin cell.
+		yplanes:    dictionary of existing instances of openmc.YPlane, of the format
+					{str(y0):yplane}    [Default: empty dictionary]
 					This is optional, but strongly recommended if you are adding
 					spacers to more than one pin cell.
 	
@@ -94,14 +99,14 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	
 	# Create necessary planes
 	p = pitch / 2.0
-	top_out = get_plane(surflist, counter, 'y',  p)
-	top_in  = get_plane(surflist, counter, 'y',  p - t)
-	bot_in  = get_plane(surflist, counter, 'y', -p + t)
-	bot_out = get_plane(surflist, counter, 'y', -p)
-	left_out  = get_plane(surflist, counter, 'x', -p)		# He feels left out
-	left_in   = get_plane(surflist, counter, 'x', -p + t)
-	right_in  = get_plane(surflist, counter, 'x',  p - t)
-	right_out = get_plane(surflist, counter, 'x',  p)
+	top_out   = get_surface(counter, yplanes, 'y', p)
+	top_in    = get_surface(counter, yplanes, 'y',  p - t)
+	bot_in    = get_surface(counter, yplanes, 'y', -p + t)
+	bot_out   = get_surface(counter, yplanes, 'y', -p)
+	left_out  = get_surface(counter, xplanes, 'x', -p)		# He feels left out
+	left_in   = get_surface(counter, xplanes, 'x', -p + t)
+	right_in  = get_surface(counter, xplanes, 'x',  p - t)
+	right_out = get_surface(counter, xplanes, 'x',  p)
 	
 	# Get the outermost (mod) Cell of the pincell
 	mod_cell = duplicate(orig_list[-1], counter)
@@ -129,15 +134,17 @@ def add_spacer_to(pincell, pitch, t, material, counter, surflist):# = []):
 	return new_pin
 
 
-def add_grid_to(lattice, spacer, counter, surflist = []):
+def add_grid_to(lattice, spacer, counter, xplanes = {}, yplanes = {}):
 	'''Add a spacer to every pincell in the lattice.
 
 	Inputs:
 		lattice:		instance of openmc.RectLattice
 		spacer:			instance of SpacerGrid
 		counter:		instance of Counter
-		surflist:		list of instances of openmc.Surface to check against.
-						Optional, but strongly recommended.
+		xplanes:        dictionary of instances of openmc.XPlane, of the format
+						{str(x0):xplane}. Optional, but strongly recommended.
+		yplanes:        dictionary of instances of openmc.YPlane, of the format
+						{str(y0):yplane}. Optional, but strongly recommended.
 	Output:
 		gridded:		instance of openmc.RectLattice with the grid applied
 						to every cell'''
@@ -159,7 +166,7 @@ def add_grid_to(lattice, spacer, counter, surflist = []):
 				new_cell = old_cell.griddict[key]
 			else:
 				new_cell = add_spacer_to(old_cell, pitch, spacer.thickness, spacer.material,
-										  counter, surflist)
+										  counter, xplanes, yplanes)
 				old_cell.griddict[key] = new_cell
 			row[i] = new_cell
 		new_universes[j] = row
