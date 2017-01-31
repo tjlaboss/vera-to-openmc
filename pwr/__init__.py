@@ -5,4 +5,3 @@ from pwr.nozzle import *
 from pwr.functions import *
 from pwr.mixture import *
 from pwr.counter import *
-from pwr.settings import *
