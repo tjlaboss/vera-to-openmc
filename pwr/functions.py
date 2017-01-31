@@ -117,7 +117,7 @@ def get_xyz_planes(openmc_surfaces, count, x0s = (), y0s = (), z0s = (), rd = 5)
 	return xlist, ylist, zlist
 
 
-def get_surface(counter, surfdict, dim, coeff, rd = 5):
+def get_surface(counter, surfdict, dim, coeff, name = "", rd = 5):
 	"""Given a single-coefficient Surface class (such as ZPlane, or Cylinder centered at 0,0),
 	look it up in the provided dictionary 'surfdict' if possible. If not, generate it anew,
 	and add it to the dictionary.
@@ -132,6 +132,7 @@ def get_surface(counter, surfdict, dim, coeff, rd = 5):
 		:param dim:             str; dimension or surface type. Case insensitive.
 								Currently works for ("x"/"xplane", "y"/"yplane", "z"/"zplane", "r"/"cyl"/"zcylinder")
 		:param coeff:           float; Value of the coefficent (such as x0 or R) for the surface type
+		:param name:            str; name to be assigned if the surface doesn't already exist
 		:param rd:              int; number of decimal places to round to. If the coefficient for a surface matches
 								up to 'rd' decimal places, they are considered equal.
 								[Default: 5]
@@ -146,13 +147,13 @@ def get_surface(counter, surfdict, dim, coeff, rd = 5):
 	else:
 		# Generate it
 		if dim in ("x", "xp", "xplane"):
-			openmc_surf = openmc.XPlane(counter.add_surface(), x0 = coeff)
+			openmc_surf = openmc.XPlane(counter.add_surface(), x0 = coeff, name = name)
 		elif dim in ("y", "yp", "yplane"):
-			openmc_surf = openmc.YPlane(counter.add_surface(), y0 = coeff)
+			openmc_surf = openmc.YPlane(counter.add_surface(), y0 = coeff, name = name)
 		elif dim in ("z", "zp", "zplane"):
-			openmc_surf = openmc.ZPlane(counter.add_surface(), z0 = coeff)
+			openmc_surf = openmc.ZPlane(counter.add_surface(), z0 = coeff, name = name)
 		elif dim in ("r", "cyl", "cylinder", "zcylinder"):
-			openmc_surf = openmc.ZCylinder(counter.add_surface(), R = coeff)
+			openmc_surf = openmc.ZCylinder(counter.add_surface(), R = coeff, name = name)
 		else:
 			errstr = "'dim' must be 'xplane', 'yplane', 'zplane', or 'zcylinder'"
 			raise AssertionError(errstr)
