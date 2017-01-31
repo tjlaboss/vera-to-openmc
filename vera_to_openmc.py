@@ -9,7 +9,6 @@ from functions import fill_lattice, clean
 import objects
 import openmc
 import pwr
-from pwr import SURFACE, CELL, MATERIAL, UNIVERSE, TALLY	# Global constants for counters
 
 
 class MC_Case(Case):
@@ -20,6 +19,12 @@ class MC_Case(Case):
 		super(MC_Case, self).__init__(source_file)
 		
 		self.openmc_surfaces = []
+		# The following dictionaries use key-value pairs of 'coefficient':openmc.Surface
+		self.openmc_xplanes ={}         # {str(x0):openmc.XPlane)
+		self.openmc_yplanes ={}         # {str(y0):openmc.YPlane)
+		self.openmc_zplanes ={}         # {str(z0):openmc.ZPlane)
+		self.openmc_cylinders ={}       # {str(R):openmc.Cylinder)
+		
 		self.openmc_materials = {}
 		self.openmc_pincells = {}
 		self.openmc_assemblies = {}
@@ -39,420 +44,52 @@ class MC_Case(Case):
 		# Create an infinite cell/universe of moderator
 		self.mod_cell = openmc.Cell(100, name = "Infinite Mod Cell", fill = self.mod)
 		self.mod_verse = openmc.Universe(100, name = "Infinite Mod Universe", cells = (self.mod_cell,))
-	
-	def __counter(self, TYPE):
-		"""Get the next cell/surface/material/universe number, and update the counter.
-		Input:
-			count:		CELL, SURFACE, MATERIAL, UNIVERSE, or TALLY
-		Output:
-			integer representing the next cell/surface/material/universe ID"""
 		
-		# Quick fix
-		return self.counter.count(TYPE)
 	
-	
+	def __get_surface(self, dim, coeff, name = "", rd = 5):
+		"""Wrapper for pwr.get_surface()
 		
-	def __get_xyz_planes(self, x0s = (), y0s = (), z0s = (), rd = 5):
-		"""
 		Inputs:
-			x0s:		list or tuple of x0's to check for; default is empty tuple
-			y0s:		same for y0's
-			z0s:		same for z0's
-			rd:			integer; number of digits to round to when comparing surface
-						equality. Default is 5
-		Outputs:
-			xlist:		list of instances of openmc.XPlane, of length len(x0s)
-			ylist:		ditto, for openmc.YPlane, y0s
-			zlist:		ditto, for openmc.ZPlane, z0s
+			:param dim:             str; dimension or surface type. Case insensitive.
+			:param coeff:           float; Value of the coefficent (such as x0 or R) for the surface type
+			:param name:            str; name to be assigned to the new surface (if one is generated)
+									[Default: empty string]
+			:param rd:              int; number of decimal places to round to. If the coefficient for a surface matches
+									up to 'rd' decimal places, they are considered equal.
+									[Default: 5]
+		Output:
+			:return openmc_surf:
 		"""
-		nx = len(x0s)
-		ny = len(y0s)
-		nz = len(z0s)
-		xlist = [None,]*nx
-		ylist = [None,]*ny
-		zlist = [None,]*ny
-		
-		for i in range(nx):
-			xlist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'x', x0s[i], eps = rd)
-		for i in range(ny):
-			ylist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'y', y0s[i], eps = rd)
-		for i in range(nz):
-			zlist[i] = pwr.get_plane(self.openmc_surfaces, self.counter, 'z', z0s[i], eps = rd)
-		
-		return xlist, ylist, zlist
+		dim = dim.lower()
+		if dim in ("x", "xp", "xplane"):
+			surfdict = self.openmc_xplanes
+		elif dim in ("y", "yp", "yplane"):
+			surfdict = self.openmc_yplanes
+		elif dim in ("z", "zp", "zplane"):
+			surfdict = self.openmc_zplanes
+		elif dim in ("r", "cyl", "cylinder", "zcylinder"):
+			surfdict = self.openmc_cylinders
+		else:
+			raise AssertionError(str(dim) + " is not an acceptable Surface type.")
+		openmc_surf = pwr.get_surface(self.counter, surfdict, dim, coeff, name, rd)
+		return openmc_surf
 	
 	
 	def get_openmc_baffle(self):
+		"""Calls pwr.get_openmc_baffle() with the
+		properties of this case and core.
+		
+		Output:
+			baffle_cell:        instance of openmc.Cell describing the baffle geometry.
 		"""
 		
-		This has been deprecated.
-		
-		FIXME: Need to replace with pwr.baffle
-		
-		"""
-		
-		"""
-		This method iterates through the square map of the core and traces out the 
-		boundary of the baffle. Overlaps are OK due to the use of unions.
-		
-		WARNING: In OpenMC 0.8.0 and earlier, there is a maximum region length. A typical PWR
-		core baffle will produce regions in excess of the default maximum region length. You
-		will need to change this for yourself in the Fortran source code (constants.f90). 
-		"""
 		baf = self.core.baffle		# instance of objects.Baffle
-		pitch = self.core.pitch		# assembly pitch
-		
-		# Useful distances
-		d0 = pitch/2.0					# dist (from center of asmbly) to edge of asmbly
-		d1 = d0 + baf.gap 				# dist to inside of baffle
-		d2 = d1 + baf.thick				# dist to outside of baffle
-		d3 = d0 - baf.gap 				# dist to inside of next baffle
-		width = self.core.size * self.core.pitch / 2.0	# dist from center of core to center of asmbly
-		
-		cmap = self.core.square_maps("s")
-		n = self.core.size - 1
-		
-		# Unite all individual regions with the Master Region
-		master_region = openmc.Union()
-		
-		
-		# For each row (moving vertically):
-		for j in range(1,n):
-			# For each column (moving horizontally):
-			for i in range(1,n):
-				if cmap[j][i]:
-					# Positions of surfaces
-					x = (i + 0.5)*pitch - width
-					y = width - (j + 0.5)*pitch
-					
-					north = cmap[j-1][i]
-					south = cmap[j+1][i]
-					east  = cmap[j][i+1]
-					west  = cmap[j][i-1]
-					southeast = cmap[j+1][i+1]
-					southwest = cmap[j+1][i-1]
-					northeast = cmap[j-1][i+1]
-					northwest = cmap[j-1][i-1]
-					
-					
-					# Left side
-					if not west:
-						x_left = x - d2
-						x_right = x - d1
-						if north:
-							y_top = y + d3
-						else:
-							y_top = y + d2
-						if south:
-							if southwest:
-								y_bot = y - d3
-							else:
-								y_bot = y - d2
-						else:
-							y_bot = y - d2
-						(left, right), (bot, top) = self.__get_xyz_planes(
-							x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-						west_region = (+left & -right & +bot & -top)
-						master_region.nodes.append(west_region)
-					
-					# Right side
-					if not east:
-						x_left = x + d1
-						x_right = x + d2
-						if north:
-							y_top = y + d3
-						else:
-							y_top = y + d2
-						if south:
-							if southeast:
-								y_bot = y - d3
-							else:
-								y_bot = y - d2
-						else:
-							y_bot = y - d2
-						(left, right), (bot, top) = self.__get_xyz_planes(
-							x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-						east_region = (+left & -right & +bot & -top)
-						master_region.nodes.append(east_region)
-					
-					# Top side
-					if not north:
-						y_bot = y + d1
-						y_top = y + d2
-						if west:
-							if northwest:
-								x_left = x - d3
-							else:
-								x_left = x - d2
-						else:
-							x_left = x - d2
-						if east:
-							x_right = x + d3
-						else:
-							x_right = x + d2
-						(left, right), (bot, top) = self.__get_xyz_planes(
-							x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-						north_region = (+left & -right & +bot & -top)
-						master_region.nodes.append(north_region)
-					
-					# Bottom side
-					if not south:
-						y_bot = y - d2
-						y_top = y - d1
-						if west:
-							if southwest:
-								x_left = x - d3
-							else:
-								x_left = x - d2
-						else:
-							x_left = x - d2
-						if east:
-							x_right = x + d3
-						else:
-							x_right = x + d2
-						(left, right), (bot, top) = self.__get_xyz_planes(
-							x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-						south_region = (+left & -right & +bot & -top)
-						master_region.nodes.append(south_region)
-		
-			# Edge cases
-			x = (j + 0.5)*pitch - width
-			y = width - (j + 0.5)*pitch
-			
-			
-			# West edge
-			if cmap[j][0]:
-				north = cmap[j-1][0]
-				south = cmap[j+1][0]
-				xx = -(width - 0.5*pitch)
-				x_left = xx - d2
-				x_right = xx - d1
-				y_bot = y - d2
-				y_top = y + d2
-				
-				(left, right), (bot, top) = self.__get_xyz_planes(
-					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-				west_region = (+left & -right & +bot & -top)
-				master_region.nodes.append(west_region)
-				
-				if not north:
-					y_bot = y + d1
-					x_right = xx + d3
-					(right,), (bot,) = self.__get_xyz_planes(
-						x0s = (x_right,), y0s = (y_bot,))[0:2]
-					north_region = (+left & -right & +bot & -top)
-				master_region.nodes.append(north_region)
-				
-				if not south:
-					y_bot = y - d2
-					y_top = y - d1
-					x_right = xx + d3
-					(right,), (bot, top) = self.__get_xyz_planes(
-						x0s = (x_right,), y0s = (y_bot, y_top))[0:2]
-					south_region = (+left & -right & +bot & -top)
-					master_region.nodes.append(south_region)
-					
-			
-			# East edge
-			if cmap[j][n]:
-				north = cmap[j-1][n]
-				south = cmap[j+1][n]
-				xx = +(width - 0.5*pitch)
-				x_left = xx + d1
-				x_right = xx + d2
-				y_bot = y - d2
-				y_top = y + d2
-				(left, right), (bot, top) = self.__get_xyz_planes(
-					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-				east_region = (+left & -right & +bot & -top)
-				master_region.nodes.append(east_region)
-				
-				if not north:
-					y_bot = y + d1
-					x_left = xx - d3
-					(left,), (bot,) = self.__get_xyz_planes(
-						x0s = (x_left,), y0s = (y_bot,))[0:2]
-					north_region = (+left & -right & +bot & -top)
-				master_region.nodes.append(north_region)
-				
-				if not south:
-					y_bot = y - d2
-					y_top = y - d1
-					x_left = xx - d3
-					(left,), (bot, top) = self.__get_xyz_planes(
-						x0s = (x_left,), y0s = (y_bot, y_top))[0:2]
-					south_region = (+left & -right & +bot & -top)
-					master_region.nodes.append(south_region)
-			
-			# North edge
-			if cmap[0][j]:
-				east  = cmap[0][j+1]
-				west  = cmap[0][j-1]
-				yy = +(width - 0.5*pitch)
-				x_left = x - d2
-				x_right = x + d2
-				y_bot = yy + d1
-				y_top = yy + d2
-				(left, right), (bot, top) = self.__get_xyz_planes(
-					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-				north_region = (+left & -right & +bot & -top)
-				master_region.nodes.append(north_region)
-				
-				if not west:
-					x_right = x - d1
-					y_bot = yy - d3
-					(right,), (bot,) = self.__get_xyz_planes(
-						x0s = (x_right,), y0s = (y_bot,))[0:2]
-					west_region = (+left & -right & +bot & -top)
-					master_region.nodes.append(west_region)
-					
-				if not east:
-					x_left = x + d1
-					x_right = x + d2
-					y_bot = yy - d3
-					(left, right), (bot, top) = self.__get_xyz_planes(
-						x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-					east_region = (+left & -right & +bot & -top)
-					master_region.nodes.append(east_region)
-					
-			
-			# South edge
-			if cmap[n][j]:
-				east  = cmap[n][j+1]
-				west  = cmap[n][j-1]
-				yy = -(width - 0.5*pitch)
-				x_left = x - d2
-				x_right = x + d2
-				y_bot = yy - d2
-				y_top = yy - d1
-				(left, right), (bot, top) = self.__get_xyz_planes(
-					x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-				south_region = (+left & -right & +bot & -top)
-				master_region.nodes.append(south_region)
-				
-				if not west:
-					x_right = x - d1
-					y_top = yy + d3
-					(right,), (top,) = self.__get_xyz_planes(
-						x0s = (x_right,), y0s = (y_top,))[0:2]
-					west_region = (+left & -right & +bot & -top)
-					master_region.nodes.append(west_region)
-					
-				if not east:
-					x_left = x + d1
-					x_right = x + d2
-					y_top = yy + d3
-					(left, right), (top,) = self.__get_xyz_planes(
-						x0s = (x_left, x_right), y0s = (y_top,))[0:2]
-					east_region = (+left & -right & +bot & -top)
-					master_region.nodes.append(east_region)
-		# Done iterating.
-		
-		
-		# Corner cases (UNTESTED)
-		# Top left
-		if cmap[0][0]:
-			x = -(width - 0.5*pitch)
-			y = -x
-			x_left = x - d2
-			y_top =  y + d2
-			
-			# West
-			x_right = x - d1
-			y_bot = y - d2
-			(left, right), (bot, top) = self.__get_xyz_planes(
-				x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-			west_region = (+left & -right & +bot & -top)
-			master_region.nodes.append(west_region)
-			
-			# North
-			x_right = x + d2
-			y_bot = y + d1
-			(right,), (bot,) = self.__get_xyz_planes(
-				x0s = (x_right,), y0s = (y_bot,))[0:2]
-			north_region = (+left & -right & +bot & -top)
-			master_region.nodes.append(north_region)
-			
-		# Top right
-		if cmap[0][n]:
-			x = +(width - 0.5*pitch)
-			y = +x
-			x_right = x + d2
-			y_top =  y + d2
-			
-			# East
-			x_left = x + d1
-			y_bot = y - d2
-			(left, right), (bot, top) = self.__get_xyz_planes(
-				x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-			east_region = (+left & -right & +bot & -top)
-			master_region.nodes.append(east_region)
-			
-			# North
-			x_left = x - d2
-			y_bot = y + d1
-			(left,), (bot,) = self.__get_xyz_planes(
-				x0s = (x_left,), y0s = (y_bot,))[0:2]
-			north_region =  (+left & -right & +bot & -top)
-			master_region.nodes.append(north_region)
-		
-		# Bottom right
-		if cmap[n][n]:
-			x = +(width - 0.5*pitch)
-			y = -x
-			x_right = x + d2
-			y_bot =  y - d2
-			
-			# East
-			x_left = x + d1
-			y_top = y + d2
-			(left, right), (bot, top) = self.__get_xyz_planes(
-				x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-			east_region =  (+left & -right & +bot & -top)
-			master_region.nodes.append(east_region)
-			
-			# South
-			x_left = x - d2
-			y_top = y - d1
-			(left,), (top,) = self.__get_xyz_planes(
-				x0s = (x_left,), y0s = (y_top,))[0:2]
-			south_region =  (+left & -right & +bot & -top)
-			master_region.nodes.append(south_region)
-		
-		# Bottom left
-		if cmap[n][0]:
-			x = -(width - 0.5*pitch)
-			y = +x
-			x_left = x - d2
-			y_bot =  y - d2
-			
-			# West
-			x_right = x - d1
-			y_top = y + d2
-			(left, right), (bot, top) = self.__get_xyz_planes(
-				x0s = (x_left, x_right), y0s = (y_bot, y_top))[0:2]
-			west_region =  (+left & -right & +bot & -top)
-			master_region.nodes.append(west_region)
-			
-			# South
-			x_right = x + d2
-			y_top = y - d1
-			(right,), (top,) = self.__get_xyz_planes(
-				x0s = (x_right,), y0s = (y_top,))[0:2]
-			south_region =  (+left & -right & +bot & -top)
-			master_region.nodes.append(south_region)
-		
-		
-		# Set the baffle material, cell, etc.
-		baffle_cell = openmc.Cell(self.__counter(CELL), "Baffle", self.get_openmc_material(baf.mat), master_region)
-		
+		cmap = self.core.shape.square_map()
+		apitch = self.core.pitch
+		baffle_cell = pwr.get_openmc_baffle(baf, cmap, apitch, self.openmc_xplanes,
+		                                    self.openmc_yplanes, self.counter)
 		return baffle_cell
 		
-	
-	
-	
-
-	
 	
 		
 	def get_openmc_material(self, material, asname = "", inname = ""):
@@ -490,7 +127,7 @@ class MC_Case(Case):
 			# Then the material doesn't exist yet in OpenMC form
 			# Generate it and add it to the index 
 			vera_mat = self.materials[material]
-			openmc_material = openmc.Material(self.__counter(MATERIAL), material)
+			openmc_material = openmc.Material(self.counter.add_material(), material)
 			openmc_material.set_density("g/cc", vera_mat.density)
 			openmc_material.temperature = vera_mat.temperature
 			for nuclide in sorted(vera_mat.isotopes):
@@ -545,20 +182,7 @@ class MC_Case(Case):
 			for ring in range(vera_cell.num_rings):
 				r = vera_cell.radii[ring]
 				name = vera_cell.name + "-ring" + str(ring)
-				# Check if the outer bounding surface exists
-				surf_id = None
-				for s in self.openmc_surfaces:
-					if s.type == "z-cylinder":
-						if (s.r == r) and (s.x0 == 0) and (s.y0 == 0):
-							# Then the cylinder is the same
-							surf_id = s.id
-							break # from the "for s in" loop
-				if not surf_id:
-					# Generate new surface and get its surf_id
-					s = openmc.ZCylinder(self.counter.add_surface(), "transmission", 0, 0, r)
-					# Add the new surfaces to the registry
-					self.openmc_surfaces.append(s)
-					
+				s = self.__get_surface("cylinder", r, name = name)
 				# Otherwise, the surface s already exists
 				# Proceed to define the cell inside that surface:
 				new_cell = openmc.Cell(self.counter.add_cell(), name)
@@ -627,7 +251,7 @@ class MC_Case(Case):
 			cell_verses[vera_cell.key] = c
 		
 		for latname in vera_asmbly.axial_labels:
-			lattice = openmc.RectLattice(self.__counter(UNIVERSE), latname)
+			lattice = openmc.RectLattice(self.counter.add_universe(), latname)
 			lattice.pitch = (pitch, pitch)
 			lattice.lower_left = [-pitch * float(npins) / 2.0] * 2
 			# And populate with universes from cell_verses
@@ -668,6 +292,9 @@ class MC_Case(Case):
 			
 			# Initiate and describe the Assembly
 			pwr_asmbly = pwr.Assembly(vera_asmbly.label, vera_asmbly.name, self.counter.add_universe(), pitch, npins)
+			pwr_asmbly.xplanes = self.openmc_xplanes
+			pwr_asmbly.yplanes = self.openmc_yplanes
+			pwr_asmbly.zplanes = self.openmc_zplanes
 			pwr_asmbly.lattices = self.get_openmc_lattices(vera_asmbly)
 			pwr_asmbly.lattice_elevs = vera_asmbly.axial_elevations
 			pwr_asmbly.mod = self.mod
@@ -697,7 +324,7 @@ class MC_Case(Case):
 					#lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
 					#					counter = self.counter, name = "Lower Nozzle")
 					#self.openmc_materials[lnozmat.name] = lnozmat
-					lnoz = Nozzle2(height, lnozmat, "Lower Nozzle")
+					lnoz = objects.Nozzle(height, lnozmat, "Lower Nozzle")
 					vera_asmbly.pwr_nozzles["lower"] = lnoz
 				else:
 					lnoz = vera_asmbly.pwr_nozzles["lower"]
@@ -711,7 +338,7 @@ class MC_Case(Case):
 					#unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
 					#					counter = self.counter, name = "Upper Nozzle")
 					#self.openmc_materials[unozmat.name] = unozmat
-					unoz = Nozzle2(height, unozmat, "Upper Nozzle")
+					unoz = objects.Nozzle(height, unozmat, "Upper Nozzle")
 					vera_asmbly.pwr_nozzles["upper"] = unoz
 				else:
 					unoz = vera_asmbly.pwr_nozzles["upper"]
@@ -782,6 +409,7 @@ class MC_Case(Case):
 		core_cells = []
 		
 		# Create the top and bottom planes of the core and core plate
+		# Intentionally does not use self.__get_surface() due to specific boundary conditions.
 		plate_bot = openmc.ZPlane(self.counter.add_surface(),
 							z0 = -self.core.bot_refl.thick, boundary_type = self.core.bc["bot"])
 		core_bot = openmc.ZPlane(self.counter.add_surface(), z0 = 0.0)
@@ -813,58 +441,32 @@ class MC_Case(Case):
 				core_cells.append(new_cell)
 		
 		# And finally, the outermost ring
-		s = openmc.ZCylinder(self.__counter(SURFACE), R = max(self.core.vessel_radii), boundary_type = self.core.bc["rad"])
-		new_cell = openmc.Cell(self.__counter(CELL), "Vessel-Outer")
+		s = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii), boundary_type = self.core.bc["rad"])
+		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
 		new_cell.region = -s    & +plate_bot & -plate_top
 		core_cells.append(new_cell)
 		
 		# Add the core plates
 		top_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[top_plate_mat.name] = top_plate_mat
-		top_plate_cell = openmc.Cell(self.__counter(CELL), "Top core plate")
+		top_plate_cell = openmc.Cell(self.counter.add_cell(), "Top core plate")
 		top_plate_cell.region = -vessel_surf & + core_top & -plate_top
 		top_plate_cell.fill = top_plate_mat
 		core_cells.append(top_plate_cell)
 		
 		bot_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[bot_plate_mat.name] = bot_plate_mat
-		bot_plate_cell = openmc.Cell(self.__counter(CELL), "Bot core plate")
+		bot_plate_cell = openmc.Cell(self.counter.add_cell(), "Bot core plate")
 		bot_plate_cell.region = -vessel_surf & + core_bot & -plate_bot
 		bot_plate_cell.fill = bot_plate_mat
 		core_cells.append(bot_plate_cell)
 		
 		outer_surfs = (vessel_surf, plate_bot, plate_top)
 		
-		openmc_vessel = openmc.Universe(self.__counter(UNIVERSE), "Reactor Vessel")
+		openmc_vessel = openmc.Universe(self.counter.add_universe(), "Reactor Vessel")
 		openmc_vessel.add_cells(core_cells)
 		
 		return openmc_vessel, inside_cell, inside_fill, outer_surfs
-			
-	
-	def add_insert(self, base_lattice, insert):
-		"""Insert a burnable poision, thimble plug, or other arbitrary object to a lattice.
-		
-		Inputs:
-			base_lattice:		instance of openmc.RectLattice
-			insert:				instance of objects.Insert with the same
-								number of pins as base_lattice
-		
-		Outputs:
-			new_lattice:		instance of openmc.RectLattice with some cells replaced
-		"""
-		n = insert.npins
-		x = base_lattice.size[0]
-		y = base_lattice.size[1]
-		assert(n == x and n == y), \
-			"'base_lattice' must be exactly " + str(n) + "x" + str(n) + " pins."
-		
-		
-		
-		
-		return None
-	
-	
-	
 	
 	
 	
@@ -898,7 +500,7 @@ class MC_Case(Case):
 		n = len(shape)
 		halfwidth = self.core.pitch * n / 2.0
 		
-		openmc_core = openmc.RectLattice(self.__counter(UNIVERSE), "Core Lattice")
+		openmc_core = openmc.RectLattice(self.counter.add_universe(), "Core Lattice")
 		openmc_core.pitch = (self.core.pitch, self.core.pitch)
 		openmc_core.lower_left = [-halfwidth * n / 2.0] * 2
 		openmc_core.outer = self.mod_verse
