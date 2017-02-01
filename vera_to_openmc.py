@@ -487,13 +487,18 @@ class MC_Case(Case):
 		
 		openmc_core = openmc.RectLattice(self.counter.add_universe(), "Core Lattice")
 		openmc_core.pitch = (self.core.pitch, self.core.pitch)
-		openmc_core.lower_left = [-halfwidth * n / 2.0] * 2
+		openmc_core.lower_left = [-halfwidth] * 2
 		openmc_core.outer = self.mod_verse
 		
+		# TODO: Determine if these are lists or numpy arrays
 		ins_map = self.core.insert_map.square_map()
 		det_map = self.core.detector_map.square_map()
 		crd_map = self.core.control_map.square_map()
 		crd_bank_map = self.core.control_bank.square_map()
+		
+		# Debug:
+		print("Insert map\n", ins_map, "\n\nDetector map\n", det_map,
+		      "\n\nControl rod map\n", crd_map, "\n\nControl rod bank map\n", crd_bank_map)
 		
 		# Need to convert to numpy.array
 		lattice = numpy.empty((n, n), dtype = openmc.Universe)
@@ -501,7 +506,6 @@ class MC_Case(Case):
 		print("Generating core (this may take a while)...")
 		# FIXME:
 		# This portion of the code is too slow.
-		# Speed it up with dictionary lookups where possible.
 		for j in range(n):
 			for i in range(n):
 				print("Doing", j, "x", i)   #debug
@@ -514,8 +518,9 @@ class MC_Case(Case):
 					det_key = det_map[j, i]
 					crd_key = crd_map[j, i]
 					crd_bank_key = crd_bank_map[j, i]
+					print(ins_key, det_key, crd_key, crd_bank_key)
 					
-					if (ins_key or crd_key or det_key) != blank:
+					if not ((ins_key == blank) and (crd_key == blank) and (det_key == blank)):
 						vera_asmbly = copy(vera_asmbly)
 						# Handle each type of insertion differently.
 						if ins_key != blank:
@@ -526,6 +531,7 @@ class MC_Case(Case):
 							vera_crd = self.controls[crd_key]
 							steps = self.state.rodbank[crd_bank_key]
 							depth = steps*vera_crd.step_size
+							print("Control rod", crd_key, crd_bank_key, "\tDepth:", depth)
 							vera_asmbly.add_insert(vera_crd, depth)
 							vera_asmbly.name += "+" + vera_crd.name
 						if det_key != blank:
