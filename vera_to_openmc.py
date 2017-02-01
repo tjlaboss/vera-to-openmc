@@ -530,7 +530,7 @@ class MC_Case(Case):
 						if crd_key != blank:
 							vera_crd = self.controls[crd_key]
 							steps = self.state.rodbank[crd_bank_key]
-							depth = steps*vera_crd.step_size
+							depth = (vera_crd.maxstep - steps)*vera_crd.step_size
 							print("Control rod", crd_key, crd_bank_key, "\tDepth:", depth)
 							vera_asmbly.add_insert(vera_crd, depth)
 							vera_asmbly.name += "+" + vera_crd.name
