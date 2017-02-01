@@ -46,7 +46,6 @@ class MC_Case(Case):
 		self.mod_verse = openmc.Universe(self.counter.add_universe(),
 		                                 name = "Infinite Mod Universe", cells = (self.mod_cell,))
 		
-	
 	def __get_surface(self, dim, coeff, name = "", rd = 5):
 		"""Wrapper for pwr.get_surface()
 		
@@ -75,7 +74,6 @@ class MC_Case(Case):
 		openmc_surf = pwr.get_surface(self.counter, surfdict, dim, coeff, name, rd)
 		return openmc_surf
 	
-	
 	def get_openmc_baffle(self):
 		"""Calls pwr.get_openmc_baffle() with the
 		properties of this case and core.
@@ -91,7 +89,6 @@ class MC_Case(Case):
 		                                    self.openmc_yplanes, self.counter)
 		return baffle_cell
 		
-	
 		
 	def get_openmc_material(self, material, asname = "", inname = ""):
 		"""Given a vera material (objects.Material) as extracted by self.__get_material(),
@@ -147,10 +144,6 @@ class MC_Case(Case):
 							openmc_material.add_nuclide(n, w, 'wo')
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
-				# Shouldn't be needed: the parsed XML should already be in weight frac
-				#if frac < 0:
-				#	openmc_material.add_nuclide(nuclide, abs(frac), 'ao')			
-					
 			self.openmc_materials[material] = openmc_material
 		
 		return openmc_material
@@ -172,7 +165,7 @@ class MC_Case(Case):
 									geometry and composition of this pin cell's universe
 				.universe_id:	integer; unique identifier of the Universe
 				.name:			string; more descriptive name of the universe (pin cell)			
-			"""
+		"""
 		
 		# First, check if this cell has already been created
 		if vera_cell.key in self.openmc_pincells:
@@ -259,7 +252,7 @@ class MC_Case(Case):
 			asmap = vera_asmbly.key_maps[latname]
 			
 			lattice.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
-			lattice.outer = self.mod_verse	# To account for the assembly gap
+			lattice.outer = self.mod_verse  # To account for the assembly gap
 			# Initialize a dictionary of versions of this lattice which have spacer grids added
 			lattice.griddict = {}
 			openmc_lattices.append(lattice)
@@ -322,9 +315,6 @@ class MC_Case(Case):
 					mass = float(ps["lower_nozzle_mass"])
 					height = float(ps["lower_nozzle_height"])
 					lnozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch, "lower-nozzle-mat")
-					#lnoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
-					#					counter = self.counter, name = "Lower Nozzle")
-					#self.openmc_materials[lnozmat.name] = lnozmat
 					lnoz = objects.Nozzle(height, lnozmat, "Lower Nozzle")
 					vera_asmbly.pwr_nozzles["lower"] = lnoz
 				else:
@@ -336,9 +326,6 @@ class MC_Case(Case):
 					mass = float(ps["upper_nozzle_mass"])
 					height = float(ps["upper_nozzle_height"])
 					unozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch, "upper-nozzle-mat")
-					#unoz = pwr.Nozzle(height, mass, nozzle_mat, self.mod, npins, pitch,
-					#					counter = self.counter, name = "Upper Nozzle")
-					#self.openmc_materials[unozmat.name] = unozmat
 					unoz = objects.Nozzle(height, unozmat, "Upper Nozzle")
 					vera_asmbly.pwr_nozzles["upper"] = unoz
 				else:
@@ -357,12 +344,9 @@ class MC_Case(Case):
 			lower reflector regions.
 											--CASL-U-2015-0183-000	'''
 			
-			
 			# Where the magic happens
 			pwr_asmbly.build()
 			self.openmc_assemblies[key] = pwr_asmbly
-			
-				
 			return pwr_asmbly
 	
 	
@@ -385,8 +369,6 @@ class MC_Case(Case):
 			                name = name, material_id = self.counter.add_material())
 			self.openmc_materials[name] = new_mixture
 			return new_mixture
-		
-	
 	
 	
 	def get_openmc_reactor_vessel(self):
@@ -444,7 +426,7 @@ class MC_Case(Case):
 		# And finally, the outermost ring
 		s = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii), boundary_type = self.core.bc["rad"])
 		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
-		new_cell.region = -s    & +plate_bot & -plate_top
+		new_cell.region = -s & +plate_bot & -plate_top
 		core_cells.append(new_cell)
 		
 		# Add the core plates
@@ -468,8 +450,6 @@ class MC_Case(Case):
 		openmc_vessel.add_cells(core_cells)
 		
 		return openmc_vessel, inside_cell, inside_fill, outer_surfs
-	
-	
 	
 	
 	
@@ -511,6 +491,7 @@ class MC_Case(Case):
 		crd_map = self.core.control_map.square_map()
 		crd_bank_map = self.core.control_bank.square_map()
 		
+		# Need to convert to numpy.array
 		lattice = [[None,]*n]*n
 		
 		print("Generating core (this may take a while)...")
@@ -550,11 +531,9 @@ class MC_Case(Case):
 					
 					new_row[i] = openmc_assembly.universe
 				else:
-					# Then install the moderator universe instead
-					#new_row[i] = 0 # REPLACE WITH: that universe
+					# No fuel assembly here: fill it with moderator
 					new_row[i] = self.mod_verse
 			lattice[j] = new_row
-		
 		
 		openmc_core.universes = lattice
 		
@@ -566,37 +545,11 @@ class MC_Case(Case):
 
 if __name__ == "__main__":
 	# Instantiate a test case with a representative VERA XML.gold
-	#filename = "gold/p7.xml.gold"
-	#filename = "gold/2a_dep.xml.gold"
-	filename = "gold/2e.xml.gold"
+	filename = "gold/p7.xml.gold"
 	test_case = MC_Case(filename)
-	#print "Testing:",  test_case
+	print("Testing:",  test_case)
 	
-	
-	print("\nInspecting the children")
-	for child in test_case.root:
-		if child.tag == "ParameterList":
-			print(child.attrib["name"])
-			
-	#print test_case.describe()
-	all_pins = []
-	for a in test_case.assemblies.values():
-		for cm in a.cellmaps.values():
-			continue
-			# comment out 'continue' to look at the cell maps
-			print(a, ':\t', cm)
-			print(cm.str_map())
-			print("-"*18)
-		#print a.params
-		for c in a.cells.values():
-			new_pin = test_case.get_openmc_pincell(c)
-			all_pins.append(new_pin)
-			if new_pin.name == "Cell_1-verse":
-				mypin = new_pin
-	
-	#print cm.square_map()
-	
-
+	a = list(test_case.assemblies.values())[0]
 	test_asmblys = test_case.get_openmc_lattices(a)[0]
 	#print(test_asmbly)
 	
@@ -605,15 +558,6 @@ if __name__ == "__main__":
 	print(test_case.core.str_maps("shape"))
 	b = test_case.get_openmc_baffle()
 	print(str(b))
-	#print(core)
-	
-	test_case.get_openmc_spacergrids(a.spacergrids, clean(a.params["grid_map"]), clean(a.params["grid_elev"]), 17, a.pitch)
-	
-	last_cell = list(mypin.cells.values())[-1]
-	print(last_cell)
-	print()
-	#print(last_cell.region.surface())
-	
 	
 	core_lattice = test_case.get_openmc_core_lattice()
 	
