@@ -87,7 +87,7 @@ class MC_Case(Case):
 		t = self.core.baffle.thick
 		gap = self.core.baffle.gap
 		baf = pwr.Baffle(mat, t, gap)
-		cmap = self.core.shape.square_map()
+		cmap = self.core.shape.square_map
 		apitch = self.core.pitch
 		baffle_cell = pwr.get_openmc_baffle(baf, cmap, apitch, self.openmc_xplanes,
 		                                    self.openmc_yplanes, self.counter)
@@ -487,24 +487,21 @@ class MC_Case(Case):
 		
 		openmc_core = openmc.RectLattice(self.counter.add_universe(), "Core Lattice")
 		openmc_core.pitch = (self.core.pitch, self.core.pitch)
-		openmc_core.lower_left = [-halfwidth * n / 2.0] * 2
+		openmc_core.lower_left = [-halfwidth] * 2
 		openmc_core.outer = self.mod_verse
 		
-		ins_map = self.core.insert_map.square_map()
-		det_map = self.core.detector_map.square_map()
-		crd_map = self.core.control_map.square_map()
-		crd_bank_map = self.core.control_bank.square_map()
+		# TODO: Determine if these are lists or numpy arrays
+		ins_map = self.core.insert_map.square_map
+		det_map = self.core.detector_map.square_map
+		crd_map = self.core.control_map.square_map
+		crd_bank_map = self.core.control_bank.square_map
 		
-		# Need to convert to numpy.array
 		lattice = numpy.empty((n, n), dtype = openmc.Universe)
 	
 		print("Generating core (this may take a while)...")
-		# FIXME:
-		# This portion of the code is too slow.
-		# Speed it up with dictionary lookups where possible.
 		for j in range(n):
 			for i in range(n):
-				print("Doing", j, "x", i)   #debug
+				print("\rConfiguring position: " + str(j) + "x" + str(i) + "...", end = "")   #debug
 				# Check if there is supposed to be an assembly in this position
 				if shape[j, i]:
 					askey = asmap[j, i].lower()
@@ -515,7 +512,7 @@ class MC_Case(Case):
 					crd_key = crd_map[j, i]
 					crd_bank_key = crd_bank_map[j, i]
 					
-					if (ins_key or crd_key or det_key) != blank:
+					if not ((ins_key == blank) and (crd_key == blank) and (det_key == blank)):
 						vera_asmbly = copy(vera_asmbly)
 						# Handle each type of insertion differently.
 						if ins_key != blank:
@@ -525,7 +522,7 @@ class MC_Case(Case):
 						if crd_key != blank:
 							vera_crd = self.controls[crd_key]
 							steps = self.state.rodbank[crd_bank_key]
-							depth = steps*vera_crd.step_size
+							depth = (vera_crd.maxstep - steps)*vera_crd.step_size
 							vera_asmbly.add_insert(vera_crd, depth)
 							vera_asmbly.name += "+" + vera_crd.name
 						if det_key != blank:
