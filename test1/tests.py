@@ -338,8 +338,11 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
+	
+	print("\nGenerating XML")
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
 	materials = openmc.Materials(matlist)

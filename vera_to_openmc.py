@@ -490,7 +490,6 @@ class MC_Case(Case):
 		openmc_core.lower_left = [-halfwidth] * 2
 		openmc_core.outer = self.mod_verse
 		
-		# TODO: Determine if these are lists or numpy arrays
 		ins_map = self.core.insert_map.square_map
 		det_map = self.core.detector_map.square_map
 		crd_map = self.core.control_map.square_map
@@ -538,8 +537,9 @@ class MC_Case(Case):
 					# No fuel assembly here: fill it with moderator
 					lattice[j, i] = self.mod_verse
 		
-		openmc_core.universes = lattice
 		
+		openmc_core.universes = lattice
+		print("\tDone.")
 		return openmc_core
 	
 	
