@@ -81,8 +81,11 @@ class MC_Case(Case):
 		Output:
 			baffle_cell:        instance of openmc.Cell describing the baffle geometry.
 		"""
-		
-		baf = self.core.baffle		# instance of objects.Baffle
+	
+		mat = self.get_openmc_material(self.core.baffle.mat)
+		t = self.core.baffle.thick
+		gap = self.core.baffle.gap
+		baf = pwr.Baffle(mat, t, gap)
 		cmap = self.core.shape.square_map()
 		apitch = self.core.pitch
 		baffle_cell = pwr.get_openmc_baffle(baf, cmap, apitch, self.openmc_xplanes,
@@ -560,7 +563,7 @@ if __name__ == "__main__":
 	print(str(b))
 	
 	core_lattice = test_case.get_openmc_core_lattice()
-	
+	print(core_lattice)
 	
 	
 	

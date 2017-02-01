@@ -123,7 +123,7 @@ class State(object):
 	def __init__(self, key, tfuel, tinlet, mod,
 	             # boron, b10 = 0.199,
 	             name = "",
-	             bank_labels = (), bank_pos = (),
+	             rodbank = None,
 	             params = {}, ):
 		self.key = key
 		self.tfuel = tfuel
@@ -675,13 +675,14 @@ class Core(object):
 					Default is whitespace."""
 		if space:
 			space = space[0]
+		smap = self.shape.square_map()
 		# Create a new blank map for the assembly layout
 		n = self.size
-		amap = numpy.array((n, n), dtype = str)
+		amap = numpy.empty((n, n), dtype = str)
 		j = 0
 		for row in range(n):
 			for col in range(n):
-				a = self.shape.square_map()[row][col]
+				a = smap[row, col]
 				if a == 0:
 					amap[row, col] = space
 				else:
@@ -727,7 +728,7 @@ class Core(object):
 			return which + " is not a valid option."
 
 
-class Nozzle2(object):
+class Nozzle(object):
 	"""Attempt 2 at creating a pwr nozzle
 		
 	"""
