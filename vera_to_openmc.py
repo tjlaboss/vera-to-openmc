@@ -42,8 +42,9 @@ class MC_Case(Case):
 		self.mod.add_s_alpha_beta("c_H_in_H2O")
 		
 		# Create an infinite cell/universe of moderator
-		self.mod_cell = openmc.Cell(100, name = "Infinite Mod Cell", fill = self.mod)
-		self.mod_verse = openmc.Universe(100, name = "Infinite Mod Universe", cells = (self.mod_cell,))
+		self.mod_cell = openmc.Cell(self.counter.add_cell(), name = "Infinite Mod Cell", fill = self.mod)
+		self.mod_verse = openmc.Universe(self.counter.add_universe(),
+		                                 name = "Infinite Mod Universe", cells = (self.mod_cell,))
 		
 	
 	def __get_surface(self, dim, coeff, name = "", rd = 5):
