@@ -251,15 +251,13 @@ class Assembly(object):
 		# TODO: At a later date, figure out if it is important to model them.
 		# If so, a "nozzle lattice" can be created to handle this.
 		
-		# TODO: This method needs to account for the depth of insertion, for control rods.
-		# The control rod insertion is given in the [STATE] block.
-		na_levels = len(self.axial_elevations) 
+		na_levels = len(self.axial_elevations)
 		ni_levels = len(insertion.axial_elevations)
 		if depth:
 			# Truncate at the top of the assembly
-			max_elev = max(insertion.axial_elevations + insertion.axial_elevations)
+			max_elev = max(self.axial_elevations + insertion.axial_elevations)
 			insert_elevations = []
-			insert_labels = insertion.axial_labels[0:1]
+			insert_labels = insertion.axial_labels[0:1]  # [0:1], not [0], to keep it as a list
 			for i in range(ni_levels):
 				z = insertion.axial_elevations[i] + depth
 				if z < max_elev:
@@ -268,13 +266,9 @@ class Assembly(object):
 				else:
 					break
 			ni_levels = len(insert_elevations)	
-			#next two lines are debug
-			print("Before:", insertion.axial_elevations, insertion.axial_labels)
-			print("After:", insert_elevations, insert_labels)
 		else:
 			insert_elevations = insertion.axial_elevations
 			insert_labels = insertion.axial_labels
-		
 		
 		# Merge and remove the duplicates
 		all_elevs = list(set(self.axial_elevations + insert_elevations))

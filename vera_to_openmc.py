@@ -496,11 +496,6 @@ class MC_Case(Case):
 		crd_map = self.core.control_map.square_map()
 		crd_bank_map = self.core.control_bank.square_map()
 		
-		# Debug:
-		print("Insert map\n", ins_map, "\n\nDetector map\n", det_map,
-		      "\n\nControl rod map\n", crd_map, "\n\nControl rod bank map\n", crd_bank_map)
-		
-		# Need to convert to numpy.array
 		lattice = numpy.empty((n, n), dtype = openmc.Universe)
 	
 		print("Generating core (this may take a while)...")
