@@ -3,12 +3,13 @@
 # Takes a VERA case and attempts to construct 
 # the required files for an OpenMC input.
 
+import numpy
+import openmc
+import pwr
+import objects
 from copy import copy
 from read_xml import Case
 from functions import fill_lattice, clean
-import objects
-import openmc
-import pwr
 
 
 class MC_Case(Case):
@@ -495,21 +496,24 @@ class MC_Case(Case):
 		crd_bank_map = self.core.control_bank.square_map()
 		
 		# Need to convert to numpy.array
-		lattice = [[None,]*n]*n
-		
+		lattice = numpy.empty((n, n), dtype = openmc.Universe)
+	
 		print("Generating core (this may take a while)...")
+		# FIXME:
+		# This portion of the code is too slow.
+		# Speed it up with dictionary lookups where possible.
 		for j in range(n):
-			new_row = [None,]*n
 			for i in range(n):
+				print("Doing", j, "x", i)   #debug
 				# Check if there is supposed to be an assembly in this position
-				if shape[j][i]:
-					askey = asmap[j][i].lower()
+				if shape[j, i]:
+					askey = asmap[j, i].lower()
 					vera_asmbly = self.assemblies[askey]
 					
-					ins_key = ins_map[j][i]
-					det_key = det_map[j][i]
-					crd_key = crd_map[j][i]
-					crd_bank_key = crd_bank_map[j][i]
+					ins_key = ins_map[j, i]
+					det_key = det_map[j, i]
+					crd_key = crd_map[j, i]
+					crd_bank_key = crd_bank_map[j, i]
 					
 					if (ins_key or crd_key or det_key) != blank:
 						vera_asmbly = copy(vera_asmbly)
@@ -532,11 +536,10 @@ class MC_Case(Case):
 					
 					openmc_assembly = self.get_openmc_assembly(vera_asmbly)
 					
-					new_row[i] = openmc_assembly.universe
+					lattice[j, i] = openmc_assembly.universe
 				else:
 					# No fuel assembly here: fill it with moderator
-					new_row[i] = self.mod_verse
-			lattice[j] = new_row
+					lattice[j, i] = self.mod_verse
 		
 		openmc_core.universes = lattice
 		
