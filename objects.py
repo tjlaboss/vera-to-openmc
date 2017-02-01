@@ -463,12 +463,18 @@ class SpacerGrid(object):
 class CoreMap(object):
 	"""A core mapping for assembly, control rod, and detector positions
 	Inputs: 
-		cell_map: 	List of integers or strings describing the assembly layout
-					You can also give it a square_map, and it will process it appropriately
-		name: 		String containing the descriptive Assembly name
-					[Default: empty string]
-		label:		string containing the unique Assembly identifier
-					[Default: empty string]	
+		cell_map: 	    List of integers or strings describing the assembly layout
+						You can also give it a square_map, and it will process it appropriately
+		name: 		    String containing the descriptive Assembly name
+						[Default: empty string]
+		label:	    	string containing the unique Assembly identifier
+						[Default: empty string]
+	
+	Other parameters:
+		square_map:     numpy.ndarray describing the core map. It is generated
+						at instantiation and refreshed with get_square_map()
+		str_map:        string depicting the core map, suitable for print(). It is
+						generated at instantiation and refreshed with get_str_map()
 	"""
 	def __init__(self, cell_map, name = "", label = ""):
 		self.name = name
@@ -491,6 +497,9 @@ class CoreMap(object):
 		else:
 			self.n = int(sqrt(len(cell_map)))
 			self.cell_map = cell_map
+		
+		self.square_map = self.get_square_map()
+		self.str_map = self.get_str_map()
 	
 	def __str__(self):
 		rep = self.name
@@ -502,17 +511,17 @@ class CoreMap(object):
 		return self.n
 	
 	def __iter__(self):
-		for i in self.square_map():
+		for i in self.square_map:
 			yield i
 	
 	def __getitem__(self, i):
-		return self.square_map()[i]
+		return self.square_map[i]
 	
 	# def __setitem__(self,index,value):
 	#	self.square_map()[index] = value
 	
 	
-	def square_map(self):
+	def get_square_map(self):
 		"""Return the cell map as a square array"""
 		n = self.n
 		smap = numpy.empty((n, n), dtype = object)
@@ -522,9 +531,9 @@ class CoreMap(object):
 				smap[j, i] = self.cell_map[k]
 		return smap
 	
-	def str_map(self):
+	def get_str_map(self):
 		"""Return a string of the square map nicely."""
-		smap = self.square_map()
+		smap = self.get_square_map()
 		ml = len(max(map(str, self.cell_map), key = len))  # max length of a key
 		printable = ""
 		for row in smap:
@@ -669,7 +678,7 @@ class Core(object):
 					Default is whitespace."""
 		if space:
 			space = space[0]
-		smap = self.shape.square_map()
+		smap = self.shape.get_square_map()
 		# Create a new blank map for the assembly layout
 		n = self.size
 		amap = numpy.empty((n, n), dtype = str)
@@ -699,11 +708,11 @@ class Core(object):
 		else, the method will return both."""
 		which = which.lower()
 		if which in ("s", "shape"):
-			return self.shape.square_map()
+			return self.shape.square_map
 		elif which in ("a", "ass", "asmbly", "assembly"):
 			return self.__asmbly_square_map(space)
 		elif not which:
-			return (self.shape.square_map(), self.__asmbly_square_map(space))
+			return (self.shape.square_map, self.__asmbly_square_map(space))
 		else:
 			return which + " is not a valid option."
 	
@@ -713,7 +722,7 @@ class Core(object):
 		else, the method will return both."""
 		which = which.lower()
 		if which in ("s", "shape"):
-			return self.shape.str_map()
+			return self.shape.str_map
 		elif which in ("a", "ass", "asmbly", "assembly"):
 			return self.__asmbly_str_map(space)
 		elif not which:
