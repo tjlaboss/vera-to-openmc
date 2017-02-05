@@ -6,12 +6,12 @@
 
 import openmc
 import pwr.spacergrid
-from pwr.functions import get_plane
+import pwr.functions
 
 
 
 class Assembly(object):
-	'''Constructor for an OpenMC Universe containing:
+	"""Constructor for an OpenMC Universe containing:
 		cells for the upper/lower nozzles,
 		lattices (with and without spacer grids),
 		and the surrounding moderator.
@@ -29,6 +29,12 @@ class Assembly(object):
 		walls:				list of instances of openmc.Surface: [min_x, max_x, min_y, max_y] 
 							Used to create the 2D region within the assembly.
 							[Will be generated automatically if not provided.]
+		xplanes:            dictionary of instances of openmc.XPlane, of the format {str(x0):xplane)
+	                        [Default: empty dictionary]
+		yplanes:            dictionary of instances of openmc.YPlane, of the format {str(y0):yplane)
+	                        [Default: empty dictionary]
+		zplanes:            dictionary of instances of openmc.ZPlane, of the format {str(z0):zplane)
+	                        [Default: empty dictionary]
 		lattices:			list of instances of openmc.RectLattice, in the axial order they appear in the assembly
 							(bottom -> top).
 							[Default: empty list]
@@ -62,19 +68,17 @@ class Assembly(object):
 		spacer_elevs:		list of the elevations of the tops/bottoms of all spacer grids
 		all_elevs:			list of all axial elevations, created when (lattice_elevs + spacer_elevs)
 							have been concatenated, sorted, and checked for duplicates
-		openmc_surfs:		list of instances of openmc.Surface used in the construction of this assembly
 		openmc_cells:		list of all instances of openmc.Cell used in the construction of this assembly
 		gridded_pincells:	dictionary of pincells which have a gridded version, in the following format:
 							{'orig. universe id': gridded instance of openmc.Universe}
 		gridded_lattices:	dictionary of lattices  which have a gridded version, in the following format:
 							{'orig. universe id': gridded instance of openmc.RectLattice}
-		assembly:			instance of openmc.Universe.
-							the whole reason you instantiated THIS object.
-							the OpenMC representation of the fuel assembly
-	'''
+		universe:			instance of openmc.Universe; the OpenMC representation of the fuel assembly
+	"""
 
 	def __init__(self, 	key = "", 		name = "", 			universe_id = None,
 						pitch = 0.0, 	npins = 0,			walls = [],
+                        xplanes = {},   yplanes = {},       zplanes = {},
 						lattices = [], 	lattice_elevs = [],	spacers = [], 	spacer_mids = [],
 						lower_nozzle = None, 				upper_nozzle = None, 
 						z_active = [],	mod = None,			counter = None):
@@ -86,6 +90,7 @@ class Assembly(object):
 		self.spacers = spacers;				self.spacer_mids = spacer_mids
 		self.lower_nozzle = lower_nozzle;	self.upper_nozzle = upper_nozzle
 		self.walls = walls;
+		self.xplanes = xplanes;             self.yplanes = yplanes;         self.zplanes = zplanes
 		self.z_active = z_active
 		self.mod = mod
 		self.counter = counter
@@ -95,23 +100,40 @@ class Assembly(object):
 		return self.name
 	
 	
-	def __get_plane(self, dim, plane, boundary_type = None, name = "", eps = None):
-		'''Shorthand for pwr.functions.get_plane() specific to this assembly'''
-		if not boundary_type:
-			boundary_type = "transmission"
-		if not eps:
-			eps = 5
-		return get_plane(self.openmc_surfaces, self.counter, dim, plane, boundary_type, name, eps)
-		
+	def __get_surface(self, dim, coeff, name = "", rd = 5):
+		"""Wrapper for pwr.get_surface()
+
+			Inputs:
+				:param dim:             str; dimension or surface type. Case insensitive.
+				:param coeff:           float; Value of the coefficent (such as x0 or R) for the surface type
+				:param name:            str; name to be assigned to the new surface (if one is generated)
+										[Default: empty string]
+				:param rd:              int; number of decimal places to round to. If the coefficient for a surface matches
+										up to 'rd' decimal places, they are considered equal.
+										[Default: 5]
+			Output:
+				:return openmc_surf:
+		"""
+		dim = dim.lower()
+		if dim in ("x", "xp", "xplane"):
+			surfdict = self.xplanes
+		elif dim in ("y", "yp", "yplane"):
+			surfdict = self.yplanes
+		elif dim in ("z", "zp", "zplane"):
+			surfdict = self.zplanes
+		else:
+			raise AssertionError(str(dim) + " is not an acceptable Surface type.")
+		openmc_surf = pwr.functions.get_surface(self.counter, surfdict, dim, coeff, name, rd)
+		return openmc_surf
 	
 	
 	def __prebuild(self):
-		'''Check that all the required properties are there.
-		If not, error out. Otherwise, do a few operations prior to build().'''
+		"""Check that all the required properties are there.
+		If not, error out. Otherwise, do a few operations prior to build()."""
 		
 		if not self.name:
 			self.name = self.key
-		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle', 'walls', 'z_active']
+		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle', 'walls', 'z_active',
 		if min(self.lattice_elevs) == 0:
 			blank_allowable.append('lower_nozzle')
 		
@@ -134,9 +156,7 @@ class Assembly(object):
 		
 		#TODO: If griddict not in lattice.__dict__  --> add it
 		
-		# Initialize the openmc list attributes
 		self.openmc_cells = []
-		self.openmc_surfaces = []
 		
 		# Determine the range of the active fuel
 		if len(self.z_active) != 2:
@@ -163,31 +183,29 @@ class Assembly(object):
 			[min_x, max_x, min_y, max_y] = self.walls
 		else:
 			half = self.pitch*self.npins/2.0
-			min_x = self.__get_plane('x', -half, name = self.name + ' - min_x') 
-			max_x = self.__get_plane('x', +half, name = self.name + ' - max_x') 
-			min_y = self.__get_plane('y', -half, name = self.name + ' - min_y') 
-			max_y = self.__get_plane('y', +half, name = self.name + ' - max_y') 
+			min_x = self.__get_surface('xplane', -half, name = self.name + ' - min_x')
+			max_x = self.__get_surface('xplane', +half, name = self.name + ' - max_x')
+			min_y = self.__get_surface('yplane', -half, name = self.name + ' - min_y')
+			max_y = self.__get_surface('yplane', +half, name = self.name + ' - max_y')
 			self.walls = [min_x, max_x, min_y, max_y]
-		self.openmc_surfaces = [min_x, max_x, min_y, max_y]
 		self.wall_region = openmc.Intersection(+min_x & +min_y & -max_x & -max_y)
 	
 	
 	def build(self):
-		'''Construct the assembly from the ground up.
+		"""Construct the assembly from the ground up.
 		
 		Output:
-			instance of openmc.Universe'''
+			instance of openmc.Universe"""
 		
 		self.__prebuild()
 		
 		# Start at the bottom
-		self.bottom = openmc.ZPlane(self.counter.add_surface(), name="bottom", z0 = 0)
+		self.bottom = self.__get_surface("zplane", 0, name = "bottom")
 		last_s = self.bottom
-		self.openmc_surfaces.append(self.bottom)
 		
 		if self.lower_nozzle:
 			lnoz = openmc.Cell(self.counter.add_cell(), "lower nozzle")
-			nozzle_top = self.__get_plane('z', self.lower_nozzle.height)
+			nozzle_top = self.__get_surface('zplane', self.lower_nozzle.height)
 			lnoz.region = (self.wall_region & +last_s & -nozzle_top)
 			lnoz.fill = self.lower_nozzle.material
 			self.openmc_cells.append(lnoz)
@@ -195,19 +213,19 @@ class Assembly(object):
 		
 		
 		for z in self.all_elevs[1:]:
-			s = self.__get_plane('z', z)
+			s = self.__get_surface('zplane', z)
 			# See what lattice we are in
 			for i in range(len(self.lattices)):
-				if z <= self.lattice_elevs[i] and z > self.lattice_elevs[i-1]:
+				if self.lattice_elevs[i] >= z > self.lattice_elevs[i-1]:
 					break
 			lat = self.lattices[i-1]
 			# Check if there is a spacer grid
 			if self.spacer_mids:
 				for g in range(len(self.spacer_elevs)):
-					if z <= self.spacer_elevs[g] and z > self.spacer_elevs[g-1]:
+					if self.spacer_elevs[g] >= z > self.spacer_elevs[g-1]:
 						break
 				# Even numbers are bottoms, odds are top
-				grid = False
+				grid = None
 				if g % 2 and z > min(self.spacer_elevs):
 					# Then the last one was a bottom: a grid is present
 					grid = self.spacers[int(g/2)]
@@ -215,7 +233,8 @@ class Assembly(object):
 				if grid:
 					if grid.key not in lat.griddict:
 						# We need to add the spacer grid to this one, and then add it to the index
-						lat.griddict[grid.key] = pwr.add_grid_to(lat, grid, self.counter, self.openmc_surfaces)
+						lat.griddict[grid.key] = pwr.add_grid_to(lat, grid, self.counter,
+						                                         self.xplanes, self.yplanes)
 					lat = lat.griddict[grid.key]
 				
 			# Now, we have the current lattice, for the correct level, with or with a spacer
@@ -232,7 +251,7 @@ class Assembly(object):
 		# Add the top nozzle if necessary:
 		if self.upper_nozzle:
 			unoz = openmc.Cell(self.counter.add_cell(), "upper nozzle")
-			nozzle_top = self.__get_plane('z', last_s.z0 + self.upper_nozzle.height)
+			nozzle_top = self.__get_surface('z', last_s.z0 + self.upper_nozzle.height)
 			unoz.region = (self.wall_region & +last_s & -nozzle_top)
 			unoz.fill = self.upper_nozzle.material
 			self.openmc_cells.append(unoz)
@@ -251,10 +270,10 @@ class Assembly(object):
 			uid = self.universe_id
 		else:
 			uid = self.counter.add_universe()
-		self.assembly = openmc.Universe(uid, name = self.name)
-		self.assembly.add_cells(self.openmc_cells)
+		self.universe = openmc.Universe(uid, name = self.name)
+		self.universe.add_cells(self.openmc_cells)
 		
-		return self.assembly
+		return self.universe
 
 
 
@@ -273,7 +292,7 @@ if __name__ == '__main__':
 	# Define a simple test material
 	iron = openmc.Material(c.add_material(), "iron")
 	iron.set_density("g/cc", 7.8)
-	iron.add_element("Fe", 1, 'ao', expand=True)
+	iron.add_element("Fe", 1, 'ao')
 	
 	mix1 = Mixture([mod, iron], [0.5,0.5], c.add_material(), 'watery iron')
 	assert isinstance(mix1, openmc.Material)	

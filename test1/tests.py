@@ -9,7 +9,7 @@ import vera_to_openmc
 
 
 def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
-	'''Create and run a simple pincell.
+	"""Create and run a simple pincell.
 	
 	True pincell cases (those starting with a '1') only have 1 assembly consisting of 1 pin cell.
 	In that case, just take the first (and only) entry in case.assemblies and assembly.cells.
@@ -22,7 +22,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 		case_file:		string of the location on the filesystem of the XML.GOLD input
 		aname:			string; unique key of the Assembly in which the cell lies.
 		pname:			string; unique key of the Cell in the Assembly 
-	'''
+	"""
 	pincell_case = vera_to_openmc.MC_Case(case_file)
 	
 	assembly1 = list(pincell_case.assemblies.values())[0]
@@ -41,7 +41,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	
 	
 	plot_lattice(assembly1.pitch, 1)
-	'''# Plot properties for this test
+	"""# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
 	plot.origin = [0, 0, 0]
@@ -50,7 +50,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	plot.color = 'mat'
 	# Instantiate a Plots collection and export to "plots.xml"
 	plot_file = openmc.Plots([plot])
-	plot_file.export_to_xml()'''
+	plot_file.export_to_xml()"""
 	
 	bounds = set_cubic_boundaries(assembly1.pitch, ("reflective",)*6)
 
@@ -58,7 +58,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 
 
 def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
-	'''Create and run a more complicated lattice
+	"""Create and run a more complicated lattice
 	
 	Plain lattice cases (those starting with a '2') are composed of a 2D lattice extended 1 cm
 	in the Z axis. In this case, just take the first (and only) entry in case.assemblies.
@@ -72,7 +72,7 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	Inputs:
 		case_file:		string of the location on the filesystem of the XML.GOLD input
 		aname:			string; unique key of the Assembly to run.
-	'''
+	"""
 	
 	ascase = vera_to_openmc.MC_Case(case_file)
 	as2 = list(ascase.assemblies.values())[0]
@@ -91,12 +91,14 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
 	for coremap in insertion_maps:
 		if coremap:
-			insert_key = coremap[0][0]
+			insert_key = coremap.square_map()[0][0]
 			if insert_key != "-":		# indicates no insertion in VERA
-				insertion = ascase.inserts[insert_key]
-				as2.add_insert(insertion)
-		# TODO: For [CONTROL] case, handle stroke, maxsteps
-		# Doesn't matter for assembly benchmarks, but does for full core
+				try:
+					insertion = ascase.inserts[insert_key]
+					as2.add_insert(insertion)
+				except KeyError as e:
+					print(ascase.inserts)
+					raise KeyError(e)
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
 	some_asmbly = openmc_as2_layers[0]
@@ -117,7 +119,7 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 
 
 def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
-	'''Create and run a single 3D assembly case
+	"""Create and run a single 3D assembly case
 	
 	
 	TODO: Allow the user to test any assembly from full-core cases as well. 
@@ -125,7 +127,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	Inputs:
 		case_file: 		string of the location on the filesystem of the XML.GOLD input
 		aname:			string; unique key of the Assembly to run.
-	'''
+	"""
 	ascase = vera_to_openmc.MC_Case(case_file)
 	as3 = list(ascase.assemblies.values())[0]
 	if aname:
@@ -141,34 +143,14 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
 	for coremap in insertion_maps:
 		if coremap:
-			print(coremap)
+			#print(coremap)
 			insert_key = coremap[0][0]
 			if insert_key != "-":		# indicates no insertion in VERA
 				insertion = ascase.inserts[insert_key]
 				as3.add_insert(insertion)
-		# TODO: For [CONTROL] case, handle stroke, maxsteps
-		# Doesn't matter for assembly benchmarks, but does for full core
-	
 		
 	pwr_asmbly = ascase.get_openmc_assembly(as3)
-	asmbly_universe = pwr_asmbly.assembly
-	
-	# Find the top and bottom of the active region
-	# 
-	# Currently, all this does is select the tallest region. This isn't necessarily what we want.
-	# A better solution may be to select everything between the nozzle regions.
-	
-
-	
-	''''n = len(as3.axial_elevations)
-	maxdiff = 0
-	for i in range(1, n):
-		diff = as3.axial_elevations[i] - as3.axial_elevations[i-1]
-		if diff > maxdiff:
-			maxdiff = diff
-			z0 = as3.axial_elevations[i-1]
-			z1 = as3.axial_elevations[i]'''
-
+	asmbly_universe = pwr_asmbly.universe
 	# The last cell of the universe should contain the moderator.
 	# We need to get the key to this before adding any more cells.
 	mod_key = list(asmbly_universe.cells.keys())[-1]
@@ -210,10 +192,26 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	return ascase, asmbly_universe, apitch, as3.pitch, as3.npins, bounds, [z0, z1]
 
 
+def test_core_lattice(case_file = "../gold/p7.xml.gold"):
+	"""Inputs:
+		case_file	
+	"""
+	
+	case = vera_to_openmc.MC_Case(case_file)
+	lat = case.get_openmc_core_lattice()
+	apitch = case.core.pitch
+	r = apitch*case.core.size
+	
+	plot_lattice(apitch, case.core.size, z = 75)
+	zrange_total = [20, 380]
+	bounds = set_cubic_boundaries(r, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
+	
+	return case, lat, r, apitch, case.core.size, bounds, zrange_total
+
 
 
 def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
-	'''Inputs:
+	"""Inputs:
 		pitch:		float; pitch between fuel pins 
 		n:			int; number of fuel pins in an assembly (usually 1 or 17)
 		bounds:		tuple/list of strings with len=6, containing the respective
@@ -222,7 +220,7 @@ def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
 					of the geometry
 	Outputs:
 		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
-	'''
+	"""
 	
 	min_x = openmc.XPlane(x0=-pitch/2.0, boundary_type=bounds[0], name = "Bound - min x")
 	max_x = openmc.XPlane(x0=+pitch/2.0, boundary_type=bounds[1], name = "Bound - max x")
@@ -239,7 +237,7 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'Plot-materials-xy'
 	plot.origin = [0, 0, z]
-	plot.width = [pitch - .01, pitch - .01]
+	plot.width = [npins*pitch - .01,]*2
 	plot.pixels = [width, height]
 	plot.color = 'mat'
 	# Instantiate a Plots collection and export to "plots.xml"
@@ -247,7 +245,7 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
 	plot_file.export_to_xml()
 
 
-def plot_assembly(pitch, npins = 1, z = 188, width = 1250, height = 1250):
+def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250):
 	# Plot properties for this test
 	plot1 = openmc.Plot(plot_id=1)
 	plot1.filename = 'Plot-fuel-xy'
@@ -271,9 +269,9 @@ def plot_assembly(pitch, npins = 1, z = 188, width = 1250, height = 1250):
 
 
 def test_core(case_file = "../gold/2o.xml.gold"):
-	'''Create a full core geometry
+	"""Create a full core geometry
 	
-	THIS DOES NOT WORK AT THIS TIME.'''
+	THIS DOES NOT WORK AT THIS TIME."""
 	core_case = vera_to_openmc.MC_Case(case_file)
 	c = core_case.core
 	n = None; pitch = None
@@ -306,7 +304,7 @@ def test_core(case_file = "../gold/2o.xml.gold"):
 	
 
 def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactive, particles):
-	'''Create the OpenMC settings and export to XML.
+	"""Create the OpenMC settings and export to XML.
 	
 	Inputs:
 		npins:		int; number of pins across an assembly. Use 1 for a pin cell,
@@ -317,7 +315,7 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 					 (min_x, max_x, min_y, max_y, min_z, max_z)
 		zrange:		list of floats describing the minimum and maximum z location
 					of fissionable material
-	'''
+	"""
 	# Instantiate a Settings object
 	settings_file = openmc.Settings()
 	settings_file.batches = min_batches
@@ -339,8 +337,11 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
+	
+	print("\nGenerating XML")
 	
 	matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
 	materials = openmc.Materials(matlist)
