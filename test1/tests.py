@@ -210,10 +210,42 @@ def test_core_lattice(case_file = "../gold/p7.xml.gold"):
 	return case, lat, r, apitch, case.core.size, bounds, zrange_total
 
 
+def test_core(case_file = "../gold/p7.xml.gold"):
+	"""Create a full core geometry
+	
+	"""
+	core_case = vera_to_openmc.MC_Case(case_file)
+	c = core_case.core
+	
+	'''
+	if c.size == 1:
+		# Single assembly case--probably should be rewritten
+		aname = c.asmbly.square_map()[0][0].lower()
+		asmbly = core_case.assemblies[aname]
+		n = asmbly.npins; pitch = asmbly.pitch; 
+		plot_lattice(pitch, n)
+		fillcore = core_case.get_openmc_assemblies(asmbly)[0]
+		bounds = (c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["top"], c.bc["top"])
+		boundaries = set_cubic_boundaries(pitch, n, bounds)
+	'''
+		
+	reactor_universe, boundaries = core_case.build_reactor()
+	pwr_asmbly = list(core_case.openmc_assemblies.values())[0]
+	zrange = pwr_asmbly.z_active  # zrange for fission source
 
-def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
+	
+	#PLOT
+	#heights = [127, 188]
+	#xynames = ["grid", "fuel"]
+	plot_core(c.pitch, c.size)
+		
+	#case, fillcell, apitch, ppitch, n, bounds, zrange
+	return core_case, reactor_universe, c.pitch, c.size, boundaries, zrange
+
+
+def set_cubic_boundaries(pitch, bounds = ('reflective',) * 6, zrange = [0.0, 1.0]):
 	"""Inputs:
-		pitch:		float; pitch between fuel pins 
+		pitch:		float; pitch between fuel pins
 		n:			int; number of fuel pins in an assembly (usually 1 or 17)
 		bounds:		tuple/list of strings with len=6, containing the respective
 					boundary types for min/max x, y, and z (default: all reflective)
@@ -223,22 +255,22 @@ def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
 		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
 	"""
 	
-	min_x = openmc.XPlane(x0=-pitch/2.0, boundary_type=bounds[0], name = "Bound - min x")
-	max_x = openmc.XPlane(x0=+pitch/2.0, boundary_type=bounds[1], name = "Bound - max x")
-	min_y = openmc.YPlane(y0=-pitch/2.0, boundary_type=bounds[2], name = "Bound - min y")
-	max_y = openmc.YPlane(y0=+pitch/2.0, boundary_type=bounds[3], name = "Bound - max y")
-	min_z = openmc.ZPlane(z0=zrange[0],  boundary_type=bounds[4], name = "Bound - min z")
-	max_z = openmc.ZPlane(z0=zrange[1],  boundary_type=bounds[5], name = "Bound - max z")
+	min_x = openmc.XPlane(x0 = -pitch / 2.0, boundary_type = bounds[0], name = "Bound - min x")
+	max_x = openmc.XPlane(x0 = +pitch / 2.0, boundary_type = bounds[1], name = "Bound - max x")
+	min_y = openmc.YPlane(y0 = -pitch / 2.0, boundary_type = bounds[2], name = "Bound - min y")
+	max_y = openmc.YPlane(y0 = +pitch / 2.0, boundary_type = bounds[3], name = "Bound - max y")
+	min_z = openmc.ZPlane(z0 = zrange[0], boundary_type = bounds[4], name = "Bound - min z")
+	max_z = openmc.ZPlane(z0 = zrange[1], boundary_type = bounds[5], name = "Bound - max z")
 	
 	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
-	
-def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
+
+def plot_lattice(pitch, npins = 1, z = 0, width = 1250, height = 1250):
 	# Plot properties for this test
-	plot = openmc.Plot(plot_id=1)
+	plot = openmc.Plot(plot_id = 1)
 	plot.filename = 'Plot-materials-xy'
 	plot.origin = [0, 0, z]
-	plot.width = [npins*pitch - .01,]*2
+	plot.width = [npins * pitch - .01, ] * 2
 	plot.pixels = [width, height]
 	plot.color = 'mat'
 	# Instantiate a Plots collection and export to "plots.xml"
@@ -248,15 +280,15 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
 
 def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250):
 	# Plot properties for this test
-	plot1 = openmc.Plot(plot_id=1)
+	plot1 = openmc.Plot(plot_id = 1)
 	plot1.filename = 'Plot-fuel-xy'
 	plot1.origin = [0, 0, z]
 	plot1.width = [pitch - .01, pitch - .01]
 	plot1.pixels = [width, height]
 	plot1.color = 'mat'
 	
-	#tmp
-	plot2 = openmc.Plot(plot_id=2)
+	# tmp
+	plot2 = openmc.Plot(plot_id = 2)
 	plot2.filename = 'Plot-grid-xy'
 	plot2.origin = [0, 0, 127]
 	plot2.width = [pitch - .01, pitch - .01]
@@ -266,43 +298,41 @@ def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250):
 	# Instantiate a Plots collection and export to "plots.xml"
 	plot_file = openmc.Plots([plot1, plot2])
 	plot_file.export_to_xml()
-	
 
 
-def test_core(case_file = "../gold/2o.xml.gold"):
-	"""Create a full core geometry
+def plot_core(pitch, n, width = 2500, height = 2500,
+              zs = [127.0, ], xynames = ["grid", ],
+              xs = [0, ], yznames = ["center"],
+              ys = [], xznames = [],
+              ):
+	nzs = len(zs)  # I don't like where this abbreviation is going
+	nxs = len(xs)
+	nys = len(ys)
+	plot_list = []
+	for k in range(nzs):
+		z = zs[k]
+		plot = openmc.Plot(plot_id = k)
+		plot.filename = "Plot-" + xynames[k] + "-xy"
+		plot.origin = (0, 0, z)
+		plot.width = (n * pitch / 2.0 - .01,) * 2
+		plot.pixels = [width, height]
+		# TODO: set up colspec
+		plot.color = "mat"
+		plot_list.append(plot)
+	for i in range(nxs):
+		x = xs[i]
+		plot = openmc.Plot(plot_id = k + i)
+		plot.filename = "Plot-" + yznames[i] + "-yz"
+		plot.origin = (x, 0, 200)  # FIXME: detect right z height
+		plot.width = (n * pitch / 2.0 - .01,) * 2
+		plot.pixels = [width, height]
+		plot.color = "mat"
+		plot_list.append(plot)
 	
-	THIS DOES NOT WORK AT THIS TIME."""
-	core_case = vera_to_openmc.MC_Case(case_file)
-	c = core_case.core
-	n = None; pitch = None
-	
-	if c.size == 1:
-		# Single assembly case
-		aname = c.asmbly.square_map()[0][0].lower()
-		asmbly = core_case.assemblies[aname]
-		n = asmbly.npins; pitch = asmbly.pitch; 
-		plot_lattice(pitch, n)
-		fillcore = core_case.get_openmc_assemblies(asmbly)[0]
-		bounds = (c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["top"], c.bc["top"])
-		boundaries = set_cubic_boundaries(pitch, n, bounds)
-		
-		
-	elif c.radii:
-		radius = openmc.ZCylinder(R = max(case.core.vessel_radii), boundary_type = 'vacuum')
-		min_z = openmc.ZPlane(z0 = 0, boundary_type="vacuum")
-		max_z = openmc.ZPlane(z0 = case.core.height, boundary_type="vacuum")
-		plot_lattice(c.pitch, 2)
-		
-		boundaries = (radius, min_z, max_z)
-	
-	else:
-		raise(IOError)
-		
-	#PLOT
-		
-	return core_case, fillcore, pitch, n, boundaries
-	
+	# Instantiate a Plots collection and export to "plots.xml"
+	plot_file = openmc.Plots(plot_list)
+	plot_file.export_to_xml()
+
 
 def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactive, particles):
 	"""Create the OpenMC settings and export to XML.
@@ -339,8 +369,8 @@ if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
-	#case, fillcell, pitch, n, bounds, zrange = test_core()
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core()
 	
 	print("\nGenerating XML")
 	
