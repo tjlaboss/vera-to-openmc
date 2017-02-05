@@ -433,20 +433,22 @@ class MC_Case(Case):
 		                                boundary_type = self.core.bc["rad"])
 		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
 		new_cell.region = -vessel_outer & +last_s & +plate_bot & -plate_top
+		m = self.core.vessel_mats[-1]
+		new_cell.fill = self.get_openmc_material(m)
 		core_cells.append(new_cell)
 		
 		# Add the core plates
 		top_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[top_plate_mat.name] = top_plate_mat
 		top_plate_cell = openmc.Cell(self.counter.add_cell(), "Top core plate")
-		top_plate_cell.region = -vessel_surf & + core_top & -plate_top
+		top_plate_cell.region = -vessel_surf & +core_top & -plate_top
 		top_plate_cell.fill = top_plate_mat
 		core_cells.append(top_plate_cell)
 		
 		bot_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[bot_plate_mat.name] = bot_plate_mat
 		bot_plate_cell = openmc.Cell(self.counter.add_cell(), "Bot core plate")
-		bot_plate_cell.region = -vessel_surf & + core_bot & -plate_bot
+		bot_plate_cell.region = -vessel_surf & +plate_bot & -core_bot
 		bot_plate_cell.fill = bot_plate_mat
 		core_cells.append(bot_plate_cell)
 		
