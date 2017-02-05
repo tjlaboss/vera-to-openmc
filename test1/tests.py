@@ -216,6 +216,7 @@ def test_core(case_file = "../gold/p7.xml.gold"):
 	"""
 	core_case = vera_to_openmc.MC_Case(case_file)
 	c = core_case.core
+	apitch = c.pitch
 	
 	'''
 	if c.size == 1:
@@ -232,7 +233,7 @@ def test_core(case_file = "../gold/p7.xml.gold"):
 	reactor_universe, boundaries = core_case.build_reactor()
 	pwr_asmbly = list(core_case.openmc_assemblies.values())[0]
 	zrange = pwr_asmbly.z_active  # zrange for fission source
-
+	ppitch = pwr_asmbly.pitch
 	
 	#PLOT
 	#heights = [127, 188]
@@ -240,7 +241,7 @@ def test_core(case_file = "../gold/p7.xml.gold"):
 	plot_core(c.pitch, c.size)
 		
 	#case, fillcell, apitch, ppitch, n, bounds, zrange
-	return core_case, reactor_universe, c.pitch, c.size, boundaries, zrange
+	return core_case, reactor_universe, apitch, ppitch, c.size, boundaries, zrange
 
 
 def set_cubic_boundaries(pitch, bounds = ('reflective',) * 6, zrange = [0.0, 1.0]):
@@ -311,7 +312,7 @@ def plot_core(pitch, n, width = 2500, height = 2500,
 	plot_list = []
 	for k in range(nzs):
 		z = zs[k]
-		plot = openmc.Plot(plot_id = k)
+		plot = openmc.Plot(plot_id = k + 1)
 		plot.filename = "Plot-" + xynames[k] + "-xy"
 		plot.origin = (0, 0, z)
 		plot.width = (n * pitch / 2.0 - .01,) * 2
@@ -321,7 +322,7 @@ def plot_core(pitch, n, width = 2500, height = 2500,
 		plot_list.append(plot)
 	for i in range(nxs):
 		x = xs[i]
-		plot = openmc.Plot(plot_id = k + i)
+		plot = openmc.Plot(plot_id = k + i + 1)
 		plot.filename = "Plot-" + yznames[i] + "-yz"
 		plot.origin = (x, 0, 200)  # FIXME: detect right z height
 		plot.width = (n * pitch / 2.0 - .01,) * 2

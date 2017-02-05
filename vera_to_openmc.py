@@ -559,6 +559,7 @@ class MC_Case(Case):
 		core_lattice = self.get_openmc_core_lattice()
 		core_cell.region = ~baffle.region
 		core_cell.fill = core_lattice
+		reactor.add_cell(core_cell)
 		return reactor, outer_surfs
 		
 	
