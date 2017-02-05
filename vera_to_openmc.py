@@ -537,10 +537,30 @@ class MC_Case(Case):
 					# No fuel assembly here: fill it with moderator
 					lattice[j, i] = self.mod_verse
 		
-		
 		openmc_core.universes = lattice
 		print("\tDone.")
 		return openmc_core
+	
+	
+	def build_reactor(self):
+		"""Tie all the core components and vessel together into one universe.
+		
+		Outputs:
+			reactor:        instance of openmc.Universe
+			outer_surfs:    tuple containing the following Surfaces, with the boundary
+							conditions specified in the VERA deck:
+			        			vessel_surf: openmc.ZCylinder bounding the outside edge of the reactor vessel
+			        			plate_bot:   openmc.ZPlane bounding the bottom of the lower core plate
+			        			plate_top:   openmc.ZPlane bounding the top of the upper core plate
+		"""
+		reactor, core_cell, inside_fill, outer_surfs = self.get_openmc_reactor_vessel()
+		baffle = self.get_openmc_baffle()
+		reactor.add_cell(baffle)
+		core_lattice = self.get_openmc_core_lattice()
+		core_cell.region = ~baffle.region
+		core_cell.fill = core_lattice
+		return reactor, outer_surfs
+		
 	
 	
 	
@@ -556,14 +576,15 @@ if __name__ == "__main__":
 	test_asmblys = test_case.get_openmc_lattices(a)[0]
 	#print(test_asmbly)
 	
-	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
+	#core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
 	#print(test_case.core.square_maps("a", ''))
-	print(test_case.core.str_maps("shape"))
-	b = test_case.get_openmc_baffle()
-	print(str(b))
+	#print(test_case.core.str_maps("shape"))
+	#b = test_case.get_openmc_baffle()
+	#print(str(b))
 	
-	core_lattice = test_case.get_openmc_core_lattice()
-	print(core_lattice)
+	#core_lattice = test_case.get_openmc_core_lattice()
+	#print(core_lattice)
+	test_case.build_reactor()
 	
 	
 	
