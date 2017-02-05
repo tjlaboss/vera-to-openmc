@@ -403,6 +403,7 @@ class MC_Case(Case):
 		core_top = openmc.ZPlane(self.counter.add_surface(), z0 = self.core.height)
 		plate_top = openmc.ZPlane(self.counter.add_surface(),
 							z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
+		zregion = +core_bot & -core_top
 		
 		# Create the concentric cylinders of the vessel
 		for ring in range(len(self.core.vessel_radii) - 1):
@@ -428,9 +429,10 @@ class MC_Case(Case):
 				core_cells.append(new_cell)
 		
 		# And finally, the outermost ring
-		s = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii), boundary_type = self.core.bc["rad"])
+		vessel_outer = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii),
+		                                boundary_type = self.core.bc["rad"])
 		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
-		new_cell.region = -s & +plate_bot & -plate_top
+		new_cell.region = -vessel_outer & +last_s & +plate_bot & -plate_top
 		core_cells.append(new_cell)
 		
 		# Add the core plates
@@ -448,12 +450,12 @@ class MC_Case(Case):
 		bot_plate_cell.fill = bot_plate_mat
 		core_cells.append(bot_plate_cell)
 		
-		outer_surfs = (vessel_surf, plate_bot, plate_top)
+		outer_surfs = (vessel_outer, plate_bot, plate_top)
 		
 		openmc_vessel = openmc.Universe(self.counter.add_universe(), "Reactor Vessel")
 		openmc_vessel.add_cells(core_cells)
 		
-		return openmc_vessel, inside_cell, inside_fill, outer_surfs
+		return openmc_vessel, inside_cell, zregion, outer_surfs
 	
 	
 	
@@ -553,13 +555,17 @@ class MC_Case(Case):
 			        			plate_bot:   openmc.ZPlane bounding the bottom of the lower core plate
 			        			plate_top:   openmc.ZPlane bounding the top of the upper core plate
 		"""
-		reactor, core_cell, inside_fill, outer_surfs = self.get_openmc_reactor_vessel()
+		reactor, core_cell, zregion, outer_surfs = self.get_openmc_reactor_vessel()
+		# Wrap the core cell around the baffle before vertically bounding the baffle
 		baffle = self.get_openmc_baffle()
-		reactor.add_cell(baffle)
+		core_cell.region &= ~baffle.region
 		core_lattice = self.get_openmc_core_lattice()
-		core_cell.region = ~baffle.region
 		core_cell.fill = core_lattice
 		reactor.add_cell(core_cell)
+		# Now it is safe to put upper and lower bounds on the baffle
+		baffle.region &= zregion
+		reactor.add_cell(baffle)
+		
 		return reactor, outer_surfs
 		
 	
