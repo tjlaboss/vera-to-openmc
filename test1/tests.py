@@ -217,6 +217,7 @@ def test_core(case_file = "../gold/p7.xml.gold"):
 	core_case = vera_to_openmc.MC_Case(case_file)
 	c = core_case.core
 	apitch = c.pitch
+	r = max(c.vessel_radii)
 	
 	'''
 	if c.size == 1:
@@ -238,7 +239,7 @@ def test_core(case_file = "../gold/p7.xml.gold"):
 	#PLOT
 	#heights = [127, 188]
 	#xynames = ["grid", "fuel"]
-	plot_core(c.pitch, c.size)
+	plot_core(r)
 		
 	#case, fillcell, apitch, ppitch, n, bounds, zrange
 	return core_case, reactor_universe, apitch, ppitch, c.size, boundaries, zrange
@@ -301,31 +302,30 @@ def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250):
 	plot_file.export_to_xml()
 
 
-def plot_core(pitch, n, width = 2500, height = 2500,
+def plot_core(radius, width = 2500, height = 2500,
               zs = [127.0, ], xynames = ["grid", ],
               xs = [0, ], yznames = ["center"],
               ys = [], xznames = [],
               ):
-	nzs = len(zs)  # I don't like where this abbreviation is going
-	nxs = len(xs)
-	nys = len(ys)
 	plot_list = []
-	for k in range(nzs):
+	for k in range(len(zs)):
 		z = zs[k]
 		plot = openmc.Plot(plot_id = k + 1)
+		plot.basis = "xy"
 		plot.filename = "Plot-" + xynames[k] + "-xy"
 		plot.origin = (0, 0, z)
-		plot.width = (n * pitch / 2.0 - .01,) * 2
+		plot.width = (2*radius - .01,) * 2
 		plot.pixels = [width, height]
 		# TODO: set up colspec
 		plot.color = "mat"
 		plot_list.append(plot)
-	for i in range(nxs):
+	for i in range(len(xs)):
 		x = xs[i]
-		plot = openmc.Plot(plot_id = k + i + 1)
+		plot = openmc.Plot(plot_id = k + i + 2)
+		plot.basis = "yz"
 		plot.filename = "Plot-" + yznames[i] + "-yz"
 		plot.origin = (x, 0, 200)  # FIXME: detect right z height
-		plot.width = (n * pitch / 2.0 - .01,) * 2
+		plot.width = (2*radius - .01,) * 2
 		plot.pixels = [width, height]
 		plot.color = "mat"
 		plot_list.append(plot)
