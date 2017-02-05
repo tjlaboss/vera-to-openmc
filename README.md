@@ -5,15 +5,16 @@ Requires:
 
 https://github.com/tjlaboss/pwr - Toolbox to simplify PWR modeling with the Python API of OpenMC
 https://github.com/CASL/VERAin  - VERA common input processor (produces xml from VERA decks)
+
 -----
 
 Contains the files:
 
 
 #### `vera_to_openmc.py`:
-Under active development. Module which performs the operations necessary to generate an OpenMC input. Contains the class `MC_Case` (child of `Case`), which has the attributes and methods required to create the OpenMC objects.
+Development is nearly complete. Module which performs the operations necessary to generate an OpenMC input. Contains the class `MC_Case` (child of `Case`), which has the attributes and methods required to create the OpenMC objects.
 
-Currently converts Problems 1 (pincell), 2 (lattice), and 3 (assembly).
+Currently converts the neutronics portions of all the progression problems: 2D pin cell, 2D lattice, 3D assembly, and 3D full-core.
 
 #### `read_xml.py`:
 Completed. Describes the class `Case`, which should contain all of the information present in the XML of a VERA case.
