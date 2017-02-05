@@ -403,6 +403,7 @@ class MC_Case(Case):
 		core_top = openmc.ZPlane(self.counter.add_surface(), z0 = self.core.height)
 		plate_top = openmc.ZPlane(self.counter.add_surface(),
 							z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
+		zregion = +core_bot & -core_top
 		
 		# Create the concentric cylinders of the vessel
 		for ring in range(len(self.core.vessel_radii) - 1):
@@ -428,32 +429,35 @@ class MC_Case(Case):
 				core_cells.append(new_cell)
 		
 		# And finally, the outermost ring
-		s = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii), boundary_type = self.core.bc["rad"])
+		vessel_outer = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii),
+		                                boundary_type = self.core.bc["rad"])
 		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
-		new_cell.region = -s & +plate_bot & -plate_top
+		new_cell.region = -vessel_outer & +last_s & +plate_bot & -plate_top
+		m = self.core.vessel_mats[-1]
+		new_cell.fill = self.get_openmc_material(m)
 		core_cells.append(new_cell)
 		
 		# Add the core plates
 		top_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[top_plate_mat.name] = top_plate_mat
 		top_plate_cell = openmc.Cell(self.counter.add_cell(), "Top core plate")
-		top_plate_cell.region = -vessel_surf & + core_top & -plate_top
+		top_plate_cell.region = -vessel_surf & +core_top & -plate_top
 		top_plate_cell.fill = top_plate_mat
 		core_cells.append(top_plate_cell)
 		
 		bot_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[bot_plate_mat.name] = bot_plate_mat
 		bot_plate_cell = openmc.Cell(self.counter.add_cell(), "Bot core plate")
-		bot_plate_cell.region = -vessel_surf & + core_bot & -plate_bot
+		bot_plate_cell.region = -vessel_surf & +plate_bot & -core_bot
 		bot_plate_cell.fill = bot_plate_mat
 		core_cells.append(bot_plate_cell)
 		
-		outer_surfs = (vessel_surf, plate_bot, plate_top)
+		outer_surfs = (vessel_outer, plate_bot, plate_top)
 		
 		openmc_vessel = openmc.Universe(self.counter.add_universe(), "Reactor Vessel")
 		openmc_vessel.add_cells(core_cells)
 		
-		return openmc_vessel, inside_cell, inside_fill, outer_surfs
+		return openmc_vessel, inside_cell, zregion, outer_surfs
 	
 	
 	
@@ -537,10 +541,35 @@ class MC_Case(Case):
 					# No fuel assembly here: fill it with moderator
 					lattice[j, i] = self.mod_verse
 		
-		
 		openmc_core.universes = lattice
 		print("\tDone.")
 		return openmc_core
+	
+	
+	def build_reactor(self):
+		"""Tie all the core components and vessel together into one universe.
+		
+		Outputs:
+			reactor:        instance of openmc.Universe
+			outer_surfs:    tuple containing the following Surfaces, with the boundary
+							conditions specified in the VERA deck:
+			        			vessel_surf: openmc.ZCylinder bounding the outside edge of the reactor vessel
+			        			plate_bot:   openmc.ZPlane bounding the bottom of the lower core plate
+			        			plate_top:   openmc.ZPlane bounding the top of the upper core plate
+		"""
+		reactor, core_cell, zregion, outer_surfs = self.get_openmc_reactor_vessel()
+		# Wrap the core cell around the baffle before vertically bounding the baffle
+		baffle = self.get_openmc_baffle()
+		core_cell.region &= ~baffle.region
+		core_lattice = self.get_openmc_core_lattice()
+		core_cell.fill = core_lattice
+		reactor.add_cell(core_cell)
+		# Now it is safe to put upper and lower bounds on the baffle
+		baffle.region &= zregion
+		reactor.add_cell(baffle)
+		
+		return reactor, outer_surfs
+		
 	
 	
 	
@@ -556,14 +585,15 @@ if __name__ == "__main__":
 	test_asmblys = test_case.get_openmc_lattices(a)[0]
 	#print(test_asmbly)
 	
-	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
+	#core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
 	#print(test_case.core.square_maps("a", ''))
-	print(test_case.core.str_maps("shape"))
-	b = test_case.get_openmc_baffle()
-	print(str(b))
+	#print(test_case.core.str_maps("shape"))
+	#b = test_case.get_openmc_baffle()
+	#print(str(b))
 	
-	core_lattice = test_case.get_openmc_core_lattice()
-	print(core_lattice)
+	#core_lattice = test_case.get_openmc_core_lattice()
+	#print(core_lattice)
+	test_case.build_reactor()
 	
 	
 	
