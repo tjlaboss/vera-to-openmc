@@ -420,8 +420,11 @@ class MC_Case(Case):
 				new_cell.region = -s & +core_bot & -core_top
 				inside_cell = new_cell
 				inside_fill = m
-				last_s = s
 				vessel_surf = s
+				last_s = s
+			#elif ring == 3:
+			#	# Neutron pad
+			#	new_cells, s = self.get_neutron_pads()
 			else:
 				new_cell.region = -s & +last_s & +plate_bot & -plate_top
 				new_cell.fill = self.get_openmc_material(m)
@@ -460,6 +463,28 @@ class MC_Case(Case):
 		return openmc_vessel, inside_cell, zregion, outer_surfs
 	
 	
+	def build_neutron_pads(self, s_in, s_out, s_bot, s_top,
+	                       npads = 4, arc_length = 32, angle = 45):
+		"""Model the layer of the reactor vessel containing the neutron pads.
+		
+		Inputs:
+			:param s_in:        instance of openmc.ZCylinder marking the inner radius
+			:param s_out:       instance of openmc.ZCylinder marking the outer radius
+			:param s_bot:       instance of openmc.ZPlane marking the bottom of the vessel
+			:param s_top:       instance of openmc.ZPlane marking the top of the vessel
+			:param npads:       int; number of pads: one per steam generator (evenly placed)
+								[Default: 4]
+			:param arc_length:  float (degrees); arc length of a single neutron pad
+			                    [Default: 32]
+			:param angle:       float (degrees); angle from the x-axis at which the first pad starts
+								[Default: 45]
+		
+		Output:
+			:return pad_cells:  tuple of instances of openmc.Cell describing the neutron pad
+			:return last_s:     the outer surface of the neutron pads
+		"""
+		return None
+		
 	
 	def get_openmc_core_lattice(self, blank = "-"):
 		"""Create the reactor core lattice.
