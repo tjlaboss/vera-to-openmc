@@ -5,10 +5,12 @@
 
 from pwr.functions import duplicate, get_surface
 import openmc
+import numpy
 from math import sqrt
 
+
 class SpacerGrid(object):
-	'''Object to hold properties of an assembly's spacer grids
+	"""Object to hold properties of an assembly's spacer grids
 	
 	Parameters:
 		key: 		string; unique name of this spacer grid
@@ -21,21 +23,21 @@ class SpacerGrid(object):
 		(key, height, mass, material - as above)
 		thickness:	float; thickness (cm) of the grid around each pin, 
 					or half the total thickness between pins
-		'''
+	"""
 	
 	def __init__(self, key, height, mass, material, pitch, npins):
-		self.key = key	
-		self.height = height	
-		self.mass = mass		
+		self.key = key
+		self.height = height
+		self.mass = mass
 		self.material = material
 		self.thickness = self.calculate_thickness(pitch, npins)
 	
 	def calculate_thickness(self, pitch, npins):
-		'''Calculate the thickness of the spacer surrounding each pincell.
+		"""Calculate the thickness of the spacer surrounding each pincell.
 		Inputs:
 			pitch:		float; pin pitch (cm)
 			npins:		int; number of pins across Assembly (npinsxnpins)
-		'''
+		"""
 		
 		''' Method:
 		
@@ -67,7 +69,7 @@ class SpacerGrid(object):
 
 
 def add_spacer_to(pincell, pitch, t, material, counter, xplanes, yplanes):
-	'''Given a pincell to be placed in a lattice, add
+	"""Given a pincell to be placed in a lattice, add
 	the spacer grid to the individual cell.
 	
 	Inputs:
@@ -90,9 +92,9 @@ def add_spacer_to(pincell, pitch, t, material, counter, xplanes, yplanes):
 	Output:
 		new_pin:	instance of openmc.Universe describing the pincell
 					surrounded by the spacer
-	'''
+	"""
 	assert isinstance(pincell, openmc.Universe), str(pincell) + "must be an openmc.Universe (not a Cell)"
-	assert isinstance(material, openmc.Material), str(material) + "is not an instance of openmc.Material" 
+	assert isinstance(material, openmc.Material), str(material) + "is not an instance of openmc.Material"
 	
 	orig_list = list(pincell.cells.values())
 	suffix = " (gridded)"
@@ -117,7 +119,7 @@ def add_spacer_to(pincell, pitch, t, material, counter, xplanes, yplanes):
 	spacer.region = (+left_out	& +top_in 	& -top_out	&	-right_out) | \
 					(+right_in	& -right_out& +bot_in	& 	-top_in)	| \
 					(+left_out	& -left_in	& +bot_in	&	-top_in)	| \
-					(+bot_out 	& -bot_in	& +left_out	&	-right_out )  
+					(+bot_out 	& -bot_in	& +left_out	&	-right_out )
 	spacer.fill = material
 	# Then fix the moderator cell to be within the bounds of the spacer
 	mod_cell.region &= (+bot_in	& +left_in	& -top_in	& -right_in )
@@ -135,7 +137,7 @@ def add_spacer_to(pincell, pitch, t, material, counter, xplanes, yplanes):
 
 
 def add_grid_to(lattice, spacer, counter, xplanes = {}, yplanes = {}):
-	'''Add a spacer to every pincell in the lattice.
+	"""Add a spacer to every pincell in the lattice.
 
 	Inputs:
 		lattice:		instance of openmc.RectLattice
@@ -147,7 +149,7 @@ def add_grid_to(lattice, spacer, counter, xplanes = {}, yplanes = {}):
 						{str(y0):yplane}. Optional, but strongly recommended.
 	Output:
 		gridded:		instance of openmc.RectLattice with the grid applied
-						to every cell'''
+						to every cell"""
 	
 	assert isinstance(lattice, openmc.RectLattice), "'lattice' must be a RectLattice."
 	assert lattice.pitch[0] == lattice.pitch[1], "lattice must have a square pitch at this time.\n" + \
@@ -155,10 +157,9 @@ def add_grid_to(lattice, spacer, counter, xplanes = {}, yplanes = {}):
 	assert isinstance(spacer, SpacerGrid), "'spacer' must be an instance of SpacerGrid."
 	pitch = lattice.pitch[0]
 	n = len(lattice.universes)
-	new_universes = [[None,]*n,]*n
+	new_universes = numpy.empty((n,n), dtype = openmc.Universe)
 	
 	for j in range(n):
-		row = [None, ] * n
 		for i in range(n):
 			old_cell = lattice.universes[j][i]
 			key = str(old_cell.id)
@@ -168,8 +169,7 @@ def add_grid_to(lattice, spacer, counter, xplanes = {}, yplanes = {}):
 				new_cell = add_spacer_to(old_cell, pitch, spacer.thickness, spacer.material,
 										  counter, xplanes, yplanes)
 				old_cell.griddict[key] = new_cell
-			row[i] = new_cell
-		new_universes[j] = row
+			new_universes[j][i] = new_cell
 	
 	if lattice.name:
 		new_name = lattice.name + "-grid:" + spacer.key
