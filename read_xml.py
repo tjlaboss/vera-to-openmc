@@ -61,10 +61,29 @@ class Case(object):
 		self.states = []
 		self.controls = {};	self.detectors = {}
 		
-		
 		# Placeholder for an essential material
 		mod_density = 1.0; mod_isotopes = {"H1":-2.0/3, "O16":-1.0/3}
 		self.materials['mod'] = objects.Material("mod", mod_density, mod_isotopes)
+		
+		# Set the default colors for commonly-used materials
+		self.colors = {
+			"mod"   :    ( 86, 188, 192),
+			"air"   :    (  0, 255, 255),
+			"he"    :    (  1, 136,  16),
+			"cs"    :    (  0,  12, 128),
+			"ss"    :    (200, 200, 200),
+			"zirc4" :    (128, 128, 128),
+			"U31"   :    (185,  17,  17),
+			"U26"   :    (210, 189, 202),
+			"U21"   :    (234, 126, 152),
+			"b4c"   :    (  0,   0,   0),
+			"aic"   :    ( 85,  85,  85),
+			"ifba"  :    (255, 165,   0),
+			"waba"  :    (152,  96,   0),
+			"inc"   :    (  0, 196, 140),
+			"pyrex" :    (174,   0, 174),
+			"pyrex-vera":(255,   0, 255),
+		}
 		
 		# Set the default Monte Carlo simulation parameters (which may be changed later)
 		self.mc = objects.MonteCarlo()
