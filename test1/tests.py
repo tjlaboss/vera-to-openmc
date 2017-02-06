@@ -121,7 +121,6 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds, [0.0, 1.0]
 
 
-
 def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	"""Create and run a single 3D assembly case
 	
@@ -284,26 +283,48 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250, col_spec = {}
 
 
 def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250, col_spec = {}):
-	# Plot properties for this test
+	# Fuel-xy (no grid)
 	plot1 = openmc.Plot(plot_id = 1)
 	plot1.filename = 'Plot-fuel-xy'
 	plot1.origin = [0, 0, z]
+	plot1.basis = "xy"
 	plot1.width = [pitch - .01, pitch - .01]
 	plot1.pixels = [width, height]
 	plot1.color = 'mat'
 	plot1.col_spec = col_spec
 	
-	# tmp
+	# Gridded fuel:MID
 	plot2 = openmc.Plot(plot_id = 2)
-	plot2.filename = 'Plot-grid-xy'
+	plot2.filename = 'Plot-mid-grid-xy'
 	plot2.origin = [0, 0, 127]
+	plot2.basis = "xy"
 	plot2.width = [pitch - .01, pitch - .01]
 	plot2.pixels = [width, height]
 	plot2.color = 'mat'
 	plot2.col_spec = col_spec
 	
+	# Gridded fuel:END
+	plot3 = openmc.Plot(plot_id = 3)
+	plot3.filename = 'Plot-end-grid-xy'
+	plot3.origin = [0, 0, 388]
+	plot3.basis = "xy"
+	plot3.width = [pitch - .01, pitch - .01]
+	plot3.pixels = [width, height]
+	plot3.color = 'mat'
+	plot3.col_spec = col_spec
+	
+	# YZ
+	plot4 = openmc.Plot(plot_id = 4)
+	plot4.filename = 'Plot-yz'
+	plot4.origin = [0, 0, 200]
+	plot4.width = [pitch - .01, 410]
+	plot4.pixels = [width, height]
+	plot4.basis = "yz"
+	plot4.color = 'mat'
+	plot4.col_spec = col_spec
+	
 	# Instantiate a Plots collection and export to "plots.xml"
-	plot_file = openmc.Plots([plot1, plot2])
+	plot_file = openmc.Plots([plot1, plot2, plot3, plot4])
 	plot_file.export_to_xml()
 
 
@@ -374,6 +395,7 @@ def plot_core(radius, width = 2500, height = 2500, col_spec = {},
 	plot_file = openmc.Plots(plot_list)
 	plot_file.export_to_xml()
 
+
 def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactive, particles):
 	"""Create the OpenMC settings and export to XML.
 	
@@ -408,9 +430,9 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2f.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core("../gold/p7.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core("../gold/p7.xml.gold")
 	
 	print("\nGenerating XML")
 	
