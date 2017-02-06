@@ -480,10 +480,21 @@ class MC_Case(Case):
 								[Default: 45]
 		
 		Output:
-			:return pad_cells:  tuple of instances of openmc.Cell describing the neutron pad
+			:return pad_cells:  list of instances of openmc.Cell describing the neutron pad
 			:return last_s:     the outer surface of the neutron pads
 		"""
-		return None
+		assert arc_length*npads <= 360, "The combined arclength must be less than 360 degrees."
+		pad_cells = []
+		theta = 360/npads
+		# Region for the neutron pad layer: each individual pad will be intersected with this
+		reg = +s_in & -s_out & +s_bot & -s_top
+		for i in range(npads):
+			th0 = angle + i*theta - arc_length/2.0
+			th1 = th0 + arc_length
+			# TODO: Calculate the coefficients for each of the planes
+		
+		last_s = s_out
+		return pad_cells, last_s
 		
 	
 	def get_openmc_core_lattice(self, blank = "-"):
