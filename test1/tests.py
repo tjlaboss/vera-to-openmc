@@ -56,7 +56,6 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 
 	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds, [0.0, 1.0]
 
-
 def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	"""Create and run a more complicated lattice
 	
@@ -121,7 +120,6 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds, [0.0, 1.0]
 
 
-
 def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	"""Create and run a single 3D assembly case
 	
@@ -150,7 +148,15 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 			#print(coremap)
 			insert_key = coremap[0][0]
 			if insert_key != "-":		# indicates no insertion in VERA
-				insertion = ascase.inserts[insert_key]
+				if insert_key in ascase.inserts:
+					insertion = ascase.inserts[insert_key]
+				elif insert_key in ascase.detectors:
+					insertion = ascase.detectors[insert_key]
+				elif insert_key in ascase.controls:
+					insertion = ascase.controls[insert_key]
+				else:
+					print(ascase.inserts)
+					raise KeyError("Unknown key:", insert_key)
 				as3.add_insert(insertion)
 		
 	pwr_asmbly = ascase.get_openmc_assembly(as3)
@@ -186,7 +192,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 		ztop = pwr_asmbly.top.z0
 		top_surf = pwr_asmbly.top
 	
-	asmbly_universe.cells[mod_key].region = (pwr_asmbly.wall_region & -bot_surf & +top_surf) 
+	asmbly_universe.cells[mod_key].region = (~pwr_asmbly.wall_region | -bot_surf | +top_surf)
 
 	zrange_total = [zbot, ztop]			# zrange for boundary conditions
 	[z0, z1] = pwr_asmbly.z_active		# zrange for fission source
@@ -267,7 +273,8 @@ def set_cubic_boundaries(pitch, bounds = ('reflective',) * 6, zrange = [0.0, 1.0
 	min_z = openmc.ZPlane(z0 = zrange[0], boundary_type = bounds[4], name = "Bound - min z")
 	max_z = openmc.ZPlane(z0 = zrange[1], boundary_type = bounds[5], name = "Bound - max z")
 	
-	return (min_x, max_x, min_y, max_y, min_z, max_z)
+	return min_x, max_x, min_y, max_y, min_z, max_z
+
 
 def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250, col_spec = {}):
 	# Plot properties for this test
@@ -284,26 +291,48 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250, col_spec = {}
 
 
 def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250, col_spec = {}):
-	# Plot properties for this test
+	# Fuel-xy (no grid)
 	plot1 = openmc.Plot(plot_id = 1)
 	plot1.filename = 'Plot-fuel-xy'
 	plot1.origin = [0, 0, z]
+	plot1.basis = "xy"
 	plot1.width = [pitch - .01, pitch - .01]
 	plot1.pixels = [width, height]
 	plot1.color = 'mat'
 	plot1.col_spec = col_spec
 	
-	# tmp
+	# Gridded fuel:MID
 	plot2 = openmc.Plot(plot_id = 2)
-	plot2.filename = 'Plot-grid-xy'
+	plot2.filename = 'Plot-mid-grid-xy'
 	plot2.origin = [0, 0, 127]
+	plot2.basis = "xy"
 	plot2.width = [pitch - .01, pitch - .01]
 	plot2.pixels = [width, height]
 	plot2.color = 'mat'
 	plot2.col_spec = col_spec
 	
+	# Gridded fuel:END
+	plot3 = openmc.Plot(plot_id = 3)
+	plot3.filename = 'Plot-end-grid-xy'
+	plot3.origin = [0, 0, 388]
+	plot3.basis = "xy"
+	plot3.width = [pitch - .01, pitch - .01]
+	plot3.pixels = [width, height]
+	plot3.color = 'mat'
+	plot3.col_spec = col_spec
+	
+	# YZ
+	plot4 = openmc.Plot(plot_id = 4)
+	plot4.filename = 'Plot-yz'
+	plot4.origin = [0, 0, 200]
+	plot4.width = [pitch - .01, 410]
+	plot4.pixels = [width, height]
+	plot4.basis = "yz"
+	plot4.color = 'mat'
+	plot4.col_spec = col_spec
+	
 	# Instantiate a Plots collection and export to "plots.xml"
-	plot_file = openmc.Plots([plot1, plot2])
+	plot_file = openmc.Plots([plot1, plot2, plot3, plot4])
 	plot_file.export_to_xml()
 
 
@@ -374,6 +403,7 @@ def plot_core(radius, width = 2500, height = 2500, col_spec = {},
 	plot_file = openmc.Plots(plot_list)
 	plot_file.export_to_xml()
 
+
 def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactive, particles):
 	"""Create the OpenMC settings and export to XML.
 	
@@ -408,9 +438,9 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2f.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core("../gold/p7.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core("../gold/p7.xml.gold")
 	
 	print("\nGenerating XML")
 	
