@@ -40,7 +40,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	
 	
 	
-	plot_lattice(assembly1.pitch, 1)
+	plot_lattice(assembly1.pitch, 1, col_spec = pincell_case.col_spec)
 	"""# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'materials-xy'
@@ -91,14 +91,18 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
 	for coremap in insertion_maps:
 		if coremap:
-			insert_key = coremap.square_map()[0][0]
+			insert_key = coremap.square_map[0][0]
 			if insert_key != "-":		# indicates no insertion in VERA
-				try:
+				if insert_key in ascase.inserts:
 					insertion = ascase.inserts[insert_key]
-					as2.add_insert(insertion)
-				except KeyError as e:
+				elif insert_key in ascase.detectors:
+					insertion = ascase.detectors[insert_key]
+				elif insert_key in ascase.controls:
+					insertion = ascase.controls[insert_key]
+				else:
 					print(ascase.inserts)
-					raise KeyError(e)
+					raise KeyError("Unknown key:", insert_key)
+				as2.add_insert(insertion)
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
 	some_asmbly = openmc_as2_layers[0]
@@ -111,7 +115,7 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	some_asmbly = pwr.assembly.add_grid_to(some_asmbly, 1.26, 17, spacergrid)
 	'''
 	
-	plot_lattice(apitch, as2.npins)
+	plot_lattice(apitch, 1, col_spec = ascase.col_spec)
 	bounds = set_cubic_boundaries(apitch)
 	
 	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds, [0.0, 1.0]
@@ -186,7 +190,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 
 	zrange_total = [zbot, ztop]			# zrange for boundary conditions
 	[z0, z1] = pwr_asmbly.z_active		# zrange for fission source
-	plot_assembly(apitch, as3.npins, z = (z1 - z0)/2.0)
+	plot_assembly(apitch, as3.npins, z = (z1 - z0)/2.0, col_spec = ascase.col_spec)
 	bounds = set_cubic_boundaries(apitch, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
 	return ascase, asmbly_universe, apitch, as3.pitch, as3.npins, bounds, [z0, z1]
@@ -202,7 +206,7 @@ def test_core_lattice(case_file = "../gold/p7.xml.gold"):
 	apitch = case.core.pitch
 	r = apitch*case.core.size
 	
-	plot_lattice(apitch, case.core.size, z = 75)
+	plot_lattice(apitch, case.core.size, z = 75, col_spec = case.col_spec)
 	zrange_total = [20, 380]
 	bounds = set_cubic_boundaries(r, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
@@ -232,7 +236,7 @@ def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
 	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
 	
-def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
+def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250, col_spec = {}):
 	# Plot properties for this test
 	plot = openmc.Plot(plot_id=1)
 	plot.filename = 'Plot-materials-xy'
@@ -240,12 +244,13 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250):
 	plot.width = [npins*pitch - .01,]*2
 	plot.pixels = [width, height]
 	plot.color = 'mat'
+	plot.col_spec = col_spec
 	# Instantiate a Plots collection and export to "plots.xml"
 	plot_file = openmc.Plots([plot])
 	plot_file.export_to_xml()
 
 
-def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250):
+def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250, col_spec = {}):
 	# Plot properties for this test
 	plot1 = openmc.Plot(plot_id=1)
 	plot1.filename = 'Plot-fuel-xy'
@@ -253,6 +258,7 @@ def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250):
 	plot1.width = [pitch - .01, pitch - .01]
 	plot1.pixels = [width, height]
 	plot1.color = 'mat'
+	plot1.col_spec = col_spec
 	
 	#tmp
 	plot2 = openmc.Plot(plot_id=2)
@@ -261,6 +267,7 @@ def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250):
 	plot2.width = [pitch - .01, pitch - .01]
 	plot2.pixels = [width, height]
 	plot2.color = 'mat'
+	plot2.col_spec = col_spec
 	
 	# Instantiate a Plots collection and export to "plots.xml"
 	plot_file = openmc.Plots([plot1, plot2])
@@ -336,9 +343,9 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1c.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2n.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2f.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3a.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
 	#case, fillcell, pitch, n, bounds, zrange = test_core()
 	
 	print("\nGenerating XML")
