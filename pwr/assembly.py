@@ -134,6 +134,7 @@ class Assembly(object):
 		if not self.name:
 			self.name = self.key
 		blank_allowable = ['universe_id', 'spacers', 'spacer_mids', 'upper_nozzle', 'walls', 'z_active',
+		                   'xplanes', 'yplanes', 'zplanes']
 		if min(self.lattice_elevs) == 0:
 			blank_allowable.append('lower_nozzle')
 		
