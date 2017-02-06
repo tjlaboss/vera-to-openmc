@@ -56,7 +56,6 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 
 	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds, [0.0, 1.0]
 
-
 def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 	"""Create and run a more complicated lattice
 	
@@ -149,7 +148,15 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 			#print(coremap)
 			insert_key = coremap[0][0]
 			if insert_key != "-":		# indicates no insertion in VERA
-				insertion = ascase.inserts[insert_key]
+				if insert_key in ascase.inserts:
+					insertion = ascase.inserts[insert_key]
+				elif insert_key in ascase.detectors:
+					insertion = ascase.detectors[insert_key]
+				elif insert_key in ascase.controls:
+					insertion = ascase.controls[insert_key]
+				else:
+					print(ascase.inserts)
+					raise KeyError("Unknown key:", insert_key)
 				as3.add_insert(insertion)
 		
 	pwr_asmbly = ascase.get_openmc_assembly(as3)
@@ -185,7 +192,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 		ztop = pwr_asmbly.top.z0
 		top_surf = pwr_asmbly.top
 	
-	asmbly_universe.cells[mod_key].region = (pwr_asmbly.wall_region & -bot_surf & +top_surf) 
+	asmbly_universe.cells[mod_key].region = (~pwr_asmbly.wall_region | -bot_surf | +top_surf)
 
 	zrange_total = [zbot, ztop]			# zrange for boundary conditions
 	[z0, z1] = pwr_asmbly.z_active		# zrange for fission source
@@ -266,7 +273,8 @@ def set_cubic_boundaries(pitch, bounds = ('reflective',) * 6, zrange = [0.0, 1.0
 	min_z = openmc.ZPlane(z0 = zrange[0], boundary_type = bounds[4], name = "Bound - min z")
 	max_z = openmc.ZPlane(z0 = zrange[1], boundary_type = bounds[5], name = "Bound - max z")
 	
-	return (min_x, max_x, min_y, max_y, min_z, max_z)
+	return min_x, max_x, min_y, max_y, min_z, max_z
+
 
 def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250, col_spec = {}):
 	# Plot properties for this test
