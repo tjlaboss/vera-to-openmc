@@ -4,6 +4,7 @@
 # the required files for an OpenMC input.
 
 import numpy
+import math
 import openmc
 import pwr
 import objects
@@ -407,6 +408,7 @@ class MC_Case(Case):
 		core_top = openmc.ZPlane(self.counter.add_surface(), z0 = self.core.height)
 		plate_top = openmc.ZPlane(self.counter.add_surface(),
 							z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
+		zregion = +core_bot & -core_top
 		
 		# Create the concentric cylinders of the vessel
 		for ring in range(len(self.core.vessel_radii) - 1):
@@ -423,8 +425,15 @@ class MC_Case(Case):
 				new_cell.region = -s & +core_bot & -core_top
 				inside_cell = new_cell
 				inside_fill = m
-				last_s = s
 				vessel_surf = s
+				last_s = s
+			elif ring == 3:
+				# Neutron pad
+				pad_fill = self.get_openmc_material(m)
+				new_cells, s = self.build_neutron_pads(s, last_s, plate_bot, plate_top,
+                               pad_mat = pad_fill, mod_mat = self.mod)
+				core_cells += new_cells
+				last_s = s
 			else:
 				new_cell.region = -s & +last_s & +plate_bot & -plate_top
 				new_cell.fill = self.get_openmc_material(m)
@@ -432,34 +441,98 @@ class MC_Case(Case):
 				core_cells.append(new_cell)
 		
 		# And finally, the outermost ring
-		s = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii), boundary_type = self.core.bc["rad"])
+		vessel_outer = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii),
+		                                boundary_type = self.core.bc["rad"])
 		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
-		new_cell.region = -s & +plate_bot & -plate_top
+		new_cell.region = -vessel_outer & +last_s & +plate_bot & -plate_top
+		m = self.core.vessel_mats[-1]
+		new_cell.fill = self.get_openmc_material(m)
 		core_cells.append(new_cell)
 		
 		# Add the core plates
 		top_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[top_plate_mat.name] = top_plate_mat
 		top_plate_cell = openmc.Cell(self.counter.add_cell(), "Top core plate")
-		top_plate_cell.region = -vessel_surf & + core_top & -plate_top
+		top_plate_cell.region = -vessel_surf & +core_top & -plate_top
 		top_plate_cell.fill = top_plate_mat
 		core_cells.append(top_plate_cell)
 		
 		bot_plate_mat = self.get_openmc_material(self.core.bot_refl.material)
 		self.openmc_materials[bot_plate_mat.name] = bot_plate_mat
 		bot_plate_cell = openmc.Cell(self.counter.add_cell(), "Bot core plate")
-		bot_plate_cell.region = -vessel_surf & + core_bot & -plate_bot
+		bot_plate_cell.region = -vessel_surf & +plate_bot & -core_bot
 		bot_plate_cell.fill = bot_plate_mat
 		core_cells.append(bot_plate_cell)
 		
-		outer_surfs = (vessel_surf, plate_bot, plate_top)
+		outer_surfs = (vessel_outer, plate_bot, plate_top)
 		
 		openmc_vessel = openmc.Universe(self.counter.add_universe(), "Reactor Vessel")
 		openmc_vessel.add_cells(core_cells)
 		
-		return openmc_vessel, inside_cell, inside_fill, outer_surfs
+		return openmc_vessel, inside_cell, zregion, outer_surfs
 	
 	
+	def build_neutron_pads(self, s_out, s_in, s_bot, s_top, pad_mat, mod_mat,
+	                       npads = 4, arc_length = 32, angle = 45):
+		"""Model the layer of the reactor vessel containing the neutron pads.
+		
+		Inputs:
+			:param s_out:       instance of openmc.ZCylinder marking the outer radius
+			:param s_in:        instance of openmc.ZCylinder marking the inner radius
+			:param s_bot:       instance of openmc.ZPlane marking the bottom of the vessel
+			:param s_top:       instance of openmc.ZPlane marking the top of the vessel
+			:param pad_mat:     instance of openmc.Material that the neutron pad is made of
+			:param mod_mat:     instance of openmc.Material that the space between the
+								neutron pads is filled with (usually moderator)
+			:param npads:       int; number of pads: one per steam generator (evenly placed)
+								[Default: 4]
+			:param arc_length:  float (degrees); arc length of a single neutron pad
+			                    [Default: 32]
+			:param angle:       float (degrees); angle from the x-axis at which the first pad starts
+								[Default: 45]
+		
+		Output:
+			:return pad_cells:  list of instances of openmc.Cell describing the neutron pad
+			:return last_s:     the outer surface of the neutron pads
+		"""
+		assert arc_length*npads <= 360, "The combined arclength must be less than 360 degrees."
+		pad_cells = []
+		theta = 360/npads
+		# Region for the neutron pad layer: each individual pad will be intersected with this
+		reg = +s_in & -s_out & +s_bot & -s_top
+		
+		# Functions for the necessary coefficients
+		phi = lambda th: th * math.pi/180 - math.pi/2
+		a = lambda th: math.sin(phi(th))
+		b = lambda th: math.cos(phi(th))
+		# Placeholder for the last surface used
+		p2 = None
+		
+		for i in range(npads):
+			name = "Neutron pad " + str(i+1)
+			th0 = angle + i*theta - arc_length/2.0
+			th1 = th0 + arc_length
+			# Create the cell where this pad is
+			if p2:
+				p0 = p2
+			else:
+				p0 = openmc.Plane(self.counter.add_surface(), A = a(th0), B = b(th0))
+			p1 = openmc.Plane(self.counter.add_surface(), A = a(th1), B = b(th1))
+			new_pad = openmc.Cell(self.counter.add_cell(), name)
+			new_pad.region = reg & +p1 & -p0
+			new_pad.fill = pad_mat
+			pad_cells.append(new_pad)
+			# Create the cell between this and the next pad
+			th2 = th0 + theta
+			p2 = openmc.Plane(self.counter.add_surface(), A = a(th2), B = b(th2))
+			new_space = openmc.Cell(self.counter.add_cell())
+			new_space.region = reg & +p2 & -p1
+			new_space.fill = mod_mat
+			pad_cells.append(new_space)
+			
+		last_s = s_out
+		return pad_cells, last_s
+		
 	
 	def get_openmc_core_lattice(self, blank = "-"):
 		"""Create the reactor core lattice.
@@ -541,10 +614,35 @@ class MC_Case(Case):
 					# No fuel assembly here: fill it with moderator
 					lattice[j, i] = self.mod_verse
 		
-		
 		openmc_core.universes = lattice
 		print("\tDone.")
 		return openmc_core
+	
+	
+	def build_reactor(self):
+		"""Tie all the core components and vessel together into one universe.
+		
+		Outputs:
+			reactor:        instance of openmc.Universe
+			outer_surfs:    tuple containing the following Surfaces, with the boundary
+							conditions specified in the VERA deck:
+			        			vessel_surf: openmc.ZCylinder bounding the outside edge of the reactor vessel
+			        			plate_bot:   openmc.ZPlane bounding the bottom of the lower core plate
+			        			plate_top:   openmc.ZPlane bounding the top of the upper core plate
+		"""
+		reactor, core_cell, zregion, outer_surfs = self.get_openmc_reactor_vessel()
+		# Wrap the core cell around the baffle before vertically bounding the baffle
+		baffle = self.get_openmc_baffle()
+		core_cell.region &= ~baffle.region
+		core_lattice = self.get_openmc_core_lattice()
+		core_cell.fill = core_lattice
+		reactor.add_cell(core_cell)
+		# Now it is safe to put upper and lower bounds on the baffle
+		baffle.region &= zregion
+		reactor.add_cell(baffle)
+		
+		return reactor, outer_surfs
+		
 	
 	
 	
@@ -560,14 +658,15 @@ if __name__ == "__main__":
 	test_asmblys = test_case.get_openmc_lattices(a)[0]
 	#print(test_asmbly)
 	
-	core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
+	#core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
 	#print(test_case.core.square_maps("a", ''))
-	print(test_case.core.str_maps("shape"))
-	b = test_case.get_openmc_baffle()
-	print(str(b))
+	#print(test_case.core.str_maps("shape"))
+	#b = test_case.get_openmc_baffle()
+	#print(str(b))
 	
-	core_lattice = test_case.get_openmc_core_lattice()
-	print(core_lattice)
+	#core_lattice = test_case.get_openmc_core_lattice()
+	#print(core_lattice)
+	test_case.build_reactor()
 	
 	
 	

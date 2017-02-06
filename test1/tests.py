@@ -213,10 +213,44 @@ def test_core_lattice(case_file = "../gold/p7.xml.gold"):
 	return case, lat, r, apitch, case.core.size, bounds, zrange_total
 
 
+def test_core(case_file = "../gold/p7.xml.gold"):
+	"""Create a full core geometry
+	
+	"""
+	core_case = vera_to_openmc.MC_Case(case_file)
+	c = core_case.core
+	apitch = c.pitch
+	r = max(c.vessel_radii)
+	
+	'''
+	if c.size == 1:
+		# Single assembly case--probably should be rewritten
+		aname = c.asmbly.square_map()[0][0].lower()
+		asmbly = core_case.assemblies[aname]
+		n = asmbly.npins; pitch = asmbly.pitch; 
+		plot_lattice(pitch, n)
+		fillcore = core_case.get_openmc_assemblies(asmbly)[0]
+		bounds = (c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["top"], c.bc["top"])
+		boundaries = set_cubic_boundaries(pitch, n, bounds)
+	'''
+		
+	reactor_universe, boundaries = core_case.build_reactor()
+	pwr_asmbly = list(core_case.openmc_assemblies.values())[0]
+	zrange = pwr_asmbly.z_active  # zrange for fission source
+	ppitch = pwr_asmbly.pitch
+	
+	#PLOT
+	#heights = [127, 188]
+	#xynames = ["grid", "fuel"]
+	plot_core(r)
+		
+	#case, fillcell, apitch, ppitch, n, bounds, zrange
+	return core_case, reactor_universe, apitch, ppitch, c.size, boundaries, zrange
 
-def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
+
+def set_cubic_boundaries(pitch, bounds = ('reflective',) * 6, zrange = [0.0, 1.0]):
 	"""Inputs:
-		pitch:		float; pitch between fuel pins 
+		pitch:		float; pitch between fuel pins
 		n:			int; number of fuel pins in an assembly (usually 1 or 17)
 		bounds:		tuple/list of strings with len=6, containing the respective
 					boundary types for min/max x, y, and z (default: all reflective)
@@ -226,22 +260,21 @@ def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange = [0.0, 1.0]):
 		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
 	"""
 	
-	min_x = openmc.XPlane(x0=-pitch/2.0, boundary_type=bounds[0], name = "Bound - min x")
-	max_x = openmc.XPlane(x0=+pitch/2.0, boundary_type=bounds[1], name = "Bound - max x")
-	min_y = openmc.YPlane(y0=-pitch/2.0, boundary_type=bounds[2], name = "Bound - min y")
-	max_y = openmc.YPlane(y0=+pitch/2.0, boundary_type=bounds[3], name = "Bound - max y")
-	min_z = openmc.ZPlane(z0=zrange[0],  boundary_type=bounds[4], name = "Bound - min z")
-	max_z = openmc.ZPlane(z0=zrange[1],  boundary_type=bounds[5], name = "Bound - max z")
+	min_x = openmc.XPlane(x0 = -pitch / 2.0, boundary_type = bounds[0], name = "Bound - min x")
+	max_x = openmc.XPlane(x0 = +pitch / 2.0, boundary_type = bounds[1], name = "Bound - max x")
+	min_y = openmc.YPlane(y0 = -pitch / 2.0, boundary_type = bounds[2], name = "Bound - min y")
+	max_y = openmc.YPlane(y0 = +pitch / 2.0, boundary_type = bounds[3], name = "Bound - max y")
+	min_z = openmc.ZPlane(z0 = zrange[0], boundary_type = bounds[4], name = "Bound - min z")
+	max_z = openmc.ZPlane(z0 = zrange[1], boundary_type = bounds[5], name = "Bound - max z")
 	
 	return (min_x, max_x, min_y, max_y, min_z, max_z)
 
-	
 def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250, col_spec = {}):
 	# Plot properties for this test
-	plot = openmc.Plot(plot_id=1)
+	plot = openmc.Plot(plot_id = 1)
 	plot.filename = 'Plot-materials-xy'
 	plot.origin = [0, 0, z]
-	plot.width = [npins*pitch - .01,]*2
+	plot.width = [npins * pitch - .01, ] * 2
 	plot.pixels = [width, height]
 	plot.color = 'mat'
 	plot.col_spec = col_spec
@@ -252,7 +285,7 @@ def plot_lattice(pitch, npins = 1, z = 0, width=1250, height=1250, col_spec = {}
 
 def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250, col_spec = {}):
 	# Plot properties for this test
-	plot1 = openmc.Plot(plot_id=1)
+	plot1 = openmc.Plot(plot_id = 1)
 	plot1.filename = 'Plot-fuel-xy'
 	plot1.origin = [0, 0, z]
 	plot1.width = [pitch - .01, pitch - .01]
@@ -260,8 +293,8 @@ def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250, col_
 	plot1.color = 'mat'
 	plot1.col_spec = col_spec
 	
-	#tmp
-	plot2 = openmc.Plot(plot_id=2)
+	# tmp
+	plot2 = openmc.Plot(plot_id = 2)
 	plot2.filename = 'Plot-grid-xy'
 	plot2.origin = [0, 0, 127]
 	plot2.width = [pitch - .01, pitch - .01]
