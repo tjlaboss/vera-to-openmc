@@ -34,6 +34,8 @@ class MC_Case(Case):
 		# Starting at 99 makes all IDs triple digits
 		self.counter = pwr.Counter(99, 99, 99, 99)
 		
+		# Define custom material color dictionary (populated by self.colors)
+		self.col_spec = {}
 		
 		# Create the essential moderator material
 		'''The outside of each cell is automatically filled with the special material "mod", which refers to
@@ -129,7 +131,8 @@ class MC_Case(Case):
 			# Then the material doesn't exist yet in OpenMC form
 			# Generate it and add it to the index 
 			vera_mat = self.materials[material]
-			openmc_material = openmc.Material(self.counter.add_material(), material)
+			m_id = self.counter.add_material()
+			openmc_material = openmc.Material(m_id, material)
 			openmc_material.set_density("g/cc", vera_mat.density)
 			openmc_material.temperature = vera_mat.temperature
 			for nuclide in sorted(vera_mat.isotopes):
@@ -148,6 +151,8 @@ class MC_Case(Case):
 							openmc_material.add_nuclide(n, w, 'wo')
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
+			if material in self.colors:
+				self.col_spec[m_id] = self.colors[material]
 			self.openmc_materials[material] = openmc_material
 		
 		return openmc_material
