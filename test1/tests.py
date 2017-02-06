@@ -336,9 +336,8 @@ def test_core(case_file = "../gold/p7.xml.gold"):
 	# PLOT
 	# heights = [127, 188]
 	# xynames = ["grid", "fuel"]
-	plot_core(r, col_spec = case.col_spec)
+	plot_core(r, col_spec = core_case.col_spec)
 	
-	# case, fillcell, apitch, ppitch, n, bounds, zrange
 	return core_case, reactor_universe, apitch, ppitch, c.size, boundaries, zrange
 
 
@@ -356,7 +355,6 @@ def plot_core(radius, width = 2500, height = 2500, col_spec = {},
 		plot.origin = (0, 0, z)
 		plot.width = (2 * radius - .01,) * 2
 		plot.pixels = [width, height]
-		# TODO: set up colspec
 		plot.color = "mat"
 		plot.col_spec = col_spec
 		plot_list.append(plot)
