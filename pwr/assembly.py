@@ -9,7 +9,6 @@ import pwr.spacergrid
 import pwr.functions
 
 
-
 class Assembly(object):
 	"""Constructor for an OpenMC Universe containing:
 		cells for the upper/lower nozzles,
@@ -89,7 +88,7 @@ class Assembly(object):
 		self.lattices = lattices;			self.lattice_elevs = lattice_elevs
 		self.spacers = spacers;				self.spacer_mids = spacer_mids
 		self.lower_nozzle = lower_nozzle;	self.upper_nozzle = upper_nozzle
-		self.walls = walls;
+		self.walls = walls
 		self.xplanes = xplanes;             self.yplanes = yplanes;         self.zplanes = zplanes
 		self.z_active = z_active
 		self.mod = mod
@@ -114,7 +113,7 @@ class Assembly(object):
 			Output:
 				:return openmc_surf:
 		"""
-		dim = dim.lower()
+		dim = str(dim).lower()
 		if dim in ("x", "xp", "xplane"):
 			surfdict = self.xplanes
 		elif dim in ("y", "yp", "yplane"):
@@ -122,7 +121,7 @@ class Assembly(object):
 		elif dim in ("z", "zp", "zplane"):
 			surfdict = self.zplanes
 		else:
-			raise AssertionError(str(dim) + " is not an acceptable Surface type.")
+			raise AssertionError(dim + " is not an acceptable Surface type.")
 		openmc_surf = pwr.functions.get_surface(self.counter, surfdict, dim, coeff, name, rd)
 		return openmc_surf
 	
