@@ -4,6 +4,7 @@
 # the required files for an OpenMC input.
 
 import numpy
+import math
 import openmc
 import pwr
 import objects
@@ -422,9 +423,13 @@ class MC_Case(Case):
 				inside_fill = m
 				vessel_surf = s
 				last_s = s
-			#elif ring == 3:
-			#	# Neutron pad
-			#	new_cells, s = self.get_neutron_pads()
+			elif ring == 3:
+				# Neutron pad
+				pad_fill = self.get_openmc_material(m)
+				new_cells, s = self.build_neutron_pads(s, last_s, plate_bot, plate_top,
+                               pad_mat = pad_fill, mod_mat = self.mod)
+				core_cells += new_cells
+				last_s = s
 			else:
 				new_cell.region = -s & +last_s & +plate_bot & -plate_top
 				new_cell.fill = self.get_openmc_material(m)
@@ -463,15 +468,18 @@ class MC_Case(Case):
 		return openmc_vessel, inside_cell, zregion, outer_surfs
 	
 	
-	def build_neutron_pads(self, s_in, s_out, s_bot, s_top,
+	def build_neutron_pads(self, s_out, s_in, s_bot, s_top, pad_mat, mod_mat,
 	                       npads = 4, arc_length = 32, angle = 45):
 		"""Model the layer of the reactor vessel containing the neutron pads.
 		
 		Inputs:
-			:param s_in:        instance of openmc.ZCylinder marking the inner radius
 			:param s_out:       instance of openmc.ZCylinder marking the outer radius
+			:param s_in:        instance of openmc.ZCylinder marking the inner radius
 			:param s_bot:       instance of openmc.ZPlane marking the bottom of the vessel
 			:param s_top:       instance of openmc.ZPlane marking the top of the vessel
+			:param pad_mat:     instance of openmc.Material that the neutron pad is made of
+			:param mod_mat:     instance of openmc.Material that the space between the
+								neutron pads is filled with (usually moderator)
 			:param npads:       int; number of pads: one per steam generator (evenly placed)
 								[Default: 4]
 			:param arc_length:  float (degrees); arc length of a single neutron pad
@@ -488,11 +496,36 @@ class MC_Case(Case):
 		theta = 360/npads
 		# Region for the neutron pad layer: each individual pad will be intersected with this
 		reg = +s_in & -s_out & +s_bot & -s_top
+		
+		# Functions for the necessary coefficients
+		phi = lambda th: th * math.pi/180 - math.pi/2
+		a = lambda th: math.sin(phi(th))
+		b = lambda th: math.cos(phi(th))
+		# Placeholder for the last surface used
+		p2 = None
+		
 		for i in range(npads):
+			name = "Neutron pad " + str(i+1)
 			th0 = angle + i*theta - arc_length/2.0
 			th1 = th0 + arc_length
-			# TODO: Calculate the coefficients for each of the planes
-		
+			# Create the cell where this pad is
+			if p2:
+				p0 = p2
+			else:
+				p0 = openmc.Plane(self.counter.add_surface(), A = a(th0), B = b(th0))
+			p1 = openmc.Plane(self.counter.add_surface(), A = a(th1), B = b(th1))
+			new_pad = openmc.Cell(self.counter.add_cell(), name)
+			new_pad.region = reg & +p1 & -p0
+			new_pad.fill = pad_mat
+			pad_cells.append(new_pad)
+			# Create the cell between this and the next pad
+			th2 = th0 + theta
+			p2 = openmc.Plane(self.counter.add_surface(), A = a(th2), B = b(th2))
+			new_space = openmc.Cell(self.counter.add_cell())
+			new_space.region = reg & +p2 & -p1
+			new_space.fill = mod_mat
+			pad_cells.append(new_space)
+			
 		last_s = s_out
 		return pad_cells, last_s
 		
