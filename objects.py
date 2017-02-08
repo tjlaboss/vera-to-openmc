@@ -300,7 +300,9 @@ class Assembly(object):
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
 				new_label = a_label + '+' + i_label
-				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap)
+				l = lambda i, j: self.get_cell_insert(insertion,
+                    insertion.key_maps[i_label], self.key_maps[a_label], i, j)
+				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = l)
 				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion
@@ -344,12 +346,10 @@ class Assembly(object):
 		if ikey == blank:
 			return akey
 		else:
-			acell_key = self.lookup(akey)
-			icell_key = insertion.celldict[ikey]
-			new_key = acell_key + "+" + icell_key
+			new_key = akey + "+" + ikey
 			if new_key not in self.cells:
-				cell_w_insert = copy(self.cells[acell_key])
-				cell_w_insert.insert(insertion.cells[icell_key])
+				cell_w_insert = copy(self.cells[akey])
+				cell_w_insert.insert(insertion.cells[ikey])
 				cell_w_insert.key = new_key
 				self.cells[new_key] = cell_w_insert
 			return new_key
