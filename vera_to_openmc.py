@@ -17,15 +17,16 @@ class MC_Case(Case):
 	"""An extension of the Case class from read_xml,
 	customized with some new attributes and methods to 
 	generate objects for OpenMC."""
+	
 	def __init__(self, source_file):
 		super(MC_Case, self).__init__(source_file)
 		
 		self.openmc_surfaces = []
 		# The following dictionaries use key-value pairs of 'coefficient':openmc.Surface
-		self.openmc_xplanes ={}         # {str(x0):openmc.XPlane)
-		self.openmc_yplanes ={}         # {str(y0):openmc.YPlane)
-		self.openmc_zplanes ={}         # {str(z0):openmc.ZPlane)
-		self.openmc_cylinders ={}       # {str(R):openmc.Cylinder)
+		self.openmc_xplanes = {}  # {str(x0):openmc.XPlane)
+		self.openmc_yplanes = {}  # {str(y0):openmc.YPlane)
+		self.openmc_zplanes = {}  # {str(z0):openmc.ZPlane)
+		self.openmc_cylinders = {}  # {str(R):openmc.Cylinder)
 		
 		self.openmc_materials = {}
 		self.openmc_pincells = {}
@@ -35,6 +36,8 @@ class MC_Case(Case):
 		# Starting at 99 makes all IDs triple digits
 		self.counter = pwr.Counter(99, 99, 99, 99)
 		
+		# Define custom material color dictionary (populated by self.colors)
+		self.col_spec = {}
 		
 		# Create the essential moderator material
 		'''The outside of each cell is automatically filled with the special material "mod", which refers to
@@ -47,10 +50,10 @@ class MC_Case(Case):
 		self.mod_cell = openmc.Cell(self.counter.add_cell(), name = "Infinite Mod Cell", fill = self.mod)
 		self.mod_verse = openmc.Universe(self.counter.add_universe(),
 		                                 name = "Infinite Mod Universe", cells = (self.mod_cell,))
-		
+	
 	def __get_surface(self, dim, coeff, name = "", rd = 5):
 		"""Wrapper for pwr.get_surface()
-		
+
 		Inputs:
 			:param dim:             str; dimension or surface type. Case insensitive.
 			:param coeff:           float; Value of the coefficent (such as x0 or R) for the surface type
@@ -79,11 +82,11 @@ class MC_Case(Case):
 	def get_openmc_baffle(self):
 		"""Calls pwr.get_openmc_baffle() with the
 		properties of this case and core.
-		
+
 		Output:
 			baffle_cell:        instance of openmc.Cell describing the baffle geometry.
 		"""
-	
+		
 		mat = self.get_openmc_material(self.core.baffle.mat)
 		t = self.core.baffle.thick
 		gap = self.core.baffle.gap
@@ -93,13 +96,12 @@ class MC_Case(Case):
 		baffle_cell = pwr.get_openmc_baffle(baf, cmap, apitch, self.openmc_xplanes,
 		                                    self.openmc_yplanes, self.counter)
 		return baffle_cell
-		
-		
+	
 	def get_openmc_material(self, material, asname = "", inname = ""):
 		"""Given a vera material (objects.Material) as extracted by self.__get_material(),
 		return an instance of openmc.Material. If the OpenMC Material exists, look it
 		up in the dictionary. Otherwise, create it anew.
-		
+
 		Inputs:
 			material:			string; key of the material in self.materials
 			asname:				string; name of the Assembly in which a pin cell is present.
@@ -107,10 +109,10 @@ class MC_Case(Case):
 								[Default: empty string]
 			inname:				string; name of the Insert which has been placed inside the cell, if any.
 								[Default: empty string]
-		
+
 		Outputs:
 			openmc_material:	instance of openmc.Material
-		
+
 		All of the material fractions sum to either +1.0 or -1.0. If positive fractions are used, they
 		refer to weight fractions. If negative fractions are used, they refer to atomic	fractions.
 		"""
@@ -128,9 +130,10 @@ class MC_Case(Case):
 			openmc_material = self.openmc_materials[material]
 		else:
 			# Then the material doesn't exist yet in OpenMC form
-			# Generate it and add it to the index 
+			# Generate it and add it to the index
 			vera_mat = self.materials[material]
-			openmc_material = openmc.Material(self.counter.add_material(), material)
+			m_id = self.counter.add_material()
+			openmc_material = openmc.Material(m_id, material)
 			openmc_material.set_density("g/cc", vera_mat.density)
 			openmc_material.temperature = vera_mat.temperature
 			for nuclide in sorted(vera_mat.isotopes):
@@ -149,27 +152,26 @@ class MC_Case(Case):
 							openmc_material.add_nuclide(n, w, 'wo')
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
+			if material in self.colors:
+				self.col_spec[m_id] = self.colors[material]
 			self.openmc_materials[material] = openmc_material
 		
 		return openmc_material
-	
-	
-
 	
 	def get_openmc_pincell(self, vera_cell):
 		"""Converts a VERA cell to an OpenMC universe. If this pincell universe
 		already exists, return it; otherwise, construct it anew, and add it
 		to self.openmc_pincells.
-		
+
 		Inputs:
 			vera_cell:			instance of objects.Cell from the vera deck
-		
+
 		Outputs:
 			pincell_universe:	instance of openmc.Universe, containing:
 				.cells:				list of instances of openmc.Cell, describing the
 									geometry and composition of this pin cell's universe
 				.universe_id:	integer; unique identifier of the Universe
-				.name:			string; more descriptive name of the universe (pin cell)			
+				.name:			string; more descriptive name of the universe (pin cell)
 		"""
 		
 		# First, check if this cell has already been created
@@ -198,7 +200,7 @@ class MC_Case(Case):
 				# Fill the cell in with a material
 				m = vera_cell.mats[ring]
 				fill = self.get_openmc_material(m, vera_cell.asname, vera_cell.inname)
-					
+				
 				# What I want to do instead is, somewhere else in the code, generate the corresponding
 				# openmc material for each objects.Material instance. Then, just look it up in that dictionary.
 				new_cell.fill = fill
@@ -211,7 +213,7 @@ class MC_Case(Case):
 			mod_cell.region = +last_s
 			openmc_cells.append(mod_cell)
 			
-			# Create a new universe in which the pin cell exists 
+			# Create a new universe in which the pin cell exists
 			pincell_universe = openmc.Universe(self.counter.add_universe(), vera_cell.name + "-verse")
 			pincell_universe.add_cells(openmc_cells)
 			
@@ -223,15 +225,13 @@ class MC_Case(Case):
 			
 			return pincell_universe
 	
-	
-	
 	def get_openmc_lattices(self, vera_asmbly):
 		"""Creates the  assembly geometry and lattices of pin cells
 		required to define an assembly in OpenMC.
-		
+
 		Inputs:
 			vera_asmbly:		instance of objects.Assembly
-		
+
 		Outputs:
 			openmc_asmblies:	list of instance of openmc.RectLattice
 		"""
@@ -256,7 +256,7 @@ class MC_Case(Case):
 			# And populate with universes from cell_verses
 			asmap = vera_asmbly.key_maps[latname]
 			
-			lattice.universes = fill_lattice(asmap, lambda c: cell_verses[c], npins)
+			lattice.universes = fill_lattice(asmap, lambda c:cell_verses[c], npins)
 			lattice.outer = self.mod_verse  # To account for the assembly gap
 			# Initialize a dictionary of versions of this lattice which have spacer grids added
 			lattice.griddict = {}
@@ -264,19 +264,16 @@ class MC_Case(Case):
 		
 		return openmc_lattices
 	
-	
-	
-	
 	def get_openmc_assembly(self, vera_asmbly):
 		"""Creates an OpenMC fuel assembly, complete with lattices
 		of fuel pins and spacer grids, that should be equivalent to what
 		is constructed by VERA.
-		
+
 		Inputs:
 			vera_asmbly:		instance of objects.Assembly
-		
+
 		Outputs:
-			pwr_asmbly:			instance of pwr.Assembly containing the lattices, spacers, and such. 
+			pwr_asmbly:			instance of pwr.Assembly containing the lattices, spacers, and such.
 								pwr_asmbly.universe is the instance of openmc.Universe modeling
 								the fuel assembly.
 		"""
@@ -301,7 +298,7 @@ class MC_Case(Case):
 			
 			if vera_asmbly.spacergrids:
 				if not vera_asmbly.pwr_spacers:
-					# Translate from VERA to pwr 
+					# Translate from VERA to pwr
 					for gkey in vera_asmbly.spacergrids:
 						g = vera_asmbly.spacergrids[gkey]
 						mat = self.get_openmc_material(g.material)
@@ -309,7 +306,7 @@ class MC_Case(Case):
 						vera_asmbly.pwr_spacers[gkey] = grid
 				# Otherwise, we should already have a dictionary of them.
 				
-				pwr_asmbly.spacers = clean(ps["grid_map"], lambda key: vera_asmbly.pwr_spacers[key] )
+				pwr_asmbly.spacers = clean(ps["grid_map"], lambda key:vera_asmbly.pwr_spacers[key])
 				pwr_asmbly.spacer_mids = clean(ps["grid_elev"], float)
 			
 			# Handle nozzles
@@ -319,7 +316,8 @@ class MC_Case(Case):
 					nozzle_mat = self.get_openmc_material(ps["lower_nozzle_comp"])
 					mass = float(ps["lower_nozzle_mass"])
 					height = float(ps["lower_nozzle_height"])
-					lnozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch, "lower-nozzle-mat")
+					lnozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch,
+					                                  "lower-nozzle-mat")
 					lnoz = objects.Nozzle(height, lnozmat, "Lower Nozzle")
 					vera_asmbly.pwr_nozzles["lower"] = lnoz
 				else:
@@ -330,7 +328,8 @@ class MC_Case(Case):
 					nozzle_mat = self.get_openmc_material(ps["upper_nozzle_comp"])
 					mass = float(ps["upper_nozzle_mass"])
 					height = float(ps["upper_nozzle_height"])
-					unozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch, "upper-nozzle-mat")
+					unozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch,
+					                                  "upper-nozzle-mat")
 					unoz = objects.Nozzle(height, unozmat, "Upper Nozzle")
 					vera_asmbly.pwr_nozzles["upper"] = unoz
 				else:
@@ -338,11 +337,11 @@ class MC_Case(Case):
 				pwr_asmbly.upper_nozzle = unoz
 			
 			'''	Worth noting about the nozzles:
-		
+
 				== Analysis of the BEAVRS Benchmark Using MPACT ==
-			A major difference between the model and the benchmark specification is the treatment of 
-			the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled 
-			with a considerable amount of stainless steel. The authors discerned that 
+			A major difference between the model and the benchmark specification is the treatment of
+			the axial reflector region. The benchmark specifies the upper and lower nozzle to be modeled
+			with a considerable amount of stainless steel. The authors discerned that
 			the benchmark is specifying up to 10 times the amount of steel that is in the nozzle and
 			core plate region. Instead of using this amount of steel, a Westinghouse optimized fuel
 			assembly (OFA) design found in Technical Report ML033530020 is used for the upper and
@@ -354,34 +353,32 @@ class MC_Case(Case):
 			self.openmc_assemblies[key] = pwr_asmbly
 			return pwr_asmbly
 	
-	
 	def get_nozzle_mixture(self, height, mass, nozzle_mat, mod_mat, npins, pitch, name = "nozzle-material"):
-		"""Get the mixture for a nozzle. 
-		
+		"""Get the mixture for a nozzle.
+
 		Inputs:
-		
+
 		Output:
 			new_mixture:		instance of pwr.Mixture
 		"""
 		if name in self.openmc_materials:
 			return self.openmc_materials[name]
 		else:
-			v = (npins*pitch)**2 * height
+			v = (npins * pitch) ** 2 * height
 			mat_vol = mass / nozzle_mat.density
 			mod_vol = v - mat_vol
 			vfracs = [mat_vol / v, mod_vol / v]
 			new_mixture = pwr.Mixture((nozzle_mat, mod_mat), vfracs,
-			                name = name, material_id = self.counter.add_material())
+			                          name = name, material_id = self.counter.add_material())
 			self.openmc_materials[name] = new_mixture
 			return new_mixture
 	
-	
 	def get_openmc_reactor_vessel(self):
 		"""Creates the pressure vessel representation in OpenMC
-		
+
 		Inputs:
 			vera_core:		instance of objects.Core
-		
+
 		Outputs:
 			openmc_vessel:	instance of openmc.Universe containing all the cells
 							describing the reactor pressure vessel EXCEPT inside_cell
@@ -399,11 +396,11 @@ class MC_Case(Case):
 		# Create the top and bottom planes of the core and core plate
 		# Intentionally does not use self.__get_surface() due to specific boundary conditions.
 		plate_bot = openmc.ZPlane(self.counter.add_surface(),
-							z0 = -self.core.bot_refl.thick, boundary_type = self.core.bc["bot"])
+		                          z0 = -self.core.bot_refl.thick, boundary_type = self.core.bc["bot"])
 		core_bot = openmc.ZPlane(self.counter.add_surface(), z0 = 0.0)
 		core_top = openmc.ZPlane(self.counter.add_surface(), z0 = self.core.height)
 		plate_top = openmc.ZPlane(self.counter.add_surface(),
-							z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
+		                          z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
 		zregion = +core_bot & -core_top
 		
 		# Create the concentric cylinders of the vessel
@@ -426,8 +423,9 @@ class MC_Case(Case):
 			elif ring == 3:
 				# Neutron pad
 				pad_fill = self.get_openmc_material(m)
-				new_cells, s = self.build_neutron_pads(s, last_s, plate_bot, plate_top,
-                               pad_mat = pad_fill, mod_mat = self.mod)
+				region = -s & +last_s & +plate_bot & -plate_top
+				pads = pwr.Neutron_Pads(region, pad_fill, self.mod, counter = self.counter)
+				new_cells = pads.get_cells()
 				core_cells += new_cells
 				last_s = s
 			else:
@@ -468,71 +466,9 @@ class MC_Case(Case):
 		return openmc_vessel, inside_cell, zregion, outer_surfs
 	
 	
-	def build_neutron_pads(self, s_out, s_in, s_bot, s_top, pad_mat, mod_mat,
-	                       npads = 4, arc_length = 32, angle = 45):
-		"""Model the layer of the reactor vessel containing the neutron pads.
-		
-		Inputs:
-			:param s_out:       instance of openmc.ZCylinder marking the outer radius
-			:param s_in:        instance of openmc.ZCylinder marking the inner radius
-			:param s_bot:       instance of openmc.ZPlane marking the bottom of the vessel
-			:param s_top:       instance of openmc.ZPlane marking the top of the vessel
-			:param pad_mat:     instance of openmc.Material that the neutron pad is made of
-			:param mod_mat:     instance of openmc.Material that the space between the
-								neutron pads is filled with (usually moderator)
-			:param npads:       int; number of pads: one per steam generator (evenly placed)
-								[Default: 4]
-			:param arc_length:  float (degrees); arc length of a single neutron pad
-			                    [Default: 32]
-			:param angle:       float (degrees); angle from the x-axis at which the first pad starts
-								[Default: 45]
-		
-		Output:
-			:return pad_cells:  list of instances of openmc.Cell describing the neutron pad
-			:return last_s:     the outer surface of the neutron pads
-		"""
-		assert arc_length*npads <= 360, "The combined arclength must be less than 360 degrees."
-		pad_cells = []
-		theta = 360/npads
-		# Region for the neutron pad layer: each individual pad will be intersected with this
-		reg = +s_in & -s_out & +s_bot & -s_top
-		
-		# Functions for the necessary coefficients
-		phi = lambda th: th * math.pi/180 - math.pi/2
-		a = lambda th: math.sin(phi(th))
-		b = lambda th: math.cos(phi(th))
-		# Placeholder for the last surface used
-		p2 = None
-		
-		for i in range(npads):
-			name = "Neutron pad " + str(i+1)
-			th0 = angle + i*theta - arc_length/2.0
-			th1 = th0 + arc_length
-			# Create the cell where this pad is
-			if p2:
-				p0 = p2
-			else:
-				p0 = openmc.Plane(self.counter.add_surface(), A = a(th0), B = b(th0))
-			p1 = openmc.Plane(self.counter.add_surface(), A = a(th1), B = b(th1))
-			new_pad = openmc.Cell(self.counter.add_cell(), name)
-			new_pad.region = reg & +p1 & -p0
-			new_pad.fill = pad_mat
-			pad_cells.append(new_pad)
-			# Create the cell between this and the next pad
-			th2 = th0 + theta
-			p2 = openmc.Plane(self.counter.add_surface(), A = a(th2), B = b(th2))
-			new_space = openmc.Cell(self.counter.add_cell())
-			new_space.region = reg & +p2 & -p1
-			new_space.fill = mod_mat
-			pad_cells.append(new_space)
-			
-		last_s = s_out
-		return pad_cells, last_s
-		
-	
 	def get_openmc_core_lattice(self, blank = "-"):
 		"""Create the reactor core lattice.
-		
+
 		This is an extremely important function that hasn't really been written yet.
 		What it needs to do is iterate through the shape map.
 			If an assembly belongs in that location:
@@ -546,7 +482,7 @@ class MC_Case(Case):
 				fill with mod
 		Then zip this lattice up in a universe and return it.
 		Later, that will be placed inside the baffle, and the reactor vessel.
-		
+
 		Input:
 			blank:			string which represents a location in a core map with no insertion.
 							[Default: "-"]
@@ -569,11 +505,11 @@ class MC_Case(Case):
 		crd_bank_map = self.core.control_bank.square_map
 		
 		lattice = numpy.empty((n, n), dtype = openmc.Universe)
-	
+		
 		print("Generating core (this may take a while)...")
 		for j in range(n):
 			for i in range(n):
-				print("\rConfiguring position: " + str(j) + "x" + str(i) + "...", end = "")   #debug
+				print("\rConfiguring position: " + str(j) + "x" + str(i) + "...", end = "")  # debug
 				# Check if there is supposed to be an assembly in this position
 				if shape[j, i]:
 					askey = asmap[j, i].lower()
@@ -594,7 +530,7 @@ class MC_Case(Case):
 						if crd_key != blank:
 							vera_crd = self.controls[crd_key]
 							steps = self.state.rodbank[crd_bank_key]
-							depth = (vera_crd.maxstep - steps)*vera_crd.step_size
+							depth = steps * vera_crd.step_size
 							vera_asmbly.add_insert(vera_crd, depth)
 							vera_asmbly.name += "+" + vera_crd.name
 						if det_key != blank:
@@ -614,10 +550,9 @@ class MC_Case(Case):
 		print("\tDone.")
 		return openmc_core
 	
-	
 	def build_reactor(self):
 		"""Tie all the core components and vessel together into one universe.
-		
+
 		Outputs:
 			reactor:        instance of openmc.Universe
 			outer_surfs:    tuple containing the following Surfaces, with the boundary
@@ -638,31 +573,27 @@ class MC_Case(Case):
 		reactor.add_cell(baffle)
 		
 		return reactor, outer_surfs
-		
-	
-	
-	
-	
+
 
 if __name__ == "__main__":
 	# Instantiate a test case with a representative VERA XML.gold
 	filename = "gold/p7.xml.gold"
 	test_case = MC_Case(filename)
-	print("Testing:",  test_case)
+	print("Testing:", test_case)
 	
 	a = list(test_case.assemblies.values())[0]
 	test_asmblys = test_case.get_openmc_lattices(a)[0]
-	#print(test_asmbly)
+	# print(test_asmbly)
 	
-	#core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
-	#print(test_case.core.square_maps("a", ''))
-	#print(test_case.core.str_maps("shape"))
-	#b = test_case.get_openmc_baffle()
-	#print(str(b))
+	# core, icell, ifill, cyl = test_case.get_openmc_reactor_vessel()
+	# print(test_case.core.square_maps("a", ''))
+	# print(test_case.core.str_maps("shape"))
+	# b = test_case.get_openmc_baffle()
+	# print(str(b))
 	
-	#core_lattice = test_case.get_openmc_core_lattice()
-	#print(core_lattice)
+	# core_lattice = test_case.get_openmc_core_lattice()
+	# print(core_lattice)
 	test_case.build_reactor()
-	
-	
-	
+
+
+
