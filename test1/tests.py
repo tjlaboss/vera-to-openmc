@@ -4,6 +4,7 @@
 
 import sys; sys.path.append('..')
 import openmc
+import pwr
 import vera_to_openmc
 
 
@@ -88,6 +89,14 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
 	some_asmbly = openmc_as2_layers[0]
+	# Add the grid spacers if necessary
+	if as2.spacergrids:
+		sg = list(as2.spacergrids.values())[0]
+		mat = ascase.get_openmc_material(sg.material, asname = as2.name)
+		grid = pwr.SpacerGrid(sg.name, sg.height, sg.mass, mat, as2.pitch, as2.npins)
+		some_asmbly = pwr.add_grid_to(some_asmbly, grid,
+                      ascase.counter, ascase.openmc_xplanes, ascase.openmc_yplanes)
+	
 	plot_lattice(apitch, 1, col_spec = ascase.col_spec)
 	bounds = set_cubic_boundaries(apitch)
 	
@@ -381,7 +390,7 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1a.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2f.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2q.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core("../gold/5a-1.xml.gold")
