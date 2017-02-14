@@ -7,9 +7,8 @@ import openmc
 import vera_to_openmc
 
 
-
 def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
-	"""Create and run a simple pincell.
+	"""Create and run a simple pincell (Problem 1).
 	
 	True pincell cases (those starting with a '1') only have 1 assembly consisting of 1 pin cell.
 	In that case, just take the first (and only) entry in case.assemblies and assembly.cells.
@@ -37,32 +36,19 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 			print("Using Assembly:", assembly1.name, "and Cell:", veracell1.name)
 	
 	openmc_cell1 = pincell_case.get_openmc_pincell(veracell1)
-	
-	
-	
 	plot_lattice(assembly1.pitch, 1, col_spec = pincell_case.col_spec)
-	"""# Plot properties for this test
-	plot = openmc.Plot(plot_id=1)
-	plot.filename = 'materials-xy'
-	plot.origin = [0, 0, 0]
-	plot.width = [01.5, 01.5]
-	plot.pixels = [1250, 1250]
-	plot.color = 'mat'
-	# Instantiate a Plots collection and export to "plots.xml"
-	plot_file = openmc.Plots([plot])
-	plot_file.export_to_xml()"""
-	
 	bounds = set_cubic_boundaries(assembly1.pitch, ("reflective",)*6)
 
 	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds, [0.0, 1.0]
 
+
 def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
-	"""Create and run a more complicated lattice
+	"""Create and run a lattice of pincells (Problem 2).
 	
 	Plain lattice cases (those starting with a '2') are composed of a 2D lattice extended 1 cm
 	in the Z axis. In this case, just take the first (and only) entry in case.assemblies.
 	
-	This function may also be used to run individual pin cells that are parts of larger cases.
+	This function may also be used to run individual lattices cells that are parts of larger cases.
 	In this event, the user must specify the lattice/assembly name 'aname'.
 	
 	!! TODO !! 
@@ -81,10 +67,7 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 		except KeyError as e:
 			print("Key", e, "not found; autodetecting.")
 			print("Using Assembly:", as2.name)
-	
 	apitch = ascase.core.pitch
-	
-	
 	
 	# Add insertions as necessary
 	insertion_maps = (ascase.core.insert_map, ascase.core.control_map, ascase.core.detector_map) 
@@ -105,15 +88,6 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 		
 	openmc_as2_layers = ascase.get_openmc_lattices(as2) 
 	some_asmbly = openmc_as2_layers[0]
-	
-	'''
-	Spacer test; doesn't work
-	import pwr
-	print(ascase.openmc_materials.keys())
-	spacergrid = pwr.SpacerGrid("key", 3.81, 875, ascase.get_openmc_material("ss"), 1.26, 17)
-	some_asmbly = pwr.assembly.add_grid_to(some_asmbly, 1.26, 17, spacergrid)
-	'''
-	
 	plot_lattice(apitch, 1, col_spec = ascase.col_spec)
 	bounds = set_cubic_boundaries(apitch)
 	
@@ -121,10 +95,9 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname=''):
 
 
 def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
-	"""Create and run a single 3D assembly case
+	"""Create and run a single 3D assembly case, such as Problem 3 or Problem 6.
 	
-	
-	TODO: Allow the user to test any assembly from full-core cases as well. 
+	TODO: Allow the user to test any assembly from full-core cases as well.
 	
 	Inputs:
 		case_file: 		string of the location on the filesystem of the XML.GOLD input
@@ -203,8 +176,11 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 
 
 def test_core_lattice(case_file = "../gold/p7.xml.gold"):
-	"""Inputs:
-		case_file	
+	"""Create the geometry for a lattice of fuel assemblies, such as in Problem 4 or
+	the core lattices from Problems 5 and 7.
+	
+	Inputs:
+		case_file:      string of the location on the filesystem of the XML.GOLD input
 	"""
 	
 	case = vera_to_openmc.MC_Case(case_file)
@@ -220,37 +196,37 @@ def test_core_lattice(case_file = "../gold/p7.xml.gold"):
 
 
 def test_core(case_file = "../gold/p7.xml.gold"):
-	"""Create a full core geometry
-	
+	"""Create a full core geometry (Problems 5 and 7).
+
+	Inputs:
+		case_file:      string of the location on the filesystem of the XML.GOLD input
 	"""
 	core_case = vera_to_openmc.MC_Case(case_file)
 	c = core_case.core
 	apitch = c.pitch
 	r = max(c.vessel_radii)
-	
 	'''
 	if c.size == 1:
 		# Single assembly case--probably should be rewritten
 		aname = c.asmbly.square_map()[0][0].lower()
 		asmbly = core_case.assemblies[aname]
-		n = asmbly.npins; pitch = asmbly.pitch; 
+		n = asmbly.npins; pitch = asmbly.pitch;
 		plot_lattice(pitch, n)
 		fillcore = core_case.get_openmc_assemblies(asmbly)[0]
 		bounds = (c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["top"], c.bc["top"])
 		boundaries = set_cubic_boundaries(pitch, n, bounds)
 	'''
-		
+	
 	reactor_universe, boundaries = core_case.build_reactor()
 	pwr_asmbly = list(core_case.openmc_assemblies.values())[0]
 	zrange = pwr_asmbly.z_active  # zrange for fission source
 	ppitch = pwr_asmbly.pitch
 	
-	#PLOT
-	#heights = [127, 188]
-	#xynames = ["grid", "fuel"]
-	plot_core(r)
-		
-	#case, fillcell, apitch, ppitch, n, bounds, zrange
+	# PLOT
+	# heights = [127, 188]
+	# xynames = ["grid", "fuel"]
+	plot_core(r, col_spec = core_case.col_spec)
+	
 	return core_case, reactor_universe, apitch, ppitch, c.size, boundaries, zrange
 
 
@@ -336,40 +312,6 @@ def plot_assembly(pitch, npins = 1, z = 188.0, width = 1250, height = 1250, col_
 	plot_file.export_to_xml()
 
 
-def test_core(case_file = "../gold/p7.xml.gold"):
-	"""Create a full core geometry
-
-	"""
-	core_case = vera_to_openmc.MC_Case(case_file)
-	c = core_case.core
-	apitch = c.pitch
-	r = max(c.vessel_radii)
-	
-	'''
-	if c.size == 1:
-		# Single assembly case--probably should be rewritten
-		aname = c.asmbly.square_map()[0][0].lower()
-		asmbly = core_case.assemblies[aname]
-		n = asmbly.npins; pitch = asmbly.pitch;
-		plot_lattice(pitch, n)
-		fillcore = core_case.get_openmc_assemblies(asmbly)[0]
-		bounds = (c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["rad"], c.bc["top"], c.bc["top"])
-		boundaries = set_cubic_boundaries(pitch, n, bounds)
-	'''
-	
-	reactor_universe, boundaries = core_case.build_reactor()
-	pwr_asmbly = list(core_case.openmc_assemblies.values())[0]
-	zrange = pwr_asmbly.z_active  # zrange for fission source
-	ppitch = pwr_asmbly.pitch
-	
-	# PLOT
-	# heights = [127, 188]
-	# xynames = ["grid", "fuel"]
-	plot_core(r, col_spec = core_case.col_spec)
-	
-	return core_case, reactor_universe, apitch, ppitch, c.size, boundaries, zrange
-
-
 def plot_core(radius, width = 2500, height = 2500, col_spec = {},
               zs = [127.0, ], xynames = ["grid", ],
               xs = [0, ], yznames = ["center"],
@@ -430,7 +372,7 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 	# Create an initial uniform spatial source distribution over fissionable zones
 	lleft  = (-npins*pitch/2.0,)*2 + (zrange[0],)
 	uright = (+npins*pitch/2.0,)*2 + (zrange[1],)
-	uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)  # @UndefinedVariable
+	uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
 
@@ -438,8 +380,8 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 
 if __name__ == "__main__":
-	case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1a.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2f.xml.gold")
+	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1a.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_lattice("../gold/2f.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core("../gold/5a-1.xml.gold")
@@ -464,17 +406,12 @@ if __name__ == "__main__":
 		min_x, max_x, min_y, max_y, min_z, max_z = bounds
 		root_cell.region = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
 	
-	
 	# Create Geometry and set root Universe
 	root_universe = openmc.Universe(universe_id=0, name='root universe')
 	root_universe.add_cell(root_cell)
 	geometry = openmc.Geometry()
 	geometry.root_universe = root_universe
 	geometry.export_to_xml()
-	
-	
-	
-
 	
 	# OpenMC simulation parameters
 	'''min_batches = 275
@@ -486,11 +423,6 @@ if __name__ == "__main__":
 	inactive 	= case.mc.inactive
 	particles 	= case.mc.particles
 	set_settings(n, ppitch, bounds, zrange, min_batches, max_batches, inactive, particles)
-	
-	
-	
-	
-	###DEBUG###
 	
 	print('\n', case)
 	print(fillcell)
