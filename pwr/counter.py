@@ -3,13 +3,11 @@
 # Container for the 'Counter' class, which allows the transfer of the 5 essential
 # OpenMC counters back and forth between modules
 
-from openmc import AUTO_SURFACE_ID, AUTO_CELL_ID, AUTO_MATERIAL_ID, AUTO_UNIVERSE_ID, AUTO_TALLY_ID
-
 class Counter(object):
 	"""An essential class for the counting of OpenMC
 	surface, cell, material, and universe IDs.
 	
-	Parameters: [integer; defaults are openmc.AUTO_(type)_ID]
+	Parameters: 	[integer; default value is 1]
 		surface_count:		initial surface count
 		cell_count:			initial cell count
 		material_count:		initial material count
@@ -23,11 +21,11 @@ class Counter(object):
 		universe:			current universe count
 		tally:              current tally count
 	"""
-	def __init__(self, 	surface = AUTO_SURFACE_ID,
-				 cell = AUTO_CELL_ID,
-				 material = AUTO_MATERIAL_ID, 
-				 universe = AUTO_UNIVERSE_ID,
-	             tally = AUTO_TALLY_ID
+	def __init__(self, 	surface = 1,
+				 cell = 1,
+				 material = 1, 
+				 universe = 1,
+	             tally = 1 
 	             ):
 		self.surface = surface
 		self.cell = cell
