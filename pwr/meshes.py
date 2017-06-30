@@ -33,18 +33,16 @@ class Mesh_Group(object):
 	
 	def __init__(self, pitch, nx, ny, lower_left = (0.0, 0.0, 0.0), id0 = 1):
 		if isinstance(pitch, (int, float)):
-			self.xpitch, self.ypitch = pitch, pitch
+			self._dx, self._dy = pitch, pitch
 		elif len(pitch) in (2, 3):
-			self.xpitch, self.ypitch = pitch[0:2]
+			self._dx, self._dy = pitch[0:2]
 		else:
 			raise IndexError("`pitch` must be of length 1, 2, or 3")
 		self._nx = nx
 		self._ny = ny
-		self._dx = nx/self.xpitch
-		self._dy = ny/self.ypitch
 		self._meshes = []
 		self._mesh_filters = []
-		self._mesh_edges = None
+		self._tallies = []
 		self.x0, self.y0, self.z0 = lower_left
 		self._z = self.z0
 		self._id0 = id0
@@ -52,6 +50,10 @@ class Mesh_Group(object):
 	@property
 	def meshes(self):
 		return self._meshes
+	
+	@property
+	def tallies(self):
+		return self._tallies
 	
 	@property
 	def id0(self):
@@ -114,10 +116,15 @@ class Mesh_Group(object):
 		new_mesh.lower_left = (self.x0, self.y0, self._z)
 		new_mesh.dimension = (self._nx, self._ny, nz)
 		new_mesh.width = (self._dx, self._dy, dz)
+		
 		new_filter = openmc.MeshFilter(new_mesh)
+		new_tally = openmc.Tally(self.id0)
+		new_tally.filters = [new_filter]
+		new_tally.scores = ["fission"]
 		
 		self._meshes.append(new_mesh)
 		self._mesh_filters.append(new_filter)
+		self._tallies.append(new_tally)
 		self._id0 += 1
 		self._z = z1
 
