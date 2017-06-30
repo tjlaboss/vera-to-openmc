@@ -7,11 +7,12 @@ import vera_to_openmc
 from copy import deepcopy
 
 
-def get_lattice_mesh(lattice, scores = ("fission"), tallies_file = None):
+def get_lattice_tally(lattice, scores, tallies_file = None):
 	"""Get
 	
 	Input:
 		lattice:            instance of openmc.RectLattice to tally over
+		scores:             list of strings; the reactions to tally
 		tallies_file:       instance of openmc.Tallies to add to
 							[Default: None]
 		
@@ -31,9 +32,9 @@ def get_lattice_mesh(lattice, scores = ("fission"), tallies_file = None):
 	mesh.width = lattice.pitch
 	
 	mesh_filter = openmc.MeshFilter(mesh)
-	mesh_tally = openmc.Tally()
+	mesh_tally = openmc.Tally(name = "fission tally")
 	mesh_tally.filters = [mesh_filter]
 	mesh_tally.scores = scores
 	
-	tallies_file.extend(mesh_tally)
+	tallies_file.extend([mesh_tally])
 	return tallies_file
