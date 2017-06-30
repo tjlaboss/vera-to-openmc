@@ -44,7 +44,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds, [0.0, 1.0]
 
 
-def test_lattice(case_file = "../gold/p7.xml.gold", aname='', get_tallies = False):
+def test_lattice(case_file = "../gold/p7.xml.gold", aname='', case_tallies = False):
 	"""Create and run a lattice of pincells (Problem 2).
 	
 	Plain lattice cases (those starting with a '2') are composed of a 2D lattice extended 1 cm
@@ -102,13 +102,13 @@ def test_lattice(case_file = "../gold/p7.xml.gold", aname='', get_tallies = Fals
 	plot_lattice(apitch, 1, col_spec = ascase.col_spec)
 	bounds = set_cubic_boundaries(apitch)
 	
-	if get_tallies:
-		get_tallies = tallies.get_lattice_tally(some_asmbly, scores = ["fission"])
+	if case_tallies:
+		case_tallies = tallies.get_lattice_tally(some_asmbly, scores = ["fission"])
 	
-	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds, [0.0, 1.0], get_tallies
+	return ascase, some_asmbly, apitch, as2.pitch, as2.npins, bounds, [0.0, 1.0], case_tallies
 
 
-def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
+def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy', case_tallies = False):
 	"""Create and run a single 3D assembly case, such as Problem 3 or Problem 6.
 	
 	TODO: Allow the user to test any assembly from full-core cases as well.
@@ -186,7 +186,13 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy'):
 	plot_assembly(apitch, as3.npins, z = (z1 - z0)/2.0, col_spec = ascase.col_spec)
 	bounds = set_cubic_boundaries(apitch, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
-	return ascase, asmbly_universe, apitch, as3.pitch, as3.npins, bounds, [z0, z1]
+	if case_tallies:
+		nzs = [1, 7, 1, 6, 1, 6, 1, 6, 1, 6, 1, 6, 1, 5]
+		dzs = [3.866, 8.2111429, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 7.9212]
+		z0 = 11.951
+		case_tallies = tallies.get_assembly_tally(as3, nzs, dzs, z0)
+	
+	return ascase, asmbly_universe, apitch, as3.pitch, as3.npins, bounds, [z0, z1], case_tallies
 
 
 def test_core_lattice(case_file = "../gold/p7.xml.gold"):
@@ -395,10 +401,10 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1a.xml.gold")
-	case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_lattice("../gold/2n.xml.gold", get_tallies = True)
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_assembly("../gold/3b.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core_lattice("../gold/p7.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange = test_core("../gold/5a-1.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_lattice("../gold/2n.xml.gold", case_tallies = True)
+	case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_assembly("../gold/3a.xml.gold", case_tallies = True)
+	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_core_lattice("../gold/p7.xml.gold")
+	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_core("../gold/5a-1.xml.gold")
 	
 	print("\nGenerating XML")
 	
