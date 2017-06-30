@@ -3,6 +3,7 @@
 # Module for tally meshes
 
 import openmc
+import math
 
 
 class Mesh_Group(object):
@@ -17,7 +18,6 @@ class Mesh_Group(object):
 	pitch:          float, or tuple of (xpitch, ypitch); cm
 	nx:             int; number of cuts in the x-direction
 	ny:             int; number of cuts in the y-direction
-	mesh_filter:    openmc.MeshFilter for ALL of the meshes
 	lower_left:     tuple of (x0, y0, z0); the lower left coordinate (cm)
 					of all the meshes
 					[Default: (0, 0, 0)]
@@ -26,7 +26,7 @@ class Mesh_Group(object):
 					[Default: 1]
 	"""
 	
-	def __init__(self, pitch, nx, ny, mesh_filter, lower_left = (0, 0, 0), id0 = 1):
+	def __init__(self, pitch, nx, ny, lower_left = (0, 0, 0), id0 = 1):
 		if isinstance(pitch, (int, float)):
 			self.xpitch, ypitch = pitch, pitch
 		elif len(pitch) in (2, 3):
@@ -35,8 +35,8 @@ class Mesh_Group(object):
 			raise IndexError("`pitch` must be of length 1, 2, or 3")
 		self._nx = nx
 		self._ny = ny
-		self.mesh_filter = mesh_filter
 		self._meshes = []
+		self._mesh_filters = []
 		self._mesh_edges = None
 		self.x0, self.y0, self.z0 = lower_left
 		self._z = self.z0
@@ -59,8 +59,14 @@ class Mesh_Group(object):
 		return self._ny
 	
 	@property
+	# Unused?
 	def mesh_edges(self):
 		return self._mesh_edges
+	
+	@property
+	def mesh_filters(self):
+		return self._mesh_filters
+	
 	
 	def add_mesh(self, z1 = None, nz = None, dz = None):
 		"""Add a mesh to the group. You must supply two of the
@@ -74,21 +80,42 @@ class Mesh_Group(object):
 			nz:         int; number of mesh cuts
 		"""
 		# z1 may be 0
-		if nz and (z1 is not None):
+		if z1 is not None:
+			assert z1 > self._z, "z1 must be larger than " + str(self._z)
+			ztrue = True
+		else:
+			ztrue = False
+		if nz and ztrue:
 			dz = (z1 - self._z)/nz
 		elif nz and dz:
 			z1 = self._z + nz*dz
-		elif dz and (z1 is not None):
-			nz = z1/dz
-			print(nz, int(nz))
-		# TODO: floor division or rounding?
-		
+		elif dz and ztrue:
+			nz = int(round(nz))
+			if not math.isclose(nz, z1/dz):
+				# Then there's no way to slice this up right
+				delta_z = z1 - self._z
+				errstr = "Cannot cut {delta_z} cm into slices of {dz} cm.".format(**locals())
+				raise IndexError(errstr)
+			
 		new_mesh = openmc.Mesh(self.id0)
 		new_mesh.type = "regular"
 		new_mesh.lower_left = (self.x0, self.y0, self._z)
 		new_mesh.width = (self._nx, self._ny, nz)
+		new_filter = openmc.MeshFilter(new_mesh)
 		
 		self._meshes.append(new_mesh)
+		self._mesh_filters.append(new_filter)
 		self._id0 += 1
 		self._z = z1
+
+
+# Test
+if __name__ == "__main__":
+	test_group = Mesh_Group(1.26, 17, 17)
+	test_group.add_mesh(10, 10)
+	test_group.add_mesh(50, 2)
+	test_group.add_mesh(100, 10)
+	print(test_group.meshes)
+	print(test_group.mesh_filters)
+
 
