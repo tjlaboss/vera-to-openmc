@@ -7,7 +7,6 @@ from matplotlib import pyplot
 from numpy import *
 
 STATEPOINT = "test1/statepoint.0100.h5"
-sp = openmc.StatePoint(STATEPOINT)
 
 
 def process_fission_rate_tally(state, tally_name = "fission tally", lat_shape = (17, 17),
@@ -68,15 +67,16 @@ def axial_power_tally(state):
 			k += 1
 	
 	xlist /= xlist.mean()
-	axial_plot(xlist, zlist)
+	return xlist, zlist
 
 
-def axial_plot(xlist, zlist):
+def axial_plot(xlista, zlista, xlistb, zlistb):
 	pyplot.figure()
-	pyplot.plot(xlist, zlist, "bs-", label = "Case 3A Axial")
+	pyplot.plot(xlista, zlista, "bD-", label = "Case 3A Axial")
+	pyplot.plot(xlistb, zlistb, "r.-", label = "Case 3B Axial")
 	pyplot.grid()
 	pyplot.xticks(linspace(0, 1.75, 8))
-	pyplot.yticks(linspace(0, 400, ))
+	pyplot.yticks(linspace(0, 400, 9))
 	pyplot.xlabel("Relative power")
 	pyplot.ylabel("z (cm)")
 	pyplot.xlim(0, 1.75)
@@ -86,6 +86,11 @@ def axial_plot(xlist, zlist):
 	
 
 
+#sp = openmc.StatePoint(STATEPOINT)
+sp3a = openmc.StatePoint("Results/3/statepoint_3Aquick.h5")
+sp3b = openmc.StatePoint("Results/3/statepoint_3Bquick.h5")
 #process_fission_rate_tally(sp)
-axial_power_tally(sp)
+x3a, z3a = axial_power_tally(sp3a)
+x3b, z3b = axial_power_tally(sp3b)
+axial_plot(x3a, z3a, x3b, z3b)
 pyplot.show()
