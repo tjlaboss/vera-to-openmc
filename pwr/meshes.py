@@ -6,6 +6,11 @@ import openmc
 import math
 
 
+class MeshError(Exception):
+	""" Class for errors involving mesh structure. """
+	pass
+
+
 class Mesh_Group(object):
 	"""Container for multiple uniform meshes to cover a 3D assembly.
 	Must have the same (x, y) pitch, but may have multiple layers
@@ -26,15 +31,17 @@ class Mesh_Group(object):
 					[Default: 1]
 	"""
 	
-	def __init__(self, pitch, nx, ny, lower_left = (0, 0, 0), id0 = 1):
+	def __init__(self, pitch, nx, ny, lower_left = (0.0, 0.0, 0.0), id0 = 1):
 		if isinstance(pitch, (int, float)):
-			self.xpitch, ypitch = pitch, pitch
+			self.xpitch, self.ypitch = pitch, pitch
 		elif len(pitch) in (2, 3):
-			self.xpitch, ypitch = pitch[0:2]
+			self.xpitch, self.ypitch = pitch[0:2]
 		else:
 			raise IndexError("`pitch` must be of length 1, 2, or 3")
 		self._nx = nx
 		self._ny = ny
+		self._dx = nx/self.xpitch
+		self._dy = ny/self.ypitch
 		self._meshes = []
 		self._mesh_filters = []
 		self._mesh_edges = None
@@ -49,6 +56,10 @@ class Mesh_Group(object):
 	@property
 	def id0(self):
 		return self._id0
+	
+	@property
+	def height(self):
+		return self._z
 	
 	@property
 	def nx(self):
@@ -85,22 +96,24 @@ class Mesh_Group(object):
 			ztrue = True
 		else:
 			ztrue = False
+		
 		if nz and ztrue:
 			dz = (z1 - self._z)/nz
 		elif nz and dz:
 			z1 = self._z + nz*dz
 		elif dz and ztrue:
-			nz = int(round(nz))
+			nz = int(round(z1/dz))
 			if not math.isclose(nz, z1/dz):
 				# Then there's no way to slice this up right
 				delta_z = z1 - self._z
 				errstr = "Cannot cut {delta_z} cm into slices of {dz} cm.".format(**locals())
-				raise IndexError(errstr)
+				raise MeshError(errstr)
 			
 		new_mesh = openmc.Mesh(self.id0)
 		new_mesh.type = "regular"
 		new_mesh.lower_left = (self.x0, self.y0, self._z)
-		new_mesh.width = (self._nx, self._ny, nz)
+		new_mesh.dimension = (self._nx, self._ny, nz)
+		new_mesh.width = (self._dx, self._dy, dz)
 		new_filter = openmc.MeshFilter(new_mesh)
 		
 		self._meshes.append(new_mesh)
@@ -111,11 +124,21 @@ class Mesh_Group(object):
 
 # Test
 if __name__ == "__main__":
-	test_group = Mesh_Group(1.26, 17, 17)
-	test_group.add_mesh(10, 10)
-	test_group.add_mesh(50, 2)
-	test_group.add_mesh(100, 10)
-	print(test_group.meshes)
-	print(test_group.mesh_filters)
+	
+	nzs = [1, 7, 1, 6, 1, 6, 1, 6, 1, 6, 1, 6, 1, 5]
+	dzs = [3.866, 8.2111429, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 7.9212]
+	assert len(nzs) == len(dzs), "Mismatch between the number of z values and z cuts"
+	n = len(nzs)
+	
+	test_group = Mesh_Group(1.26, 17, 17, lower_left = (-17/1.26, -17/1.26, 11.951))
+	
+	total = test_group.z0
+	for i in range(n):
+		nz = nzs[i]
+		dz = dzs[i]
+		test_group.add_mesh(nz = nz, dz = dz)
+		total += nz*dz
+		print(round(total, 5))
+	
 
 
