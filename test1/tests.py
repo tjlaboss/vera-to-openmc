@@ -187,9 +187,7 @@ def test_assembly(case_file = "../gold/3a.xml.gold", aname='assy', case_tallies 
 	bounds = set_cubic_boundaries(apitch, ("reflective",)*4 + ("vacuum",)*2, zrange_total)
 	
 	if case_tallies:
-		nzs = [1, 7, 1, 6, 1, 6, 1, 6, 1, 6, 1, 6, 1, 5]
-		dzs = [3.866, 8.2111429, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 8.065, 3.81, 7.9212]
-		z0 = 11.951
+		nzs, dzs, z0 = ascase.get_axial_zones()
 		case_tallies = tallies.get_assembly_tally(as3, nzs, dzs, z0)
 	
 	return ascase, asmbly_universe, apitch, as3.pitch, as3.npins, bounds, [z0, z1], case_tallies
