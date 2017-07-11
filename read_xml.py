@@ -51,15 +51,18 @@ class Case(object):
 		self.case_id = "Unnamed VERA Case"
 		
 		# Blocks to use and ignore
-		self.usable = ("CORE", "INSERTS", "STATES", "CONTROLS", "DETECTORS", "ASSEMBLIES", "SHIFT") # Relevant to OpenMC
-		self.ignore = ("MPACT", "INSILICO", "COBRATF", "EDITS")			# Blocks specific to other codes 
+		self.usable = ("CORE", "INSERTS", "STATES", "CONTROLS", "DETECTORS", "ASSEMBLIES",
+		               "SHIFT", "EDITS") # Relevant to OpenMC
+		self.ignore = ("MPACT", "INSILICO", "COBRATF")			# Blocks specific to other codes
 		
 		# Initialize some parameters with empty lists
 		self.materials = {}
 		self.assemblies = {}
 		self.inserts = {}
 		self.states = []
-		self.controls = {};	self.detectors = {}
+		self.controls = {}
+		self.detectors = {}
+		self.axial_edits = []
 		
 		# Placeholder for an essential material
 		mod_density = 1.0; mod_isotopes = {"H1":-2.0/3, "O16":-1.0/3}
@@ -418,6 +421,16 @@ class Case(object):
 									
 						self.mc = objects.MonteCarlo(cycles, inactive, particles)
 					
+					elif name == "EDITS":
+						for prop in child:
+							pname = prop.attrib["name"].lower()
+							if prop.tag == "Parameter" and pname == "axial_edit_bounds":
+								v = prop.attrib["value"]
+								self.axial_edits = clean(v, float)
+							elif prop.tag == "ParameterList":
+								warnstr = "Warning: unknown ParameterList " + pname + " in [EDITS] block."
+								warn(warnstr)
+								self.warnings += 1
 							
 					elif name == "INSERTS":
 						for insert in child:
