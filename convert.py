@@ -3,9 +3,14 @@
 # Functions common to all or most of the 'convert_[type].py' modules
 
 import sys
+import os
 from xml.etree.ElementTree import ParseError
 import openmc
 import vera_to_openmc
+
+
+def _arg_val(string):
+	return sys.argv[sys.argv.index(string) + 1]
 
 
 def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange=(0.0, 1.0)):
@@ -143,26 +148,24 @@ def get_monte_carlo(mc, args):
 		max_batches:    int; the maximum number of batches to
 						run if tally triggers are active.
 	"""
-	def arg_val(string):
-		return int(args[args.index(string) + 1])
-		
+	
 	# Monte Carlo parameters
 	# Get some from the command line, set them, and then double-check
 	if "--particles" in args:
-		particles = arg_val("--particles")
+		particles = int(_arg_val("--particles"))
 	else:
 		particles = mc.particles
 	if "--batches" in args:
-		min_batches = arg_val("--batches")
+		min_batches = int(_arg_val("--batches"))
 	else:
 		min_batches = mc.min_batches
 		mc.max_batches = 10*min_batches
 	if "--max-batches" in args:
-		max_batches = arg_val("--max-batches")
+		max_batches = int(_arg_val("--max-batches"))
 	else:
 		max_batches = mc.max_batches
 	if "--inactive" in args:
-		inactive = arg_val("--inactive")
+		inactive = int(_arg_val("--inactive"))
 	else:
 		inactive = mc.inactive
 	# Sanity check
@@ -182,6 +185,25 @@ the minimum number of batches.\n"
 	return particles, inactive, min_batches, max_batches
 
 
+def get_export_location(case_file, args):
+	# Default export location
+	if "--export" in args:
+		folder = _arg_val("--export")
+	else:
+		folder = case_file.split('/')[-1].split('.')[0]
+	if not os.path.exists(folder):
+		# Let it fail here if it can't create
+		os.makedirs(folder)
+	elif os.listdir(folder):
+		answer = None
+		astr = "{} exists and is not empty; export anyway? [y/n] ".format(folder)
+		while answer not in ("y", "n", "yes", "no"):
+			answer = input(astr).lower()
+		if answer[0] == "n":
+			sys.exit("Process aborted.")
+	return folder
+
+
 def get_args():
 	"""Handle the command line arguments
 	
@@ -197,10 +219,9 @@ def get_args():
 	# Probably move these elsewhere?
 	prob, case = get_case(case_file)
 	particles, inactive, min_batches, max_batches = get_monte_carlo(case.mc, args)
+	folder = get_export_location(case_file, args)
 	
-	# TODO: Export location
-	
-	return prob, case, particles, inactive, min_batches, max_batches
+	return prob, case, particles, inactive, min_batches, max_batches, folder
 	
 	
 if __name__ == "__main__":
