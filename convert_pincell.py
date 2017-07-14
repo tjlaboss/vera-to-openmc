@@ -2,9 +2,7 @@
 #
 # More user-friendly program to convert individual pincell cases
 
-import sys
-import vera_to_openmc
-from convert_common import *
+from convert import *
 
 def convert_pincell(cell):
 	"""Create and run a simple pincell.

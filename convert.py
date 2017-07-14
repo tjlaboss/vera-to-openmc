@@ -78,8 +78,6 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 def get_args():
 	"""Handle the command line arguments
 	
-	TODO: Allow user to extract specific assemblies/lattices/pincells
-	
 	Outputs:
 		case_number:    int in {1, 2, 3, 4, 5}; describes which kind of problem it is
 		                (2D pincell, 2D lattice, 3D assembly, 3D mini-core, 3D full-core)
@@ -115,7 +113,7 @@ def get_args():
 			if bc == "vacuum":
 				# This is a full-core
 				return 5, case
-			elif bc == "reflecting":
+			elif bc in ("reflecting", "reflective"):
 				# This is a mini-core
 				return 4, case
 			else:
@@ -142,41 +140,6 @@ Please check your BCs: case.core.bc["rad"] = {}""".format(bc)
 					# This is a 2D pincell
 					return 1, case
 	
-	"""
-	else:
-		if len(args) >= 3:
-			aname = args[2]
-		else:
-			print("The following assemblies were found:")
-			for a in case.assemblies:
-				print("\t-", a)
-			aname = ""
-		
-		# Manually name an assembly
-		while aname not in case.assemblies:
-			aname = input("Select an assembly: ")
-			aname = aname.lower()
-			if aname not in case.assemblies:
-				print(aname, "is not available in this Case.")
-		assembly0 = case.assemblies[aname]
-	# Select a pin cell
-	if len(assembly0.cells == 1):
-		veracell0 = list(assembly0.cells.values())[0]
-	else:
-		if len(args) >= 4:
-			pname = args[3]
-		else:
-			print("The following pin cells were found:")
-			for p in assembly0.cells:
-				print("\t-", p)
-			pname = ""
-		
-		# Manually name a cell
-		while pname not in assembly0.cells:
-			pname = input("Select a pincell: ")
-			pname = pname.lower()
-			if pname not in assembly0.cells:
-				print(pname, "is not available in this Assembly.")
-		veracell0 = assembly0.cells[pname]
-	"""
-	#return case, veracell0
+if __name__ == "__main__":
+	# test
+	print(get_args())
