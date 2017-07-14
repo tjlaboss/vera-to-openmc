@@ -75,33 +75,18 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 	settings_file.export_to_xml()
 
 
-def get_args():
-	"""Handle the command line arguments
-	
-	Outputs:
+def get_case(case_file):
+	"""Outputs:
 		case_number:    int in {1, 2, 3, 4, 5}; describes which kind of problem it is
 		                (2D pincell, 2D lattice, 3D assembly, 3D mini-core, 3D full-core)
 		case:           instance of vera_to_openmc.MC_Case
 	"""
-	args = sys.argv
-	errstr1 = "convert_pincell accepts at most 3 arguments at this time (case_file, aname, pname).\n"
-	assert len(args) <= 4, errstr1
-	case_file = ""
-	pname = ""
-	aname = ""
-	
-	# Remember, args[0] is this script itself!
-	if len(args) >= 2:
-		case_file = args[1]
-	if not case_file:
-		case_file = input("Enter the location of the VERA xml input: ")
-	
 	# Process the Case and determine what kind it is (pincell, lattice, assembly, or fullcore)
 	try:
 		case = vera_to_openmc.MC_Case(case_file)
 	except ParseError as e:
 		raise ParseError("Could not parse {}; \
-		is it a valid XML file?\n{}".format(case_file, e))
+			is it a valid XML file?\n{}".format(case_file, e))
 	except IOError as e:
 		raise IOError("Could not open {}: {}".format(case_file, e))
 	else:
@@ -118,9 +103,9 @@ def get_args():
 				return 4, case
 			else:
 				errstr = """\
-"Unable to determine whether this is Problem 4 (mini-core)
-or Problem 5 (full-core) from the boundary conditions.
-Please check your BCs: case.core.bc["rad"] = {}""".format(bc)
+	"Unable to determine whether this is Problem 4 (mini-core)
+	or Problem 5 (full-core) from the boundary conditions.
+	Please check your BCs: case.core.bc["rad"] = {}""".format(bc)
 				raise ParseError(errstr)
 		else:
 			# This is an assembly, lattice, or pincell
@@ -139,6 +124,65 @@ Please check your BCs: case.core.bc["rad"] = {}""".format(bc)
 				else:
 					# This is a 2D pincell
 					return 1, case
+
+
+def get_args():
+	"""Handle the command line arguments
+	
+	"""
+	args = sys.argv
+	case_file = ""
+	pname = ""
+	aname = ""
+	
+	def arg_val(string):
+		return args[args.index(string) + 1]
+	
+	# Remember, args[0] is this script itself!
+	if len(args) >= 2:
+		case_file = args[1]
+	if not case_file:
+		case_file = input("Enter the location of the VERA xml input: ")
+	
+	# Probably move this somewhere else
+	prob, case = get_case(case_file)
+	
+	# Monte Carlo parameters
+	# Get some from the command line, set them, and then double-check
+	if "--particles" in args:
+		particles = int(arg_val("--particles"))
+	else:
+		particles = case.mc.particles
+	if "--batches" in args:
+		min_batches = int(arg_val("--batches"))
+	else:
+		min_batches = case.mc.min_batches
+		case.mc.max_batches = 10*min_batches
+	if "--max-batches" in args:
+		max_batches = int(arg_val("--max-batches"))
+	else:
+		max_batches = case.mc.max_batches
+	if "--inactive" in args:
+		inactive = int(arg_val("--inactive"))
+	else:
+		inactive = case.mc.inactive
+	# Sanity check
+	errs = 0
+	errstr = "\n"
+	if inactive >= min_batches:
+		errs += 1
+		errstr += "The number of inactive matches cannot \
+be more than the number of batches.\n"
+	if min_batches > max_batches:
+		errs += 1
+		errstr += "The maximum number of batches must be at least \
+the minimum number of batches.\n"
+	if errs:
+		raise ValueError(errstr)
+	
+	print(particles, inactive, min_batches, max_batches)
+	return prob, case
+	
 	
 if __name__ == "__main__":
 	# test
