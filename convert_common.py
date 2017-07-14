@@ -2,7 +2,10 @@
 #
 # Functions common to all or most of the 'convert_[type].py' modules
 
+import sys
+from xml.etree.ElementTree import ParseError
 import openmc
+import vera_to_openmc
 
 
 def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange=(0.0, 1.0)):
@@ -70,3 +73,110 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 	uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)  # @UndefinedVariable
 	settings_file.source = openmc.source.Source(space=uniform_dist)
 	settings_file.export_to_xml()
+
+
+def get_args():
+	"""Handle the command line arguments
+	
+	TODO: Allow user to extract specific assemblies/lattices/pincells
+	
+	Outputs:
+		case_number:    int in {1, 2, 3, 4, 5}; describes which kind of problem it is
+		                (2D pincell, 2D lattice, 3D assembly, 3D mini-core, 3D full-core)
+		case:           instance of vera_to_openmc.MC_Case
+	"""
+	args = sys.argv
+	errstr1 = "convert_pincell accepts at most 3 arguments at this time (case_file, aname, pname).\n"
+	assert len(args) <= 4, errstr1
+	case_file = ""
+	pname = ""
+	aname = ""
+	
+	# Remember, args[0] is this script itself!
+	if len(args) >= 2:
+		case_file = args[1]
+	if not case_file:
+		case_file = input("Enter the location of the VERA xml input: ")
+	
+	# Process the Case and determine what kind it is (pincell, lattice, assembly, or fullcore)
+	try:
+		case = vera_to_openmc.MC_Case(case_file)
+	except ParseError as e:
+		raise ParseError("Could not parse {}; \
+		is it a valid XML file?\n{}".format(case_file, e))
+	except IOError as e:
+		raise IOError("Could not open {}: {}".format(case_file, e))
+	else:
+		# Select an assembly
+		if len(case.assemblies) > 1:
+			# This is a full-core or mini-core.
+			# Determine which from boundary conditions
+			bc = case.core.bc["rad"]
+			if bc == "vacuum":
+				# This is a full-core
+				return 5, case
+			elif bc == "reflecting":
+				# This is a mini-core
+				return 4, case
+			else:
+				errstr = """\
+"Unable to determine whether this is Problem 4 (mini-core)
+or Problem 5 (full-core) from the boundary conditions.
+Please check your BCs: case.core.bc["rad"] = {}""".format(bc)
+				raise ParseError(errstr)
+		else:
+			# This is an assembly, lattice, or pincell
+			# Examine the 1 assembly and see
+			assembly0 = list(case.assemblies.values())[0]
+			if len(assembly0.cellmaps) > 1:
+				# This is a 3D assembly
+				return 3, case
+			else:
+				# This is a lattice or pincell
+				# Examine the 1 cellmap and see
+				cellmap0 = list(assembly0.cellmaps.values())[0]
+				if len(cellmap0) > 1:
+					# This is a 2D lattice
+					return 2, case
+				else:
+					# This is a 2D pincell
+					return 1, case
+	
+	"""
+	else:
+		if len(args) >= 3:
+			aname = args[2]
+		else:
+			print("The following assemblies were found:")
+			for a in case.assemblies:
+				print("\t-", a)
+			aname = ""
+		
+		# Manually name an assembly
+		while aname not in case.assemblies:
+			aname = input("Select an assembly: ")
+			aname = aname.lower()
+			if aname not in case.assemblies:
+				print(aname, "is not available in this Case.")
+		assembly0 = case.assemblies[aname]
+	# Select a pin cell
+	if len(assembly0.cells == 1):
+		veracell0 = list(assembly0.cells.values())[0]
+	else:
+		if len(args) >= 4:
+			pname = args[3]
+		else:
+			print("The following pin cells were found:")
+			for p in assembly0.cells:
+				print("\t-", p)
+			pname = ""
+		
+		# Manually name a cell
+		while pname not in assembly0.cells:
+			pname = input("Select a pincell: ")
+			pname = pname.lower()
+			if pname not in assembly0.cells:
+				print(pname, "is not available in this Assembly.")
+		veracell0 = assembly0.cells[pname]
+	"""
+	#return case, veracell0
