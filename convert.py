@@ -126,46 +126,45 @@ def get_case(case_file):
 					return 1, case
 
 
-def get_args():
-	"""Handle the command line arguments
+def get_monte_carlo(mc, args):
+	"""Get the Monte Carlo parameters from the command line.
+	Anything not provided will be populated from the default
+	values in the XML.
 	
+	Inputs:
+		mc:             instance of objects.MonteCarlo to use
+						for default values.
+		args:           list of the command line arguments
+	
+	Outputs:
+		particles:      int; the number of particles/batch
+		inactive:       int; the number of inactive batches
+		min_batches:    int; the number of batches to run
+		max_batches:    int; the maximum number of batches to
+						run if tally triggers are active.
 	"""
-	args = sys.argv
-	case_file = ""
-	pname = ""
-	aname = ""
-	
 	def arg_val(string):
-		return args[args.index(string) + 1]
-	
-	# Remember, args[0] is this script itself!
-	if len(args) >= 2:
-		case_file = args[1]
-	if not case_file:
-		case_file = input("Enter the location of the VERA xml input: ")
-	
-	# Probably move this somewhere else
-	prob, case = get_case(case_file)
-	
+		return int(args[args.index(string) + 1])
+		
 	# Monte Carlo parameters
 	# Get some from the command line, set them, and then double-check
 	if "--particles" in args:
-		particles = int(arg_val("--particles"))
+		particles = arg_val("--particles")
 	else:
-		particles = case.mc.particles
+		particles = mc.particles
 	if "--batches" in args:
-		min_batches = int(arg_val("--batches"))
+		min_batches = arg_val("--batches")
 	else:
-		min_batches = case.mc.min_batches
-		case.mc.max_batches = 10*min_batches
+		min_batches = mc.min_batches
+		mc.max_batches = 10*min_batches
 	if "--max-batches" in args:
-		max_batches = int(arg_val("--max-batches"))
+		max_batches = arg_val("--max-batches")
 	else:
-		max_batches = case.mc.max_batches
+		max_batches = mc.max_batches
 	if "--inactive" in args:
-		inactive = int(arg_val("--inactive"))
+		inactive = arg_val("--inactive")
 	else:
-		inactive = case.mc.inactive
+		inactive = mc.inactive
 	# Sanity check
 	errs = 0
 	errstr = "\n"
@@ -180,8 +179,28 @@ the minimum number of batches.\n"
 	if errs:
 		raise ValueError(errstr)
 	
-	print(particles, inactive, min_batches, max_batches)
-	return prob, case
+	return particles, inactive, min_batches, max_batches
+
+
+def get_args():
+	"""Handle the command line arguments
+	
+	"""
+	args = sys.argv
+	
+	# Remember, args[0] is this script itself!
+	if len(args) >= 2:
+		case_file = args[1]
+	else:
+		case_file = input("Enter the location of the VERA xml input: ")
+	
+	# Probably move these elsewhere?
+	prob, case = get_case(case_file)
+	particles, inactive, min_batches, max_batches = get_monte_carlo(case.mc, args)
+	
+	# TODO: Export location
+	
+	return prob, case, particles, inactive, min_batches, max_batches
 	
 	
 if __name__ == "__main__":
