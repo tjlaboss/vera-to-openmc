@@ -12,7 +12,7 @@ Contains the files:
 
 
 #### `vera_to_openmc.py`:
-Development is nearly complete. Module which performs the operations necessary to generate an OpenMC input. Contains the class `MC_Case` (child of `Case`), which has the attributes and methods required to create the OpenMC objects.
+Module which performs the operations necessary to generate an OpenMC input. Contains the class `MC_Case` (child of `Case`), which has the attributes and methods required to create the OpenMC objects.
 
 Currently converts the neutronics portions of all the progression problems: 2D pin cell, 2D lattice, 3D assembly, and 3D full-core.
 
@@ -25,6 +25,8 @@ Module containing useful classes for `read_xml.py`
 #### `functions.py`:
 Module containing useful functions for `read_xml.py`
 
+#### `tallies.py`:
+Module containing functions to find the power distribution for some of the benchmark cases.
 
 ------
 
