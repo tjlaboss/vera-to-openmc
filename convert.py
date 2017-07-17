@@ -9,6 +9,8 @@ import openmc
 import vera_to_openmc
 
 
+_OPTS = ("--export", "--particles", "--batches", "--max-batches", "--inactive")
+
 def _arg_val(string):
 	return sys.argv[sys.argv.index(string) + 1]
 
@@ -215,6 +217,18 @@ def get_args():
 		case_file = args[1]
 	else:
 		case_file = input("Enter the location of the VERA xml input: ")
+	
+	# Check if there are erroneous options
+	errs = 0
+	errstr = "\nUnknown arguments:"
+	for i in range(1, len(args)):
+		arg = args[i]
+		if arg not in _OPTS and arg != case_file:
+			if args[i-1] not in _OPTS:
+				errs += 1
+				errstr += '\n' + str(arg)
+	if errs:
+		raise ValueError(errstr)
 	
 	# Probably move these elsewhere?
 	prob, case = get_case(case_file)
