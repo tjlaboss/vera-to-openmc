@@ -196,7 +196,7 @@ class MC_Case(Case):
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
 			if material in self.colors:
-				self.col_spec[m_id] = self.colors[material]
+				self.col_spec[openmc_material] = self.colors[material]
 			self.openmc_materials[material] = openmc_material
 		
 		return openmc_material
