@@ -6,7 +6,9 @@ import sys
 import os
 from xml.etree.ElementTree import ParseError
 import openmc
+import openmc.stats
 import vera_to_openmc
+import tallies
 
 _OPTS = ("--particles", "--batches", "--max-batches", "--inactive",
          "--export", "--help", "-h")
@@ -31,30 +33,6 @@ Monte Carlo Parameters:
 
 def _arg_val(string):
 	return sys.argv[sys.argv.index(string) + 1]
-
-
-def set_cubic_boundaries(pitch, bounds=('reflective',)*6, zrange=(0.0, 1.0)):
-	"""Set the source box around the fuel.
-	
-	Inputs:
-		pitch:		float; pitch between fuel pins
-		n:			int; number of fuel pins in an assembly (usually 1 or 17)
-		bounds:		tuple/list of strings with len=6, containing the respective
-					boundary types for min/max x, y, and z (default: all reflective)
-		zrange: 	list of floats with len=2 describing the minimum and maximum z values
-					of the geometry
-	Outputs:
-		a tuple of the openmc X/Y/ZPlanes for the min/max x, y, and z boundaries
-	"""
-	
-	min_x = openmc.XPlane(x0=-pitch/2.0, boundary_type=bounds[0], name="Bound - min x")
-	max_x = openmc.XPlane(x0=+pitch/2.0, boundary_type=bounds[1], name="Bound - max x")
-	min_y = openmc.YPlane(y0=-pitch/2.0, boundary_type=bounds[2], name="Bound - min y")
-	max_y = openmc.YPlane(y0=+pitch/2.0, boundary_type=bounds[3], name="Bound - max y")
-	min_z = openmc.ZPlane(z0=zrange[0], boundary_type=bounds[4], name="Bound - min z")
-	max_z = openmc.ZPlane(z0=zrange[1], boundary_type=bounds[5], name="Bound - max z")
-	
-	return min_x, max_x, min_y, max_y, min_z, max_z
 
 
 def plot_xy_lattice(pitch, z=0, width=1250, height=1250, plot_name='Plot-materials-xy'):
@@ -259,6 +237,93 @@ def get_args():
 	folder = get_export_location(case_file, args)
 	
 	return prob, case, particles, inactive, min_batches, max_batches, folder
+
+
+class Conversion(object):
+	"""Conversion of
+	
+	"""
+	def __init__(self, case, particles, inactive, min_batches, max_batches, folder):
+		self._case = case
+		self._particles = particles
+		self._inactive = inactive
+		self._min_batches = min_batches
+		self._max_batches = max_batches
+		self.folder = folder
+		self._pitch = self._get_pitch()
+		
+		matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
+		self._materials = openmc.Materials(matlist)
+		
+		self._settings = openmc.Settings()
+		self._settings.batches = min_batches
+		self._settings.trigger_max_batches = max_batches
+		self._settings.inactive = inactive
+		self._settings.particles = particles
+		self._settings.source = self._get_source_box()
+		
+		self._geometry = openmc.Geometry()
+		self._geometry.root_universe = self._get_root_universe()
+	
+	def _get_root_universe(self):
+		pass
+	
+	def _get_source_box(self):
+		pass
+	
+	def _get_pitch(self):
+		pass
+	
+	def get_cubic_boundaries(self, zrange, bounds = ("reflective",)*6):
+		"""Get a cuboid region
+		
+		Paramters:
+		----------
+		zrange:     list/tuple of floats; [zbot, ztop]
+		bounds:     list/tuple of strs describing the boundary conditions
+					on each edge; [min_x, max_x, min_y, max_y, min_z, max_z]
+					[Default: ("reflective",)*6 ]
+		
+		Returns:
+		--------
+		region:     intersection of the 6 edges
+		"""
+		p = self._pitch
+		min_x = openmc.XPlane(x0=-p/2.0, boundary_type=bounds[0], name="Bound - min x")
+		max_x = openmc.XPlane(x0=+p/2.0, boundary_type=bounds[1], name="Bound - max x")
+		min_y = openmc.YPlane(y0=-p/2.0, boundary_type=bounds[2], name="Bound - min y")
+		max_y = openmc.YPlane(y0=+p/2.0, boundary_type=bounds[3], name="Bound - max y")
+		min_z = openmc.ZPlane(z0=zrange[0], boundary_type=bounds[4], name="Bound - min z")
+		max_z = openmc.ZPlane(z0=zrange[1], boundary_type=bounds[5], name="Bound - max z")
+		region = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
+		return region
+	
+
+class Pincell_Conversion(Conversion):
+	def _get_pitch(self):
+		return self._case.assemblies.values()[0].pitch
+	
+	def _get_root_universe(self):
+		"""Fill the root universe with the pincell universe"""
+		root_universe = openmc.Universe(universe_id=0, name='root universe')
+		assembly = list(self._case.assemblies.values())[0]
+		pincell = list(assembly.cells.values())[0]
+		root_cell = self._case.get_openmc_pincell(pincell)
+		root_cell.region = self.get_cubic_boundaries(zrange=(0.0, 1.0))
+		root_universe.add_cell(root_cell)
+		return root_universe
+		
+	def _get_source_box(self):
+		# Create an initial uniform spatial source distribution over fissionable zones
+		p = self._pitch
+		lleft = (-p/2.0, -p/2.0, 0.0)
+		uright = (+p/2.0, +p/2.0, 1.0)
+		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
+		return openmc.source.Source(space=uniform_dist)
+	
+		
+		
+		
 
 
 if __name__ == "__main__":
