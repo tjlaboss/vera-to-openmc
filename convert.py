@@ -38,19 +38,6 @@ def _arg_val(string):
 	return sys.argv[sys.argv.index(string) + 1]
 
 
-def plot_xy_lattice(pitch, z=0, width=1250, height=1250, plot_name='Plot-materials-xy'):
-	# Plot properties for this test
-	plot = openmc.Plot(plot_id=1)
-	plot.filename = plot_name
-	plot.origin = [0, 0, z]
-	plot.width = [pitch - .01, pitch - .01]
-	plot.pixels = [width, height]
-	plot.color = 'mat'
-	# Instantiate a Plots collection--don't export to "plots.xml" just yet
-	plot_file = openmc.Plots([plot])
-	return plot_file
-
-
 def get_case(case_file):
 	"""Outputs:
 		case_number:    int in {1, 2, 3, 4, 5}; describes which kind of problem it is
@@ -242,8 +229,22 @@ def get_args():
 
 
 class Conversion(object):
-	"""Conversion of
+	"""Base class for conversion of VERA progression problems
 	
+	Parameters:
+	-----------
+	case:           instance of vera_to_openmc.MC_Case
+	particles:      int; number of particles per batch to run
+	inactive:       int; number of inactive batches to run
+	min_batches:    int; number of active batches to run,
+					if tally triggers are not present
+	max_batches:    int; maximum number of batches to run,
+					if tally triggers are present (NotImplemented)
+	folder:         str; path to the directory to export to
+	to_tally:       Boolean; whether to generate and export tallies.xml
+	                [Default: True]
+	to_plot:        Boolean; whether to generate and export plots.xml
+	                [Default: True]
 	"""
 	def __init__(self, case, particles, inactive, min_batches, max_batches,
 	             folder, to_tally=True, to_plot=False):
@@ -333,7 +334,8 @@ class Conversion(object):
 		self._settings.export_to_xml(self.folder + "/settings.xml")
 		if self._tallies:
 			self._tallies.export_to_xml(self.folder + "/tallies.xml")
-		self._plots.export_to_xml(self.folder + "/plots.xml")
+		if self._plots:
+			self._plots.export_to_xml(self.folder + "/plots.xml")
 
 
 class LatticeBaseConversion(Conversion):
@@ -342,7 +344,7 @@ class LatticeBaseConversion(Conversion):
 		- Problem 2: 2D lattice
 		- Problem 3: 3D assembly
 	
-	Adds the method _add_insertions()
+	Implements the method _add_insertions()
 	"""
 	def _add_insertions(self):
 		"""Add insertions to the base assembly as necessary."""
@@ -429,7 +431,8 @@ class LatticeConversion(LatticeBaseConversion):
 		return root_universe
 	
 	def _get_source_box(self, zrange):
-		# Create an initial uniform spatial source distribution over fissionable zones
+		"""Create an initial uniform spatial source distribution
+		over fissionable zones"""
 		p = self._pitch
 		lleft = (-p/2.0, -p/2.0, zrange[0])
 		uright = (+p/2.0, +p/2.0, zrange[1])
@@ -459,6 +462,7 @@ class AssemblyConversion(LatticeBaseConversion):
 		return self._case.core.pitch
 	
 	def _get_3d_assembly(self):
+		"""Build the pwr.Assembly"""
 		self._add_insertions()
 		self._pwr_assembly = self._case.get_openmc_assembly(self._assembly0)
 		asmbly_universe = self._pwr_assembly.universe
@@ -498,9 +502,8 @@ class AssemblyConversion(LatticeBaseConversion):
 		return self._pwr_assembly
 	
 	def _get_root_universe(self):
-		"""Fill the root universe with the pincell universe"""
+		"""Build the Assembly universe and fill the root cell with it"""
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
-		
 		root_cell = openmc.Cell(cell_id=0, name="root cell")
 		assembly = self._get_3d_assembly()
 		root_cell.fill = assembly.universe
@@ -519,8 +522,7 @@ class AssemblyConversion(LatticeBaseConversion):
 		return openmc.source.Source(space=uniform_dist)
 	
 	def _set_case_tallies(self):
-		assembly = list(self._case.assemblies.values())[0]
-		lattice = self._case.get_openmc_lattices(assembly)[0]
+		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
 		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
 		
 	def _get_zactive(self):
