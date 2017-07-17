@@ -226,15 +226,15 @@ def get_args():
 	to_plot = get_whether_to("--plot", args)
 	
 	if prob == 1:
-		conv = Pincell_Conversion(case, particles, inactive, min_batches,
+		conv = PincellConversion(case, particles, inactive, min_batches,
 		                          max_batches, folder, False, to_plot)
 		conv.export_to_xml()
 	elif prob == 2:
-		conv = Lattice_Conversion(case, particles, inactive, min_batches,
+		conv = LatticeConversion(case, particles, inactive, min_batches,
 		                          max_batches, folder, to_tally, to_plot)
 		conv.export_to_xml()
 	elif prob == 3:
-		conv = Assembly_Conversion(case, particles, inactive, min_batches,
+		conv = AssemblyConversion(case, particles, inactive, min_batches,
 		                           max_batches, folder, to_tally, to_plot)
 		conv.export_to_xml()
 	else:
@@ -256,6 +256,7 @@ class Conversion(object):
 		self._pitch = self._get_pitch()
 		
 		self._assembly0 = list(self._case.assemblies.values())[0]
+		self._pwr_assembly = None
 		
 		self._geometry = openmc.Geometry()
 		self._geometry.root_universe = self._get_root_universe()
@@ -270,7 +271,7 @@ class Conversion(object):
 		self._settings.trigger_max_batches = max_batches
 		self._settings.inactive = inactive
 		self._settings.particles = particles
-		self._settings.source = self._get_source_box()
+		self._settings.source = self._get_source_box(self._get_zactive())
 		
 		if to_tally:
 			self._tallies = openmc.Tallies()
@@ -287,7 +288,10 @@ class Conversion(object):
 	def _get_root_universe(self):
 		pass
 	
-	def _get_source_box(self):
+	def _get_zactive(self):
+		pass
+	
+	def _get_source_box(self, zrange):
 		pass
 	
 	def _get_pitch(self):
@@ -332,18 +336,16 @@ class Conversion(object):
 		self._plots.export_to_xml(self.folder + "/plots.xml")
 
 
-class InsertMixin(object):
+class LatticeBaseConversion(Conversion):
 	"""Class containing the add_insertions and add_spacergrids
-	methods as used by single-assembly cases (for example,
-	Probem 2: 2D lattice and Problem 3: 3D assembly)"""
+	methods as used by single-assembly cases, which are:
+		- Problem 2: 2D lattice
+		- Problem 3: 3D assembly
 	
-	def __init__(self):
-		self._case = None
-		self._assembly0 = None
-		pass
-	
+	Adds the method _add_insertions()
+	"""
 	def _add_insertions(self):
-		# Add insertions as necessary
+		"""Add insertions to the base assembly as necessary."""
 		insertion_maps = (self._case.core.insert_map,
 		                  self._case.core.control_map,
 		                  self._case.core.detector_map)
@@ -361,27 +363,9 @@ class InsertMixin(object):
 						print(self._case.inserts)
 						raise KeyError("Unknown key:", insert_key)
 					self._assembly0.add_insert(insertion)
-		
-		# pwr_asmbly = self._case.get_openmc_assembly(self._assembly0)
-		
-		# The last cell of the universe should contain the moderator.
-		# We need to get the key to this before adding any more cells.
-		# mod_key = list(asmbly_universe.cells.keys())[-1]
-		layers = self._case.get_openmc_lattices(self._assembly0)
-		lattice = layers[0]
-		return lattice
 	
-	def _add_spacergrids(self, lattice):
-		sg = list(self._assembly0.spacergrids.values())[0]
-		mat = self._case.get_openmc_material(sg.material, asname=self._assembly0.name)
-		grid = pwr.SpacerGrid(sg.name, sg.height, sg.mass, mat,
-		                      self._assembly0.pitch, self._assembly0.npins)
-		lattice = pwr.add_grid_to(lattice, grid, self._case.counter,
-		                          self._case.openmc_xplanes, self._case.openmc_yplanes)
-		return lattice
 
-
-class Pincell_Conversion(Conversion):
+class PincellConversion(Conversion):
 	def _get_pitch(self):
 		return self._assembly0.pitch
 	
@@ -395,13 +379,16 @@ class Pincell_Conversion(Conversion):
 		root_universe.add_cell(root_cell)
 		return root_universe
 		
-	def _get_source_box(self):
+	def _get_source_box(self, zrange):
 		# Create an initial uniform spatial source distribution over fissionable zones
 		p = self._pitch
-		lleft = (-p/2.0, -p/2.0, 0.0)
-		uright = (+p/2.0, +p/2.0, 1.0)
+		lleft = (-p/2.0, -p/2.0, zrange[0])
+		uright = (+p/2.0, +p/2.0, zrange[1])
 		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
 		return openmc.source.Source(space=uniform_dist)
+	
+	def _get_zactive(self):
+		return 0.0, 1.0
 	
 	def _set_case_plots(self):
 		plot = openmc.Plot()
@@ -414,29 +401,43 @@ class Pincell_Conversion(Conversion):
 		self._plots.add_plot(plot)
 
 
-class Lattice_Conversion(Conversion, InsertMixin):
+class LatticeConversion(LatticeBaseConversion):
 	def _get_pitch(self):
 		return self._case.core.pitch
+	
+	def _add_spacergrids(self, lattice):
+		sg = list(self._assembly0.spacergrids.values())[0]
+		mat = self._case.get_openmc_material(sg.material, asname=self._assembly0.name)
+		grid = pwr.SpacerGrid(sg.name, sg.height, sg.mass, mat,
+		                      self._assembly0.pitch, self._assembly0.npins)
+		lattice = pwr.add_grid_to(lattice, grid, self._case.counter,
+		                          self._case.openmc_xplanes, self._case.openmc_yplanes)
+		return lattice
 	
 	def _get_root_universe(self):
 		"""Fill the root universe with the pincell universe"""
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
-		lattice = self._add_insertions()
+		self._add_insertions()
+		layers = self._case.get_openmc_lattices(self._assembly0)
+		lattice = layers[0]
 		if self._assembly0.spacergrids:
 			lattice = self._add_spacergrids(lattice)
 		root_cell = openmc.Cell(cell_id=0, name="root cell")
 		root_cell.fill = lattice
-		root_cell.region = self.get_cubic_boundaries(zrange=(0.0, 1.0))
+		root_cell.region = self.get_cubic_boundaries(self._get_zactive())
 		root_universe.add_cell(root_cell)
 		return root_universe
 	
-	def _get_source_box(self):
+	def _get_source_box(self, zrange):
 		# Create an initial uniform spatial source distribution over fissionable zones
 		p = self._pitch
-		lleft = (-p/2.0, -p/2.0, 0.0)
-		uright = (+p/2.0, +p/2.0, 1.0)
+		lleft = (-p/2.0, -p/2.0, zrange[0])
+		uright = (+p/2.0, +p/2.0, zrange[1])
 		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
 		return openmc.source.Source(space=uniform_dist)
+	
+	def _get_zactive(self):
+		return 0.0, 1.0
 
 	def _set_case_tallies(self):
 		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
@@ -453,26 +454,65 @@ class Lattice_Conversion(Conversion, InsertMixin):
 		self._plots.add_plot(plot)
 
 
-class Assembly_Conversion(Conversion, InsertMixin):
+class AssemblyConversion(LatticeBaseConversion):
 	def _get_pitch(self):
 		return self._case.core.pitch
+	
+	def _get_3d_assembly(self):
+		self._add_insertions()
+		self._pwr_assembly = self._case.get_openmc_assembly(self._assembly0)
+		asmbly_universe = self._pwr_assembly.universe
+		# The last cell of the universe should contain the moderator.
+		# We need to get the key to this before adding any more cells.
+		mod_key = list(asmbly_universe.cells.keys())[-1]
+		
+		lplate = self._case.core.bot_refl
+		uplate = self._case.core.top_refl
+		if lplate:
+			# Add the lower core plate
+			zbot = self._pwr_assembly.bottom.z0 - lplate.thick
+			bot_surf = openmc.ZPlane(self._case.counter.add_surface(), z0=zbot, name="Bottom")
+			bot_plate_cell = openmc.Cell(self._case.counter.add_cell(), "Lower Core Plate")
+			bot_plate_cell.fill = self._case.get_openmc_material(lplate.material)
+			bot_plate_cell.region = self._pwr_assembly.wall_region & \
+			                        +bot_surf & -self._pwr_assembly.bottom
+			asmbly_universe.add_cell(bot_plate_cell)
+		else:
+			print("Warning: No lower core plate found.")
+			bot_surf = self._pwr_assembly.bottom
+		if uplate:
+			# Add the upper core plate
+			ztop = self._pwr_assembly.top.z0 + uplate.thick
+			top_surf = openmc.ZPlane(self._case.counter.add_surface(), z0=ztop, name="Top")
+			top_plate_cell = openmc.Cell(self._case.counter.add_cell(), "Upper Core Plate")
+			top_plate_cell.fill = self._case.get_openmc_material(uplate.material)
+			top_plate_cell.region = self._pwr_assembly.wall_region & \
+			                        +self._pwr_assembly.top & -top_surf
+			asmbly_universe.add_cell(top_plate_cell)
+		else:
+			print("Warning: No upper core plate found.")
+			top_surf = self._pwr_assembly.top
+		
+		asmbly_universe.cells[mod_key].region = (~self._pwr_assembly.wall_region | -bot_surf | +top_surf)
+		
+		return self._pwr_assembly
 	
 	def _get_root_universe(self):
 		"""Fill the root universe with the pincell universe"""
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
-		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
+		
 		root_cell = openmc.Cell(cell_id=0, name="root cell")
-		root_cell.fill = lattice
-		zbot = self._assembly0.bottom.z0
-		ztop = self._assembly0.top.z0
+		assembly = self._get_3d_assembly()
+		root_cell.fill = assembly.universe
+		zbot = assembly.bottom.z0
+		ztop = assembly.top.z0
 		root_cell.region = self.get_cubic_boundaries(zrange=(zbot, ztop))
 		root_universe.add_cell(root_cell)
 		return root_universe
 	
-	def _get_source_box(self):
+	def _get_source_box(self, zrange):
 		# Create an initial uniform spatial source distribution over fissionable zones
 		p = self._pitch
-		zrange = self._assembly0.z_active
 		lleft = (-p/2.0, -p/2.0, zrange[0])
 		uright = (+p/2.0, +p/2.0, zrange[1])
 		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
@@ -482,16 +522,49 @@ class Assembly_Conversion(Conversion, InsertMixin):
 		assembly = list(self._case.assemblies.values())[0]
 		lattice = self._case.get_openmc_lattices(assembly)[0]
 		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
+		
+	def _get_zactive(self):
+		return self._pwr_assembly.z_active
 	
 	def _set_case_plots(self):
-		plot = openmc.Plot()
-		plot.filename = 'Plot-materials-xy'
-		plot.origin = [0, 0, 0.5]
-		plot.width = [self._pitch - .01, ]*2
-		plot.pixels = [1200, 1200]
-		plot.color_by = 'material'
-		plot.colors = self._case.col_spec
-		self._plots.add_plot(plot)
+		p = self._pitch
+		width = 1250
+		height = 1250
+		# Fuel-xy (no grid)
+		plot1 = openmc.Plot(plot_id=1)
+		plot1.filename = 'Plot-fuel-xy'
+		plot1.origin = [0, 0, 188.0]
+		plot1.basis = "xy"
+		plot1.width = [p - .01, p - .01]
+		
+		# Gridded fuel:MID
+		plot2 = openmc.Plot(plot_id=2)
+		plot2.filename = 'Plot-mid-grid-xy'
+		plot2.origin = [0, 0, 127]
+		plot2.basis = "xy"
+		plot2.width = [p - .01, p - .01]
+		
+		# Gridded fuel:END
+		plot3 = openmc.Plot(plot_id=3)
+		plot3.filename = 'Plot-end-grid-xy'
+		plot3.origin = [0, 0, 388]
+		plot3.basis = "xy"
+		plot3.width = [p - .01, p - .01]
+		
+		# YZ
+		plot4 = openmc.Plot(plot_id=4)
+		plot4.filename = 'Plot-yz'
+		plot4.origin = [0, 0, 200]
+		plot4.width = [p - .01, 410]
+		plot4.pixels = [width, height]
+		plot4.basis = "yz"
+		
+		for pl in (plot1, plot2, plot3, plot4):
+			pl.pixels = [width, height]
+			pl.color_by = "material"
+			pl.colors = self._case.col_spec
+			self._plots.add_plot(pl)
+		
 
 if __name__ == "__main__":
 	# test
