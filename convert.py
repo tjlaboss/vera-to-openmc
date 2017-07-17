@@ -236,7 +236,11 @@ def get_args():
 	particles, inactive, min_batches, max_batches = get_monte_carlo(case.mc, args)
 	folder = get_export_location(case_file, args)
 	
-	return prob, case, particles, inactive, min_batches, max_batches, folder
+	if prob == 1:
+		conv = Pincell_Conversion(case, particles, inactive, min_batches, max_batches, folder)
+		conv.export_to_xml()
+	else:
+		return prob, case, particles, inactive, min_batches, max_batches, folder
 
 
 class Conversion(object):
@@ -252,18 +256,24 @@ class Conversion(object):
 		self.folder = folder
 		self._pitch = self._get_pitch()
 		
+		self._geometry = openmc.Geometry()
+		self._geometry.root_universe = self._get_root_universe()
+	
 		matlist = [value for (key, value) in sorted(case.openmc_materials.items())]
 		self._materials = openmc.Materials(matlist)
 		
 		self._settings = openmc.Settings()
+		self._settings.temperature = {"method": "interpolation", "multipole": True}
+		self._settings.output = {'tallies': False}
 		self._settings.batches = min_batches
 		self._settings.trigger_max_batches = max_batches
 		self._settings.inactive = inactive
 		self._settings.particles = particles
 		self._settings.source = self._get_source_box()
 		
-		self._geometry = openmc.Geometry()
-		self._geometry.root_universe = self._get_root_universe()
+		self._tallies = openmc.Tallies()
+		
+		self._plots = openmc.Plots()
 	
 	def _get_root_universe(self):
 		pass
@@ -298,17 +308,26 @@ class Conversion(object):
 		region = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
 		return region
 	
+	def export_to_xml(self):
+		self._materials.export_to_xml(self.folder + "/materials.xml")
+		self._geometry.export_to_xml(self.folder + "/geometry.xml")
+		self._settings.export_to_xml(self.folder + "/settings.xml")
+		self._tallies.export_to_xml(self.folder + "/tallies.xml")
+		self._plots.export_to_xml(self.folder + "/plots.xml")
+	
 
 class Pincell_Conversion(Conversion):
 	def _get_pitch(self):
-		return self._case.assemblies.values()[0].pitch
+		assembly = list(self._case.assemblies.values())[0]
+		return assembly.pitch
 	
 	def _get_root_universe(self):
 		"""Fill the root universe with the pincell universe"""
-		root_universe = openmc.Universe(universe_id=0, name='root universe')
+		root_universe = openmc.Universe(universe_id=0, name="root universe")
 		assembly = list(self._case.assemblies.values())[0]
 		pincell = list(assembly.cells.values())[0]
-		root_cell = self._case.get_openmc_pincell(pincell)
+		root_cell = openmc.Cell(cell_id=0, name="root cell")
+		root_cell.fill = self._case.get_openmc_pincell(pincell)
 		root_cell.region = self.get_cubic_boundaries(zrange=(0.0, 1.0))
 		root_universe.add_cell(root_cell)
 		return root_universe
