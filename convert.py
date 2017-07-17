@@ -8,8 +8,26 @@ from xml.etree.ElementTree import ParseError
 import openmc
 import vera_to_openmc
 
+_OPTS = ("--particles", "--batches", "--max-batches", "--inactive",
+         "--export", "--help", "-h")
 
-_OPTS = ("--export", "--particles", "--batches", "--max-batches", "--inactive")
+_HELP_STR = """
+USAGE:
+python convert.py [case_file] [--options]
+-----------------------------------------------------------
+Options:
+    --help, -h              : display this help message and exit
+    --export [/path/to/dir] : directory where to export the xml
+
+Monte Carlo Parameters:
+    --particles             : number of particles per batch
+    --inactive              : number of inactive batches to run
+    --batches               : number of total batches to run
+                              unless tally triggers are active
+    --max_batches           : maximum number of batches to run
+                              if tally triggers are active
+"""
+
 
 def _arg_val(string):
 	return sys.argv[sys.argv.index(string) + 1]
@@ -212,6 +230,11 @@ def get_args():
 	"""
 	args = sys.argv
 	
+	# Quit if the user requests the help message
+	if ("-h" in args) or ("--help" in args):
+		print(_HELP_STR)
+		raise sys.exit()
+	
 	# Remember, args[0] is this script itself!
 	if len(args) >= 2:
 		case_file = args[1]
@@ -224,7 +247,7 @@ def get_args():
 	for i in range(1, len(args)):
 		arg = args[i]
 		if arg not in _OPTS and arg != case_file:
-			if args[i-1] not in _OPTS:
+			if args[i - 1] not in _OPTS:
 				errs += 1
 				errstr += '\n' + str(arg)
 	if errs:
@@ -236,8 +259,8 @@ def get_args():
 	folder = get_export_location(case_file, args)
 	
 	return prob, case, particles, inactive, min_batches, max_batches, folder
-	
-	
+
+
 if __name__ == "__main__":
 	# test
 	print(get_args())
