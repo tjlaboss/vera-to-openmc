@@ -8,6 +8,7 @@ from xml.etree.ElementTree import ParseError
 import openmc
 import openmc.stats
 import vera_to_openmc
+import pwr
 import tallies
 
 _OPTS = ("--particles", "--batches", "--max-batches", "--inactive",
@@ -232,6 +233,10 @@ def get_args():
 		conv = Lattice_Conversion(case, particles, inactive, min_batches,
 		                          max_batches, folder, to_tally, to_plot)
 		conv.export_to_xml()
+	elif prob == 3:
+		conv = Assembly_Conversion(case, particles, inactive, min_batches,
+		                           max_batches, folder, to_tally, to_plot)
+		conv.export_to_xml()
 	else:
 		return prob, case, particles, inactive, min_batches, max_batches, folder
 
@@ -250,6 +255,8 @@ class Conversion(object):
 		self.folder = folder
 		self._pitch = self._get_pitch()
 		
+		self._assembly0 = list(self._case.assemblies.values())[0]
+		
 		self._geometry = openmc.Geometry()
 		self._geometry.root_universe = self._get_root_universe()
 	
@@ -258,7 +265,6 @@ class Conversion(object):
 		
 		self._settings = openmc.Settings()
 		self._settings.temperature = {"method": "interpolation", "multipole": True}
-		print(to_tally, type(to_tally))
 		self._settings.output = {'tallies': to_tally}
 		self._settings.batches = min_batches
 		self._settings.trigger_max_batches = max_batches
@@ -324,18 +330,65 @@ class Conversion(object):
 		if self._tallies:
 			self._tallies.export_to_xml(self.folder + "/tallies.xml")
 		self._plots.export_to_xml(self.folder + "/plots.xml")
+
+
+class InsertMixin(object):
+	"""Class containing the add_insertions and add_spacergrids
+	methods as used by single-assembly cases (for example,
+	Probem 2: 2D lattice and Problem 3: 3D assembly)"""
 	
+	def __init__(self):
+		self._case = None
+		self._assembly0 = None
+		pass
+	
+	def _add_insertions(self):
+		# Add insertions as necessary
+		insertion_maps = (self._case.core.insert_map,
+		                  self._case.core.control_map,
+		                  self._case.core.detector_map)
+		for coremap in insertion_maps:
+			if coremap:
+				insert_key = coremap[0][0]
+				if insert_key != "-":  # indicates no insertion in VERA
+					if insert_key in self._case.inserts:
+						insertion = self._case.inserts[insert_key]
+					elif insert_key in self._case.detectors:
+						insertion = self._case.detectors[insert_key]
+					elif insert_key in self._case.controls:
+						insertion = self._case.controls[insert_key]
+					else:
+						print(self._case.inserts)
+						raise KeyError("Unknown key:", insert_key)
+					self._assembly0.add_insert(insertion)
+		
+		# pwr_asmbly = self._case.get_openmc_assembly(self._assembly0)
+		
+		# The last cell of the universe should contain the moderator.
+		# We need to get the key to this before adding any more cells.
+		# mod_key = list(asmbly_universe.cells.keys())[-1]
+		layers = self._case.get_openmc_lattices(self._assembly0)
+		lattice = layers[0]
+		return lattice
+	
+	def _add_spacergrids(self, lattice):
+		sg = list(self._assembly0.spacergrids.values())[0]
+		mat = self._case.get_openmc_material(sg.material, asname=self._assembly0.name)
+		grid = pwr.SpacerGrid(sg.name, sg.height, sg.mass, mat,
+		                      self._assembly0.pitch, self._assembly0.npins)
+		lattice = pwr.add_grid_to(lattice, grid, self._case.counter,
+		                          self._case.openmc_xplanes, self._case.openmc_yplanes)
+		return lattice
+
 
 class Pincell_Conversion(Conversion):
 	def _get_pitch(self):
-		assembly = list(self._case.assemblies.values())[0]
-		return assembly.pitch
+		return self._assembly0.pitch
 	
 	def _get_root_universe(self):
 		"""Fill the root universe with the pincell universe"""
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
-		assembly = list(self._case.assemblies.values())[0]
-		pincell = list(assembly.cells.values())[0]
+		pincell = list(self._assembly0.cells.values())[0]
 		root_cell = openmc.Cell(cell_id=0, name="root cell")
 		root_cell.fill = self._case.get_openmc_pincell(pincell)
 		root_cell.region = self.get_cubic_boundaries(zrange=(0.0, 1.0))
@@ -361,16 +414,16 @@ class Pincell_Conversion(Conversion):
 		self._plots.add_plot(plot)
 
 
-class Lattice_Conversion(Conversion):
+class Lattice_Conversion(Conversion, InsertMixin):
 	def _get_pitch(self):
-		assembly = list(self._case.assemblies.values())[0]
-		return assembly.npins*assembly.pitch
+		return self._case.core.pitch
 	
 	def _get_root_universe(self):
 		"""Fill the root universe with the pincell universe"""
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
-		assembly = list(self._case.assemblies.values())[0]
-		lattice = self._case.get_openmc_lattices(assembly)[0]
+		lattice = self._add_insertions()
+		if self._assembly0.spacergrids:
+			lattice = self._add_spacergrids(lattice)
 		root_cell = openmc.Cell(cell_id=0, name="root cell")
 		root_cell.fill = lattice
 		root_cell.region = self.get_cubic_boundaries(zrange=(0.0, 1.0))
@@ -386,8 +439,7 @@ class Lattice_Conversion(Conversion):
 		return openmc.source.Source(space=uniform_dist)
 
 	def _set_case_tallies(self):
-		assembly = list(self._case.assemblies.values())[0]
-		lattice = self._case.get_openmc_lattices(assembly)[0]
+		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
 		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
 		
 	def _set_case_plots(self):
@@ -400,6 +452,46 @@ class Lattice_Conversion(Conversion):
 		plot.colors = self._case.col_spec
 		self._plots.add_plot(plot)
 
+
+class Assembly_Conversion(Conversion, InsertMixin):
+	def _get_pitch(self):
+		return self._case.core.pitch
+	
+	def _get_root_universe(self):
+		"""Fill the root universe with the pincell universe"""
+		root_universe = openmc.Universe(universe_id=0, name="root universe")
+		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
+		root_cell = openmc.Cell(cell_id=0, name="root cell")
+		root_cell.fill = lattice
+		zbot = self._assembly0.bottom.z0
+		ztop = self._assembly0.top.z0
+		root_cell.region = self.get_cubic_boundaries(zrange=(zbot, ztop))
+		root_universe.add_cell(root_cell)
+		return root_universe
+	
+	def _get_source_box(self):
+		# Create an initial uniform spatial source distribution over fissionable zones
+		p = self._pitch
+		zrange = self._assembly0.z_active
+		lleft = (-p/2.0, -p/2.0, zrange[0])
+		uright = (+p/2.0, +p/2.0, zrange[1])
+		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
+		return openmc.source.Source(space=uniform_dist)
+	
+	def _set_case_tallies(self):
+		assembly = list(self._case.assemblies.values())[0]
+		lattice = self._case.get_openmc_lattices(assembly)[0]
+		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
+	
+	def _set_case_plots(self):
+		plot = openmc.Plot()
+		plot.filename = 'Plot-materials-xy'
+		plot.origin = [0, 0, 0.5]
+		plot.width = [self._pitch - .01, ]*2
+		plot.pixels = [1200, 1200]
+		plot.color_by = 'material'
+		plot.colors = self._case.col_spec
+		self._plots.add_plot(plot)
 
 if __name__ == "__main__":
 	# test
