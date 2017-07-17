@@ -11,7 +11,7 @@ import vera_to_openmc
 import tallies
 
 _OPTS = ("--particles", "--batches", "--max-batches", "--inactive",
-         "--export", "--help", "-h")
+         "--export", "--help", "-h", "--tallies")
 
 _HELP_STR = """
 USAGE:
@@ -20,6 +20,7 @@ python convert.py [case_file] [--options]
 Options:
     --help, -h              : display this help message and exit
     --export [/path/to/dir] : directory where to export the xml
+    --tallies [true/false]  : whether to export the default tallies
 
 Monte Carlo Parameters:
     --particles             : number of particles per batch
@@ -46,36 +47,6 @@ def plot_xy_lattice(pitch, z=0, width=1250, height=1250, plot_name='Plot-materia
 	# Instantiate a Plots collection--don't export to "plots.xml" just yet
 	plot_file = openmc.Plots([plot])
 	return plot_file
-
-
-# plot_file.export_to_xml()
-
-def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactive, particles):
-	"""Create the OpenMC settings and export to XML.
-
-	Inputs:
-		npins:		int; number of pins across an assembly. Use 1 for a pin cell,
-					and the lattice size for an assembly (usually 17).
-		pitch:		float; distance in cm between two PIN CELLS (not assemblies).
-					Used for detecting fissionable zones.
-		bounds:		iterable (tuple, list, etc.) of the X, Y, and Z bounding Planes:
-					 (min_x, max_x, min_y, max_y, min_z, max_z)
-		zrange:		list of floats describing the minimum and maximum z location
-					of fissionable material
-	"""
-	settings_file = openmc.Settings()
-	settings_file.batches = min_batches
-	settings_file.inactive = inactive
-	settings_file.particles = particles
-	settings_file.output = {'tallies': False}
-	settings_file.trigger_active = True
-	settings_file.trigger_max_batches = max_batches
-	# Create an initial uniform spatial source distribution over fissionable zones
-	lleft = (-npins*pitch/2.0,)*2 + (zrange[0],)
-	uright = (+npins*pitch/2.0,)*2 + (zrange[1],)
-	uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)  # @UndefinedVariable
-	settings_file.source = openmc.source.Source(space=uniform_dist)
-	settings_file.export_to_xml()
 
 
 def get_case(case_file):
@@ -202,6 +173,19 @@ def get_export_location(case_file, args):
 	return folder
 
 
+def get_whether_to_tally(args):
+	if "--tally" in args:
+		to_tally = str(_arg_val("--tally")).lower()
+		if to_tally == "true":
+			return True
+		elif to_tally == "false":
+			return False
+		else:
+			raise ValueError('Arugment --tally must be "true" or "false"')
+	else:
+		return True
+		
+
 def get_args():
 	"""Handle the command line arguments
 	
@@ -235,9 +219,13 @@ def get_args():
 	prob, case = get_case(case_file)
 	particles, inactive, min_batches, max_batches = get_monte_carlo(case.mc, args)
 	folder = get_export_location(case_file, args)
+	to_tally = get_whether_to_tally(args)
 	
 	if prob == 1:
-		conv = Pincell_Conversion(case, particles, inactive, min_batches, max_batches, folder)
+		conv = Pincell_Conversion(case, particles, inactive, min_batches, max_batches, folder, False)
+		conv.export_to_xml()
+	elif prob == 2:
+		conv = Lattice_Conversion(case, particles, inactive, min_batches, max_batches, folder, to_tally)
 		conv.export_to_xml()
 	else:
 		return prob, case, particles, inactive, min_batches, max_batches, folder
@@ -247,7 +235,7 @@ class Conversion(object):
 	"""Conversion of
 	
 	"""
-	def __init__(self, case, particles, inactive, min_batches, max_batches, folder):
+	def __init__(self, case, particles, inactive, min_batches, max_batches, folder, to_tally=True):
 		self._case = case
 		self._particles = particles
 		self._inactive = inactive
@@ -264,14 +252,19 @@ class Conversion(object):
 		
 		self._settings = openmc.Settings()
 		self._settings.temperature = {"method": "interpolation", "multipole": True}
-		self._settings.output = {'tallies': False}
+		print(to_tally, type(to_tally))
+		self._settings.output = {'tallies': to_tally}
 		self._settings.batches = min_batches
 		self._settings.trigger_max_batches = max_batches
 		self._settings.inactive = inactive
 		self._settings.particles = particles
 		self._settings.source = self._get_source_box()
 		
-		self._tallies = openmc.Tallies()
+		if to_tally:
+			self._tallies = openmc.Tallies()
+			self._set_case_tallies()
+		else:
+			self._tallies = None
 		
 		self._plots = openmc.Plots()
 	
@@ -282,6 +275,9 @@ class Conversion(object):
 		pass
 	
 	def _get_pitch(self):
+		pass
+	
+	def _set_case_tallies(self):
 		pass
 	
 	def get_cubic_boundaries(self, zrange, bounds = ("reflective",)*6):
@@ -312,7 +308,8 @@ class Conversion(object):
 		self._materials.export_to_xml(self.folder + "/materials.xml")
 		self._geometry.export_to_xml(self.folder + "/geometry.xml")
 		self._settings.export_to_xml(self.folder + "/settings.xml")
-		self._tallies.export_to_xml(self.folder + "/tallies.xml")
+		if self._tallies:
+			self._tallies.export_to_xml(self.folder + "/tallies.xml")
 		self._plots.export_to_xml(self.folder + "/plots.xml")
 	
 
@@ -339,8 +336,36 @@ class Pincell_Conversion(Conversion):
 		uright = (+p/2.0, +p/2.0, 1.0)
 		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
 		return openmc.source.Source(space=uniform_dist)
+
+
+class Lattice_Conversion(Conversion):
+	def _get_pitch(self):
+		assembly = list(self._case.assemblies.values())[0]
+		return assembly.npins*assembly.pitch
 	
-		
+	def _get_root_universe(self):
+		"""Fill the root universe with the pincell universe"""
+		root_universe = openmc.Universe(universe_id=0, name="root universe")
+		assembly = list(self._case.assemblies.values())[0]
+		lattice = self._case.get_openmc_lattices(assembly)[0]
+		root_cell = openmc.Cell(cell_id=0, name="root cell")
+		root_cell.fill = lattice
+		root_cell.region = self.get_cubic_boundaries(zrange=(0.0, 1.0))
+		root_universe.add_cell(root_cell)
+		return root_universe
+	
+	def _get_source_box(self):
+		# Create an initial uniform spatial source distribution over fissionable zones
+		p = self._pitch
+		lleft = (-p/2.0, -p/2.0, 0.0)
+		uright = (+p/2.0, +p/2.0, 1.0)
+		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
+		return openmc.source.Source(space=uniform_dist)
+
+	def _set_case_tallies(self):
+		assembly = list(self._case.assemblies.values())[0]
+		lattice = self._case.get_openmc_lattices(assembly)[0]
+		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
 		
 		
 
@@ -348,3 +373,4 @@ class Pincell_Conversion(Conversion):
 if __name__ == "__main__":
 	# test
 	print(get_args())
+	print("Exported successfully.")
