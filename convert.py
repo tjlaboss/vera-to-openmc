@@ -366,6 +366,16 @@ class LatticeBaseConversion(Conversion):
 						raise KeyError("Unknown key:", insert_key)
 					self._assembly0.add_insert(insertion)
 	
+	def _get_source_box(self, zrange):
+		"""Create an initial uniform spatial source distribution
+		over fissionable zones"""
+		p = self._assembly0.pitch
+		n = self._assembly0.npins
+		lleft =  (-n*p/2.0, -n*p/2.0, zrange[0])
+		uright = (+n*p/2.0, +n*p/2.0, zrange[1])
+		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
+		return openmc.source.Source(space=uniform_dist)
+
 
 class PincellConversion(Conversion):
 	def _get_pitch(self):
@@ -429,15 +439,6 @@ class LatticeConversion(LatticeBaseConversion):
 		root_cell.region = self.get_cubic_boundaries(self._get_zactive())
 		root_universe.add_cell(root_cell)
 		return root_universe
-	
-	def _get_source_box(self, zrange):
-		"""Create an initial uniform spatial source distribution
-		over fissionable zones"""
-		p = self._pitch
-		lleft = (-p/2.0, -p/2.0, zrange[0])
-		uright = (+p/2.0, +p/2.0, zrange[1])
-		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
-		return openmc.source.Source(space=uniform_dist)
 	
 	def _get_zactive(self):
 		return 0.0, 1.0
@@ -516,14 +517,6 @@ class AssemblyConversion(LatticeBaseConversion):
 		root_cell.region = self.get_cubic_boundaries((zbot, ztop), boundaries)
 		root_universe.add_cell(root_cell)
 		return root_universe
-	
-	def _get_source_box(self, zrange):
-		# Create an initial uniform spatial source distribution over fissionable zones
-		p = self._pitch
-		lleft = (-p/2.0, -p/2.0, zrange[0])
-		uright = (+p/2.0, +p/2.0, zrange[1])
-		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
-		return openmc.source.Source(space=uniform_dist)
 	
 	def _set_case_tallies(self):
 		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
