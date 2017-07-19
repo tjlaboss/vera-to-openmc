@@ -481,6 +481,7 @@ class AssemblyConversion(LatticeBaseConversion):
 			bot_plate_cell.region = self._pwr_assembly.wall_region & \
 			                        +bot_surf & -self._pwr_assembly.bottom
 			asmbly_universe.add_cell(bot_plate_cell)
+			self._pwr_assembly.bottom = bot_surf
 		else:
 			print("Warning: No lower core plate found.")
 			bot_surf = self._pwr_assembly.bottom
@@ -493,6 +494,7 @@ class AssemblyConversion(LatticeBaseConversion):
 			top_plate_cell.region = self._pwr_assembly.wall_region & \
 			                        +self._pwr_assembly.top & -top_surf
 			asmbly_universe.add_cell(top_plate_cell)
+			self._pwr_assembly.top = top_surf
 		else:
 			print("Warning: No upper core plate found.")
 			top_surf = self._pwr_assembly.top
@@ -509,7 +511,9 @@ class AssemblyConversion(LatticeBaseConversion):
 		root_cell.fill = assembly.universe
 		zbot = assembly.bottom.z0
 		ztop = assembly.top.z0
-		root_cell.region = self.get_cubic_boundaries(zrange=(zbot, ztop))
+		bc = self._case.core.bc
+		boundaries = (bc["rad"],)*4 + (bc["bot"], bc["top"])
+		root_cell.region = self.get_cubic_boundaries((zbot, ztop), boundaries)
 		root_universe.add_cell(root_cell)
 		return root_universe
 	
