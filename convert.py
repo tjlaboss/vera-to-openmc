@@ -213,19 +213,20 @@ def get_args():
 	to_plot = get_whether_to("--plot", args)
 	
 	if prob == 1:
-		conv = PincellConversion(case, particles, inactive, min_batches,
-		                          max_batches, folder, False, to_plot)
-		conv.export_to_xml()
+		Conversion_Class = PincellConversion
 	elif prob == 2:
-		conv = LatticeConversion(case, particles, inactive, min_batches,
-		                          max_batches, folder, to_tally, to_plot)
-		conv.export_to_xml()
+		Conversion_Class = LatticeConversion
 	elif prob == 3:
-		conv = AssemblyConversion(case, particles, inactive, min_batches,
-		                           max_batches, folder, to_tally, to_plot)
-		conv.export_to_xml()
+		Conversion_Class = AssemblyConversion
+	elif prob == 4:
+		Conversion_Class = MiniCoreConversion
 	else:
-		return prob, case, particles, inactive, min_batches, max_batches, folder
+		attribs = str((prob, case, particles, inactive, min_batches, max_batches, folder))
+		raise ValueError("DEBUG\nUnknown conversion for: \n" + attribs)
+	
+	conv = Conversion_Class(case, particles, inactive, min_batches,
+		                    max_batches, folder, to_tally, to_plot)
+	conv.export_to_xml()
 
 
 class Conversion(object):
@@ -247,7 +248,7 @@ class Conversion(object):
 	                [Default: True]
 	"""
 	def __init__(self, case, particles, inactive, min_batches, max_batches,
-	             folder, to_tally=True, to_plot=False):
+	             folder, to_tally=True, to_plot=True):
 		self._case = case
 		self._particles = particles
 		self._inactive = inactive
@@ -427,7 +428,7 @@ class LatticeConversion(LatticeBaseConversion):
 		return lattice
 	
 	def _get_root_universe(self):
-		"""Fill the root universe with the pincell universe"""
+		"""Fill the root universe with the 2D lattice universe"""
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
 		self._add_insertions()
 		layers = self._case.get_openmc_lattices(self._assembly0)
@@ -563,7 +564,17 @@ class AssemblyConversion(LatticeBaseConversion):
 			pl.color_by = "material"
 			pl.colors = self._case.col_spec
 			self._plots.add_plot(pl)
+
 		
+class MiniCoreConversion(Conversion):
+	def _get_pitch(self):
+		return self._case.core.pitch
+		
+		
+		
+		
+		
+
 
 if __name__ == "__main__":
 	# test
