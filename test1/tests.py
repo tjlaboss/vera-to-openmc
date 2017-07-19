@@ -9,7 +9,7 @@ import vera_to_openmc
 import tallies
 
 
-def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
+def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = "", case_tallies = False):
 	"""Create and run a simple pincell (Problem 1).
 	
 	True pincell cases (those starting with a '1') only have 1 assembly consisting of 1 pin cell.
@@ -41,7 +41,7 @@ def test_pincell(case_file = "../gold/1c.xml.gold", aname="", pname = ""):
 	plot_lattice(assembly1.pitch, 1, col_spec = pincell_case.col_spec)
 	bounds = set_cubic_boundaries(assembly1.pitch, ("reflective",)*6)
 
-	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds, [0.0, 1.0]
+	return pincell_case, openmc_cell1, assembly1.pitch, 1, bounds, [0.0, 1.0], None
 
 
 def test_lattice(case_file = "../gold/p7.xml.gold", aname='', case_tallies = False):
@@ -398,9 +398,9 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 
 if __name__ == "__main__":
-	#case, fillcell, ppitch, n, bounds, zrange = test_pincell("../gold/1a.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_lattice("../gold/2n.xml.gold", case_tallies = True)
-	case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_assembly("../gold/3a.xml.gold", case_tallies = True)
+	#case, fillcell, ppitch, n, bounds, zrange, tally_file = test_pincell("../gold/1a.xml.gold", case_tallies = False)
+	case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_lattice("../gold/2n.xml.gold", case_tallies = True)
+	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_assembly("../gold/3a.xml.gold", case_tallies = True)
 	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_core_lattice("../gold/p7.xml.gold")
 	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_core("../gold/5a-1.xml.gold")
 	
