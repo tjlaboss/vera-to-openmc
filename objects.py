@@ -504,7 +504,7 @@ class CoreMap(object):
 	def __str__(self):
 		rep = self.name
 		rep += ":\n"
-		rep += self.str_map()
+		rep += self.str_map
 		return rep
 	
 	def __len__(self):
@@ -712,7 +712,7 @@ class Core(object):
 		elif which in ("a", "ass", "asmbly", "assembly"):
 			return self.__asmbly_square_map(space)
 		elif not which:
-			return (self.shape.square_map, self.__asmbly_square_map(space))
+			return self.shape.square_map, self.__asmbly_square_map(space)
 		else:
 			return which + " is not a valid option."
 	

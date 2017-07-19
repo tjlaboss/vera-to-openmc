@@ -533,8 +533,9 @@ class MC_Case(Case):
 			openmc_core:	instance of openmc.RectLattice; the lattice contains [read: will contain]
 							instances of pwr.Assembly
 		"""
-		shape, asmap = self.core.square_maps(space = "")
-		n = len(shape)
+		shape = self.core.shape.square_map
+		asmap = self.core.asmbly.square_map
+		n = shape.size
 		halfwidth = self.core.pitch * n / 2.0
 		
 		openmc_core = openmc.RectLattice(self.counter.add_universe(), "Core Lattice")
@@ -556,6 +557,9 @@ class MC_Case(Case):
 				# Check if there is supposed to be an assembly in this position
 				if shape[j, i]:
 					askey = asmap[j, i].lower()
+					print(asmap)
+					print(askey)
+					print(self.assemblies)
 					vera_asmbly = self.assemblies[askey]
 					
 					ins_key = ins_map[j, i]
