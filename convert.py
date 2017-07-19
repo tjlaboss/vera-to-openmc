@@ -54,7 +54,7 @@ def get_case(case_file):
 		raise IOError("Could not open {}: {}".format(case_file, e))
 	else:
 		# Select an assembly
-		if len(case.assemblies) > 1:
+		if len(case.core.asmbly) > 1:
 			# This is a full-core or mini-core.
 			# Determine which from boundary conditions
 			bc = case.core.bc["rad"]
@@ -254,10 +254,10 @@ class Conversion(object):
 		self._min_batches = min_batches
 		self._max_batches = max_batches
 		self.folder = folder
-		self._pitch = self._get_pitch()
 		
-		self._assembly0 = list(self._case.assemblies.values())[0]
 		self._pwr_assembly = None
+		self._assembly0 = list(self._case.assemblies.values())[0]
+		self._pitch = self._get_pitch()
 		
 		self._geometry = openmc.Geometry()
 		self._geometry.root_universe = self._get_root_universe()
