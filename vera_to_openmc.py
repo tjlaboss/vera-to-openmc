@@ -535,12 +535,13 @@ class MC_Case(Case):
 		"""
 		shape = self.core.shape.square_map
 		asmap = self.core.asmbly.square_map
-		n = shape.size
-		halfwidth = self.core.pitch * n / 2.0
+		ny, nx = shape.shape
+		halfwidthx = self.core.pitch*nx/2.0
+		halfwidthy = self.core.pitch*ny/2.0
 		
 		openmc_core = openmc.RectLattice(self.counter.add_universe(), "Core Lattice")
 		openmc_core.pitch = (self.core.pitch, self.core.pitch)
-		openmc_core.lower_left = [-halfwidth] * 2
+		openmc_core.lower_left = [-halfwidthx, -halfwidthy]
 		openmc_core.outer = self.mod_verse
 		
 		ins_map = self.core.insert_map.square_map
@@ -548,18 +549,15 @@ class MC_Case(Case):
 		crd_map = self.core.control_map.square_map
 		crd_bank_map = self.core.control_bank.square_map
 		
-		lattice = numpy.empty((n, n), dtype = openmc.Universe)
+		lattice = numpy.empty((ny, nx), dtype=openmc.Universe)
 		
 		print("Generating core (this may take a while)...")
-		for j in range(n):
-			for i in range(n):
+		for j in range(ny):
+			for i in range(nx):
 				print("\rConfiguring position: " + str(j) + "x" + str(i) + "...", end = "")  # debug
 				# Check if there is supposed to be an assembly in this position
 				if shape[j, i]:
 					askey = asmap[j, i].lower()
-					print(asmap)
-					print(askey)
-					print(self.assemblies)
 					vera_asmbly = self.assemblies[askey]
 					
 					ins_key = ins_map[j, i]

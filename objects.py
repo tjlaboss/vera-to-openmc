@@ -482,20 +482,25 @@ class CoreMap(object):
 		
 		if isinstance(cell_map[0], list):
 			# If you feed it a square map:
-			self.n = len(cell_map[0])
+			self.ny = len(cell_map[0, :])
+			self.nx = len(cell_map[:, 0])
 			self.cell_map = []
 			for row in cell_map:
 				self.cell_map += row
 		elif isinstance(cell_map, numpy.ndarray):
-			self.n = len(cell_map)
+			self.ny, self.nx = cell_map.shape
 			self.cell_map = []
 			for row in cell_map:
 				self.cell_map += list(row)
 		elif isinstance(cell_map, CoreMap):
-			self.n = cell_map.n
+			self.nx = cell_map.nx
+			self.ny = cell_map.ny
 			self.cell_map = cell_map.cell_map
 		else:
-			self.n = int(sqrt(len(cell_map)))
+			# Guess that it's square
+			# TODO: Include warning here
+			self.nx = int(sqrt(len(cell_map)))
+			self.ny = self.nx
 			self.cell_map = cell_map
 		
 		self.square_map = self.get_square_map()
@@ -508,7 +513,12 @@ class CoreMap(object):
 		return rep
 	
 	def __len__(self):
+		# TODO: figure out nx, ny
+		raise NotImplementedError(self.__shape__())
 		return self.n
+	
+	def __shape__(self):
+		return self.ny, self.nx
 	
 	def __iter__(self):
 		for i in self.square_map:
@@ -523,11 +533,12 @@ class CoreMap(object):
 	
 	def get_square_map(self):
 		"""Return the cell map as a square array"""
-		n = self.n
-		smap = numpy.empty((n, n), dtype = object)
-		for j in range(self.n):
-			for i in range(self.n):
-				k = n*j + i
+		nx = self.nx
+		ny = self.ny
+		smap = numpy.empty((ny, nx), dtype = object)
+		for j in range(ny):
+			for i in range(nx):
+				k = ny*j + i
 				smap[j, i] = self.cell_map[k]
 		return smap
 	
