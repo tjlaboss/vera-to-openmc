@@ -514,8 +514,7 @@ class CoreMap(object):
 	
 	def __len__(self):
 		# TODO: figure out nx, ny
-		raise NotImplementedError(self.__shape__())
-		return self.n
+		return max(self.nx, self.ny)
 	
 	def __shape__(self):
 		return self.ny, self.nx
@@ -655,6 +654,9 @@ class Core(object):
 			self.asmbly = asmbly
 		# if not isinstance(control, class_or_tuple)
 		
+		self.nx = self.shape.nx
+		self.ny = self.shape.ny
+		
 		self.bc = {}
 		# Correct for OpenMC syntax
 		for key in bc:
@@ -737,7 +739,7 @@ class Core(object):
 		elif which in ("a", "ass", "asmbly", "assembly"):
 			return self.__asmbly_str_map(space)
 		elif not which:
-			return (self.shape.str_map(), self.__asmbly_str_map(space))
+			return self.shape.str_map(), self.__asmbly_str_map(space)
 		else:
 			return which + " is not a valid option."
 

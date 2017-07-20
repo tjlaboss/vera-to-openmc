@@ -54,7 +54,7 @@ def get_case(case_file):
 		raise IOError("Could not open {}: {}".format(case_file, e))
 	else:
 		# Select an assembly
-		if len(case.core.asmbly) > 1:
+		if len(case.core.asmbly.cell_map) > 1:
 			# This is a full-core or mini-core.
 			# Determine which from boundary conditions
 			bc = case.core.bc["rad"]
@@ -256,8 +256,9 @@ class Conversion(object):
 		self._max_batches = max_batches
 		self.folder = folder
 		
-		self._pwr_assembly = None
+		self._pwr_assembly0 = None
 		self._assembly0 = list(self._case.assemblies.values())[0]
+		self._pwr_assembly0 = self._case.get_openmc_assembly(self._assembly0)
 		self._pitch = self._get_pitch()
 		
 		self._geometry = openmc.Geometry()
@@ -305,7 +306,7 @@ class Conversion(object):
 	def _set_case_plots(self):
 		pass
 	
-	def get_cubic_boundaries(self, zrange, bounds = ("reflective",)*6):
+	def get_cubic_boundaries(self, zrange, bounds = ("reflective",)*6, nx=1, ny=1):
 		"""Get a cuboid region
 		
 		Paramters:
@@ -320,10 +321,10 @@ class Conversion(object):
 		region:     intersection of the 6 edges
 		"""
 		p = self._pitch
-		min_x = openmc.XPlane(x0=-p/2.0, boundary_type=bounds[0], name="Bound - min x")
-		max_x = openmc.XPlane(x0=+p/2.0, boundary_type=bounds[1], name="Bound - max x")
-		min_y = openmc.YPlane(y0=-p/2.0, boundary_type=bounds[2], name="Bound - min y")
-		max_y = openmc.YPlane(y0=+p/2.0, boundary_type=bounds[3], name="Bound - max y")
+		min_x = openmc.XPlane(x0=-nx*p/2.0, boundary_type=bounds[0], name="Bound - min x")
+		max_x = openmc.XPlane(x0=+nx*p/2.0, boundary_type=bounds[1], name="Bound - max x")
+		min_y = openmc.YPlane(y0=-ny*p/2.0, boundary_type=bounds[2], name="Bound - min y")
+		max_y = openmc.YPlane(y0=+ny*p/2.0, boundary_type=bounds[3], name="Bound - max y")
 		min_z = openmc.ZPlane(z0=zrange[0], boundary_type=bounds[4], name="Bound - min z")
 		max_z = openmc.ZPlane(z0=zrange[1], boundary_type=bounds[5], name="Bound - max z")
 		region = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
@@ -466,8 +467,7 @@ class AssemblyConversion(LatticeBaseConversion):
 	def _get_3d_assembly(self):
 		"""Build the pwr.Assembly"""
 		self._add_insertions()
-		self._pwr_assembly = self._case.get_openmc_assembly(self._assembly0)
-		asmbly_universe = self._pwr_assembly.universe
+		asmbly_universe = self._pwr_assembly0.universe
 		# The last cell of the universe should contain the moderator.
 		# We need to get the key to this before adding any more cells.
 		mod_key = list(asmbly_universe.cells.keys())[-1]
@@ -476,34 +476,34 @@ class AssemblyConversion(LatticeBaseConversion):
 		uplate = self._case.core.top_refl
 		if lplate:
 			# Add the lower core plate
-			zbot = self._pwr_assembly.bottom.z0 - lplate.thick
+			zbot = self._pwr_assembly0.bottom.z0 - lplate.thick
 			bot_surf = openmc.ZPlane(self._case.counter.add_surface(), z0=zbot, name="Bottom")
 			bot_plate_cell = openmc.Cell(self._case.counter.add_cell(), "Lower Core Plate")
 			bot_plate_cell.fill = self._case.get_openmc_material(lplate.material)
-			bot_plate_cell.region = self._pwr_assembly.wall_region & \
-			                        +bot_surf & -self._pwr_assembly.bottom
+			bot_plate_cell.region = self._pwr_assembly0.wall_region & \
+			                        +bot_surf & -self._pwr_assembly0.bottom
 			asmbly_universe.add_cell(bot_plate_cell)
-			self._pwr_assembly.bottom = bot_surf
+			self._pwr_assembly0.bottom = bot_surf
 		else:
 			print("Warning: No lower core plate found.")
-			bot_surf = self._pwr_assembly.bottom
+			bot_surf = self._pwr_assembly0.bottom
 		if uplate:
 			# Add the upper core plate
-			ztop = self._pwr_assembly.top.z0 + uplate.thick
+			ztop = self._pwr_assembly0.top.z0 + uplate.thick
 			top_surf = openmc.ZPlane(self._case.counter.add_surface(), z0=ztop, name="Top")
 			top_plate_cell = openmc.Cell(self._case.counter.add_cell(), "Upper Core Plate")
 			top_plate_cell.fill = self._case.get_openmc_material(uplate.material)
-			top_plate_cell.region = self._pwr_assembly.wall_region & \
-			                        +self._pwr_assembly.top & -top_surf
+			top_plate_cell.region = self._pwr_assembly0.wall_region & \
+			                        +self._pwr_assembly0.top & -top_surf
 			asmbly_universe.add_cell(top_plate_cell)
-			self._pwr_assembly.top = top_surf
+			self._pwr_assembly0.top = top_surf
 		else:
 			print("Warning: No upper core plate found.")
-			top_surf = self._pwr_assembly.top
+			top_surf = self._pwr_assembly0.top
 		
-		asmbly_universe.cells[mod_key].region = (~self._pwr_assembly.wall_region | -bot_surf | +top_surf)
+		asmbly_universe.cells[mod_key].region = (~self._pwr_assembly0.wall_region | -bot_surf | +top_surf)
 		
-		return self._pwr_assembly
+		return self._pwr_assembly0
 	
 	def _get_root_universe(self):
 		"""Build the Assembly universe and fill the root cell with it"""
@@ -524,7 +524,7 @@ class AssemblyConversion(LatticeBaseConversion):
 		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
 		
 	def _get_zactive(self):
-		return self._pwr_assembly.z_active
+		return self._pwr_assembly0.z_active
 	
 	def _set_case_plots(self):
 		p = self._pitch
@@ -565,15 +565,80 @@ class AssemblyConversion(LatticeBaseConversion):
 			pl.colors = self._case.col_spec
 			self._plots.add_plot(pl)
 
-		
-class MiniCoreConversion(Conversion):
+
+class CoreBaseConversion(Conversion):
+	def _get_zactive(self):
+		return self._pwr_assembly0.z_active
+	
+	def _get_source_box(self, zrange):
+		# Create an initial uniform spatial source distribution over fissionable zones
+		p = self._pitch
+		nx = self._case.core.nx
+		ny = self._case.core.ny
+		lleft =  (-p*nx/2.0, -p*ny/2.0, zrange[0])
+		uright = (+p*nx/2.0, +p*ny/2.0, zrange[1])
+		uniform_dist = openmc.stats.Box(lleft, uright, only_fissionable=True)
+		return openmc.source.Source(space=uniform_dist)
+
+
+class MiniCoreConversion(CoreBaseConversion):
 	def _get_pitch(self):
 		return self._case.core.pitch
+	
+	def _get_root_universe(self):
+		root_universe = openmc.Universe(universe_id=0, name="root universe")
+		lattice = self._case.get_openmc_core_lattice()
+		root_cell = openmc.Cell(cell_id=0, name="root cell")
+		root_cell.fill = lattice
+		nx = self._case.core.nx
+		ny = self._case.core.ny
+		zrange = [self._pwr_assembly0.bottom.z0, self._pwr_assembly0.top.z0]
+		bc = self._case.core.bc
+		boundaries = (bc["rad"],)*4 + (bc["bot"], bc["top"])
+		root_cell.region = self.get_cubic_boundaries(zrange, bounds=boundaries,
+		                                             nx=nx, ny=ny)
+		root_universe.add_cell(root_cell)
+		return root_universe
+	
+	def _set_case_plots(self):
+		wx = self._case.core.nx*self._case.core.pitch
+		wy = self._case.core.ny*self._case.core.pitch
+		width = 1250
+		height = 1250
+		# Fuel-xy (no grid)
+		plot1 = openmc.Plot(plot_id=1)
+		plot1.filename = 'Plot-fuel-xy'
+		plot1.origin = [0, 0, 188.0]
 		
+		# Gridded fuel:MID
+		plot2 = openmc.Plot(plot_id=2)
+		plot2.filename = 'Plot-mid-grid-xy'
+		plot2.origin = [0, 0, 127]
 		
+		# Gridded fuel:END
+		plot3 = openmc.Plot(plot_id=3)
+		plot3.filename = 'Plot-end-grid-xy'
+		plot3.origin = [0, 0, 388]
 		
+		for pl in (plot1, plot2, plot3):
+			pl.basis = "xy"
+			pl.pixels = [width, height]
+			pl.color_by = "material"
+			pl.colors = self._case.col_spec
+			pl.width = [wx - .01, wy - .01]
+			self._plots.add_plot(pl)
 		
-		
+		# YZ
+		plot4 = openmc.Plot(plot_id=4)
+		plot4.filename = 'Plot-yz'
+		plot4.basis = "yz"
+		dz = self._pwr_assembly0.top.z0 - self._pwr_assembly0.bottom.z0
+		plot4.origin = [0, 0, dz/2]
+		plot4.width = [wy, dz]
+		plot4.pixels = [width, height]
+		plot4.color_by = "material"
+		plot4.colors = self._case.col_spec
+		self._plots.add_plot(plot4)
 
 
 if __name__ == "__main__":
