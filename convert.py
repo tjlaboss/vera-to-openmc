@@ -176,9 +176,9 @@ def get_whether_to(keyword, args):
 		return True
 		
 
-def get_args():
-	"""Handle the command line arguments
-	
+def convert_problem():
+	"""Handle the command line arguments, select a case,
+	convert it to OpenMC, and export it to XML.
 	"""
 	args = sys.argv
 	
@@ -212,23 +212,21 @@ def get_args():
 	to_tally = get_whether_to("--tally", args)
 	to_plot = get_whether_to("--plot", args)
 	
-	if prob == 1:
-		Conversion_Class = PincellConversion
-	elif prob == 2:
-		Conversion_Class = LatticeConversion
-	elif prob == 3:
-		Conversion_Class = AssemblyConversion
-	elif prob == 4:
-		Conversion_Class = MiniCoreConversion
-	elif prob == 5:
-		Conversion_Class = FullCoreConversion
-	else:
-		attribs = str((prob, case, particles, inactive, min_batches, max_batches, folder))
-		raise ValueError("DEBUG\nUnknown conversion for: \n" + attribs)
+	conversion_classes = {1: PincellConversion,
+	                      2: LatticeConversion,
+	                      3: AssemblyConversion,
+	                      4: MiniCoreConversion,
+	                      5: FullCoreConversion}
 	
-	conv = Conversion_Class(case, particles, inactive, min_batches,
-		                    max_batches, folder, to_tally, to_plot)
-	conv.export_to_xml()
+	try:
+		ThisConversion = conversion_classes[prob]
+		conv = ThisConversion(case, particles, inactive, min_batches,
+		                      max_batches, folder, to_tally, to_plot)
+	except(IndexError):
+		errstr = "Unknown conversion for: {}".format(case_file)
+		raise ValueError(errstr)
+	else:
+		conv.export_to_xml()
 
 
 class Conversion(object):
@@ -684,6 +682,4 @@ class FullCoreConversion(CoreBaseConversion):
 
 
 if __name__ == "__main__":
-	# test
-	print(get_args())
-	print("Exported successfully.")
+	convert_problem()
