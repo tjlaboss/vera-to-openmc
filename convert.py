@@ -652,6 +652,35 @@ class FullCoreConversion(CoreBaseConversion):
 		root_cell.region = -vessel & +bot & -top
 		root_universe.add_cell(root_cell)
 		return root_universe
+	
+	def _set_case_plots(self):
+		width = 2500
+		height = 2500
+		zlist = [127.0]
+		xynames = ["grid"]
+		xlist = [0]
+		yznames = ["center"]
+		radius = max(self._case.core.vessel_radii)
+		for k, z in enumerate(zlist):
+			plot = openmc.Plot(plot_id=k + 1)
+			plot.basis = "xy"
+			plot.filename = "Plot-" + xynames[k] + "-xy"
+			plot.origin = (0, 0, z)
+			plot.width = (2*radius - .01,)*2
+			plot.pixels = [width, height]
+			plot.color_by = "material"
+			plot.colors = self._case.col_spec
+			self._plots.add_plot(plot)
+		for i, x in enumerate(xlist):
+			plot = openmc.Plot(plot_id=k + i + 2)
+			plot.basis = "yz"
+			plot.filename = "Plot-" + yznames[i] + "-yz"
+			plot.origin = (x, 0, 200)  # FIXME: detect right z height
+			plot.width = (2*radius - .01,)*2
+			plot.pixels = [width, height]
+			plot.color_by = "material"
+			plot.colors = self._case.col_spec
+			self._plots.add_plot(plot)
 
 
 if __name__ == "__main__":
