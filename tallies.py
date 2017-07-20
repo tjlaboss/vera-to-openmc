@@ -71,7 +71,7 @@ def get_assembly_tally(assembly, nzs, dzs, z0 = None, tallies_file = None):
 	
 	lx = -assembly.pitch*assembly.npins/2
 	lowleft = (lx, lx, z0)
-	meshes = pwr.meshes.Mesh_Group(assembly.npins*assembly.pitch, 1, 1, lowleft)
+	meshes = pwr.meshes.MeshGroup(assembly.npins*assembly.pitch, 1, 1, lowleft)
 	for i in range(n):
 		nz = nzs[i]
 		dz = dzs[i]

@@ -282,31 +282,38 @@ class Case(object):
 							elif p == "vessel_mats":
 								mats = clean(v, str)
 						
-						
+						# Make an "empty" core map in case one does not exist
+						# TODO: Replace everything with arrays
+						empty_map = ['-']*len(shape_map[0, :])*len(shape_map[:, 0])
+						empty_core_map = objects.CoreMap(shape(empty_map, shape_map), "[EMPTY MAP]")
 						# Take the ugly cellmaps, shape them to match the core shape,
 						# and then turn them into nice CoreMaps.
 						if insert_cellmap:
 							insert_map = objects.CoreMap(shape(insert_cellmap, shape_map), "Core insertion map")
-						else:	insert_map = None
+						else:
+							insert_map = empty_core_map
 						if control_bank_cellmap:
 							control_bank = objects.CoreMap(shape(control_bank_cellmap, shape_map), "Control rod bank map")
-						else:	control_bank = None
+						else:
+							control_bank = empty_core_map
 						if control_cellmap:
 							control_map = objects.CoreMap(shape(control_cellmap, shape_map), "Control rod location map")
-						else:	control_map = None
+						else:
+							control_map = empty_core_map
 						if detector_cellmap:
 							detector_map = objects.CoreMap(shape(detector_cellmap, shape_map), "Detector location map")
-						else:	detector_map = None
+						else:
+							detector_map = empty_core_map
 							
 							
 						# Check that each pressure vessel radius has a corresponding material
 						if len(radii) != len(mats):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
 							self.errors += 1
-						self.core = objects.Core(pitch, core_size, core_height, shape_map, asmbly, core_params,
+						asmbly_map = objects.CoreMap(shape(asmbly, shape_map), "Core Assembly map")
+						self.core = objects.Core(pitch, core_size, core_height, shape_map, asmbly_map, core_params,
 												 bcs, lower_refl, upper_refl, radii, mats, baffle,
 												 control_bank, control_map, insert_map, detector_map)
-								
 						
 					elif name == "ASSEMBLIES":
 						for asmbly in child:

@@ -68,18 +68,19 @@ def fill_lattice(keys, lam, n = 0, dtype = object):
 	return lattice
 
 
-def replace_lattice(new_keys, original, lam = None, n = 0, dtype = object, blank = "-"):
+def replace_lattice(new_keys, original, lam = None, nx = None, ny = None, dtype = object, blank = "-"):
 	"""Same as fill_lattice, but instead of performing a function on the key,
 	substitutes the key from 'new_keys' into 'original' unless the key=='blank'."""
 	
-	if not n:
-		n = len(original)
+	if not nx:
+		ny = original.ny
+		nx = original.nx
 	if not lam:
 		lam = lambda i, j: new_keys[i][j]
 		
-	lattice = numpy.empty((n, n), dtype)
-	for i in range(n):
-		for j in range(n):
+	lattice = numpy.empty((ny, nx), dtype)
+	for i in range(nx):
+		for j in range(ny):
 			k = new_keys[i][j]
 			if k == blank:
 				lattice[j, i] = original[i][j]
@@ -89,7 +90,7 @@ def replace_lattice(new_keys, original, lam = None, n = 0, dtype = object, blank
 	return lattice
 
 
-def shape(raw_list, shape_map, blank = "-"):
+def shape(raw_list, shape_map, blank="-"):
 	"""Turn an oddly-shaped list into one suitable for a square map.
 	Warning: this does not check to verify if they are of compatible lengths.
 	
@@ -103,18 +104,16 @@ def shape(raw_list, shape_map, blank = "-"):
 		nice_list:	list of len=len(shape_map)^2
 	"""
 	count = 0
-	n = len(shape_map)
-	nice_list = [None,]*n**2
-	for j in range(n):
-		for i in range(n):
-			k = j*n + i		# index within nice_list
+	nx = shape_map.nx
+	ny = shape_map.ny
+	nice_list = numpy.empty((ny, nx), dtype=object)
+	nice_list[:, :] = blank
+	for j in range(ny):
+		for i in range(nx):
 			if shape_map[j][i]:
-				nice_list[k] = raw_list[count]
+				nice_list[j, i] = raw_list[count]
 				count += 1
-			else:
-				nice_list[k] = blank
 	return nice_list
-	
 
 
 def set_nuclide_xs(material, xstring):
