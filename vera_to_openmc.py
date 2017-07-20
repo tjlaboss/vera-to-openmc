@@ -79,6 +79,49 @@ class MC_Case(Case):
 		openmc_surf = pwr.get_surface(self.counter, surfdict, dim, coeff, name, rd)
 		return openmc_surf
 	
+	def get_axial_zones(self, d = 4):
+		"""Return lists used for the axial power distribution tally.
+		
+		Inputs:
+			d:      int; number of decimal places to consider
+					a mesh spacing "equal"
+					[Default: 4]
+		
+		Outputs:
+			nzs:    list of ints; the number of z cuts in a mesh layer
+			dzs:    list of floats; the size of a z cut (cm) in a mesh layer
+			z0:     float; where the z cuts start (cm)
+		"""
+		z0 = self.axial_edits[0]
+		n = len(self.axial_edits)
+		dzs = []
+		nzs = []
+		z = z0
+		dz0 = self.axial_edits[1] - self.axial_edits[0]
+		dz_count = 0
+		seq = [dz0]
+		
+		def avg_dz(dzvals, m):
+			return round(sum(dzvals)/m, d)
+		
+		for i in range(n - 1):
+			dz1 = self.axial_edits[i + 1] - z
+			if math.isclose(dz1, dz0, abs_tol = 10**(1 - d)):
+				dz_count += 1
+				seq.append(dz1)
+			else:
+				if dz_count:
+					nzs.append(dz_count)
+					dzs.append(avg_dz(seq, dz_count))
+				dz_count = 1
+				seq = [dz1]
+			z += dz1
+			dz0 = dz1
+		# Conclude the loop
+		nzs.append(dz_count)
+		dzs.append(avg_dz(seq, dz_count))
+		return nzs, dzs, z0
+	
 	def get_openmc_baffle(self):
 		"""Calls pwr.get_openmc_baffle() with the
 		properties of this case and core.
