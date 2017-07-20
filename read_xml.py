@@ -310,7 +310,8 @@ class Case(object):
 						if len(radii) != len(mats):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
 							self.errors += 1
-						self.core = objects.Core(pitch, core_size, core_height, shape_map, asmbly, core_params,
+						asmbly_map = objects.CoreMap(shape(asmbly, shape_map), "Core Assembly map")
+						self.core = objects.Core(pitch, core_size, core_height, shape_map, asmbly_map, core_params,
 												 bcs, lower_refl, upper_refl, radii, mats, baffle,
 												 control_bank, control_map, insert_map, detector_map)
 						

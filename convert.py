@@ -220,6 +220,8 @@ def get_args():
 		Conversion_Class = AssemblyConversion
 	elif prob == 4:
 		Conversion_Class = MiniCoreConversion
+	elif prob == 5:
+		Conversion_Class = FullCoreConversion
 	else:
 		attribs = str((prob, case, particles, inactive, min_batches, max_batches, folder))
 		raise ValueError("DEBUG\nUnknown conversion for: \n" + attribs)
@@ -567,6 +569,9 @@ class AssemblyConversion(LatticeBaseConversion):
 
 
 class CoreBaseConversion(Conversion):
+	def _get_pitch(self):
+		return self._case.core.pitch
+	
 	def _get_zactive(self):
 		return self._pwr_assembly0.z_active
 	
@@ -582,9 +587,6 @@ class CoreBaseConversion(Conversion):
 
 
 class MiniCoreConversion(CoreBaseConversion):
-	def _get_pitch(self):
-		return self._case.core.pitch
-	
 	def _get_root_universe(self):
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
 		lattice = self._case.get_openmc_core_lattice()
@@ -639,6 +641,17 @@ class MiniCoreConversion(CoreBaseConversion):
 		plot4.color_by = "material"
 		plot4.colors = self._case.col_spec
 		self._plots.add_plot(plot4)
+
+
+class FullCoreConversion(CoreBaseConversion):
+	def _get_root_universe(self):
+		root_universe = openmc.Universe(universe_id=0, name="root universe")
+		reactor_universe, (vessel, bot, top) = self._case.build_reactor()
+		root_cell = openmc.Cell(cell_id=0, name="root cell")
+		root_cell.fill = reactor_universe
+		root_cell.region = -vessel & +bot & -top
+		root_universe.add_cell(root_cell)
+		return root_universe
 
 
 if __name__ == "__main__":

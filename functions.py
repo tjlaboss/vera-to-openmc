@@ -90,7 +90,7 @@ def replace_lattice(new_keys, original, lam = None, nx = None, ny = None, dtype 
 	return lattice
 
 
-def shape(raw_list, shape_map, blank = "-"):
+def shape(raw_list, shape_map, blank="-"):
 	"""Turn an oddly-shaped list into one suitable for a square map.
 	Warning: this does not check to verify if they are of compatible lengths.
 	
@@ -106,17 +106,14 @@ def shape(raw_list, shape_map, blank = "-"):
 	count = 0
 	nx = shape_map.nx
 	ny = shape_map.ny
-	nice_list = [None,]*nx*ny
+	nice_list = numpy.empty((ny, nx), dtype=object)
+	nice_list[:, :] = blank
 	for j in range(ny):
 		for i in range(nx):
-			k = j*ny + i		# index within nice_list
 			if shape_map[j][i]:
-				nice_list[k] = raw_list[count]
+				nice_list[j, i] = raw_list[count]
 				count += 1
-			else:
-				nice_list[k] = blank
 	return nice_list
-	
 
 
 def set_nuclide_xs(material, xstring):

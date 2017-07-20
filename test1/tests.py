@@ -399,10 +399,10 @@ def set_settings(npins, pitch, bounds, zrange, min_batches, max_batches, inactiv
 
 if __name__ == "__main__":
 	#case, fillcell, ppitch, n, bounds, zrange, tally_file = test_pincell("../gold/1a.xml.gold", case_tallies = False)
-	case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_lattice("../gold/2n.xml.gold", case_tallies = True)
+	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_lattice("../gold/2n.xml.gold", case_tallies = True)
 	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_assembly("../gold/3a.xml.gold", case_tallies = True)
 	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_core_lattice("../gold/p7.xml.gold")
-	#case, fillcell, apitch, ppitch, n, bounds, zrange, tally_file = test_core("../gold/5a-1.xml.gold")
+	case, fillcell, apitch, ppitch, n, bounds, zrange = test_core("../gold/5a-1.xml.gold"); case_tallies = False
 	
 	print("\nGenerating XML")
 	
