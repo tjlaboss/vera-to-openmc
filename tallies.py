@@ -4,11 +4,9 @@
 
 import openmc
 import pwr
-import vera_to_openmc
-from copy import deepcopy
 
 
-def get_lattice_tally(lattice, scores, tallies_file = None):
+def get_lattice_tally(lattice, scores, tallies_file=None):
 	"""Get
 	
 	Input:
@@ -33,7 +31,7 @@ def get_lattice_tally(lattice, scores, tallies_file = None):
 	mesh.width = lattice.pitch
 	
 	mesh_filter = openmc.MeshFilter(mesh)
-	mesh_tally = openmc.Tally(name = "fission tally")
+	mesh_tally = openmc.Tally(name="fission tally")
 	mesh_tally.filters = [mesh_filter]
 	mesh_tally.scores = scores
 	
@@ -41,7 +39,7 @@ def get_lattice_tally(lattice, scores, tallies_file = None):
 	return tallies_file
 
 
-def get_assembly_tally(assembly, nzs, dzs, z0 = None, tallies_file = None):
+def get_assembly_tally(assembly, nzs, dzs, z0=None, tallies_file=None):
 	"""Get the tallies for a pwr assembly
 	
 	Parameters
@@ -75,6 +73,6 @@ def get_assembly_tally(assembly, nzs, dzs, z0 = None, tallies_file = None):
 	for i in range(n):
 		nz = nzs[i]
 		dz = dzs[i]
-		meshes.add_mesh(nz = nz, dz = dz)
+		meshes.add_mesh(nz=nz, dz=dz)
 	tallies_file.extend(meshes.tallies)
 	return tallies_file
