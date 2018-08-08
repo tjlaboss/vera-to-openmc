@@ -636,10 +636,13 @@ class Case(object):
 		
 		# Initialize variables
 		name = ""
-		tinlet = 0.0;	tfuel = 0.0;
+		tinlet = 0.0
+		tfuel = 0.0
+		bfrac = 0.0
 		b10 = 0.184309	# wt fraction
 		density = 0.0
-		bank_labels = (); bank_pos = ()
+		bank_labels = ()
+		bank_pos = ()
 		for prop in state:
 			p = prop.attrib["name"]
 			v = prop.attrib["value"]
