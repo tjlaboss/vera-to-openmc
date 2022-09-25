@@ -431,21 +431,19 @@ class MC_Case(Case):
 		
 		# Create the top and bottom planes of the core and core plate
 		# Intentionally does not use self.__get_surface() due to specific boundary conditions.
-		plate_bot = openmc.ZPlane(self.counter.add_surface(),
-		                          z0 = -self.core.bot_refl.thick, boundary_type = self.core.bc["bot"])
-		core_bot = openmc.ZPlane(self.counter.add_surface(), z0 = 0.0)
-		core_top = openmc.ZPlane(self.counter.add_surface(), z0 = self.core.height)
-		plate_top = openmc.ZPlane(self.counter.add_surface(),
-		                          z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
+		plate_bot = openmc.ZPlane(surface_id=self.counter.add_surface(),
+		                          z0=-self.core.bot_refl.thick, boundary_type=self.core.bc["bot"])
+		core_bot = openmc.ZPlane(surface_id=self.counter.add_surface(), z0 = 0.0)
+		core_top = openmc.ZPlane(surface_id=self.counter.add_surface(), z0 = self.core.height)
+		plate_top = openmc.ZPlane(surface_id=self.counter.add_surface(),
+		                          z0=self.core.height + self.core.top_refl.thick, boundary_type=self.core.bc["top"])
 		zregion = +core_bot & -core_top
 		
 		# Create the concentric cylinders of the vessel
 		for ring in range(len(self.core.vessel_radii) - 1):
 			r = self.core.vessel_radii[ring]
 			m = self.core.vessel_mats[ring]
-			
-			s = openmc.ZCylinder(self.counter.add_surface(), R = r)
-			
+			s = openmc.ZCylinder(surface_id=self.counter.add_surface(), r=r)
 			cell_name = "Vessel_" + str(ring)
 			new_cell = openmc.Cell(self.counter.add_cell(), cell_name)
 			
@@ -471,8 +469,9 @@ class MC_Case(Case):
 				core_cells.append(new_cell)
 		
 		# And finally, the outermost ring
-		vessel_outer = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii),
-		                                boundary_type = self.core.bc["rad"])
+		vessel_outer = openmc.ZCylinder(surface_id=self.counter.add_surface(),
+		                                r=max(self.core.vessel_radii),
+		                                boundary_type=self.core.bc["rad"])
 		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
 		new_cell.region = -vessel_outer & +last_s & +plate_bot & -plate_top
 		m = self.core.vessel_mats[-1]

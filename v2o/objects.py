@@ -380,6 +380,8 @@ class Insert(Assembly):
 		self.axial_elevations = axial_elevs
 		self.axial_labels = axial_labels
 		self.params = params
+		self.celldict = {}
+		self.key_maps = {}
 		self.construct_maps()
 
     
