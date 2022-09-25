@@ -384,12 +384,8 @@ class Case:
 									self.errors += 1
 									
 							# Instantiate an Assembly object and pass it the parameters
-<<<<<<< HEAD:v2o/read_xml.py
 							new_assembly = v2o.Assembly(name=cname, cells=cells, cellmaps=maps, spacergrids=grids,
 							                            params=asmbly_params)
-=======
-							new_assembly = v2o.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
->>>>>>> master:read_xml.py
 							self.assemblies[new_assembly.label] = new_assembly
 						
 					elif name == "STATES":
@@ -630,11 +626,7 @@ class Case:
 			state:		The ParameterList object describing an operating state
 		Output:
 			a_state:	instance of v2o.State
-<<<<<<< HEAD:v2o/read_xml.py
 		"""
-=======
-		'''
->>>>>>> master:read_xml.py
 		key = state.attrib["name"].lower()
 		
 		# Initialize variables
@@ -712,11 +704,7 @@ class Case:
 			is_control:		Whether to instantiate this as a Control object.
 		Output:
 			an_insert:		instance of v2o.Insert
-<<<<<<< HEAD:v2o/read_xml.py
 		"""
-=======
-		'''
->>>>>>> master:read_xml.py
 		in_name = insert.attrib["name"].lower()
 		# dictionary of all independent parameters for this assembly
 		key = in_name; title = in_name
