@@ -389,7 +389,13 @@ class PincellConversion(Conversion):
 	def _get_root_universe(self):
 		"""Fill the root universe with the pincell universe"""
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
-		pincell = list(self._assembly0.cells.values())[0]
+		pincells_values = self._assembly0.cells.values()
+		##################################################
+		# FIXME: This does the first lattice encountered #
+		##################################################
+		if len(pincells_values) > 0:
+			raise RuntimeError(f"Multiple pincell definitions found: {pincells_values}. Aborting.")
+		pincell = list(pincells_values)[0]
 		root_cell = openmc.Cell(cell_id=0, name="root cell")
 		root_cell.fill = self._case.get_openmc_pincell(pincell)
 		root_cell.region = self.get_cubic_boundaries(zrange=(0.0, 1.0))
@@ -423,7 +429,13 @@ class LatticeConversion(LatticeBaseConversion):
 		return self._case.core.pitch
 	
 	def _add_spacergrids(self, lattice):
-		sg = list(self._assembly0.spacergrids.values())[0]
+		sg_values = self._assembly0.spacergrids.values()
+		######################################################
+		# FIXME: This does the first spacer grid encountered #
+		######################################################
+		if len(sg_values) > 1:
+			raise RuntimeError(f"Multiple spacer grid definitions found: {sg_values}. Aborting.")
+		sg = list(sg_values)[0]
 		mat = self._case.get_openmc_material(sg.material, asname=self._assembly0.name)
 		grid = pwr.SpacerGrid(sg.name, sg.height, sg.mass, mat,
 		                      self._assembly0.pitch, self._assembly0.npins)
@@ -436,6 +448,11 @@ class LatticeConversion(LatticeBaseConversion):
 		root_universe = openmc.Universe(universe_id=0, name="root universe")
 		self._add_insertions()
 		layers = self._case.get_openmc_lattices(self._assembly0)
+		################################################
+		# FIXME: This does the first layer encountered #
+		################################################
+		if len(layers) > 1:
+			raise RuntimeError(f"Multiple lattice definitions found: {layers}. Aborting.")
 		lattice = layers[0]
 		if self._assembly0.spacergrids:
 			lattice = self._add_spacergrids(lattice)
@@ -449,8 +466,13 @@ class LatticeConversion(LatticeBaseConversion):
 		return 0.0, 1.0
 
 	def _set_case_tallies(self):
-		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
-		v2o.tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
+		lattices = self._case.get_openmc_lattices(self._assembly0)
+		##################################################
+		# FIXME: This does the first lattice encountered #
+		##################################################
+		if len(lattices) > 0:
+			raise RuntimeError(f"Multiple lattice definitions found: {lattices}. Aborting.")
+		v2o.tallies.get_lattice_tally(lattices[0], scores=["fission"], tallies_file=self._tallies)
 		
 	def _set_case_plots(self):
 		plot = openmc.Plot()
@@ -523,8 +545,13 @@ class AssemblyConversion(LatticeBaseConversion):
 		return root_universe
 	
 	def _set_case_tallies(self):
-		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
-		v2o.tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
+		lattices = self._case.get_openmc_lattices(self._assembly0)
+		##################################################
+		# FIXME: This does the first lattice encountered #
+		##################################################
+		if len(lattices) > 1:
+			raise RuntimeError(f"Multiple lattice definitions found: {lattices}. Aborting.")
+		v2o.tallies.get_lattice_tally(lattices[0], scores=["fission"], tallies_file=self._tallies)
 		
 	def _get_zactive(self):
 		return self._pwr_assembly0.z_active
