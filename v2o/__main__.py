@@ -7,9 +7,8 @@ import os
 from xml.etree.ElementTree import ParseError
 import openmc
 import openmc.stats
-import vera_to_openmc
 import pwr
-import tallies
+import v2o
 
 _OPTS = ("--particles", "--batches", "--max-batches", "--inactive",
          "--export", "--help", "-h", "--tallies", "--plots")
@@ -42,11 +41,11 @@ def get_case(case_file):
 	"""Outputs:
 		case_number:    int in {1, 2, 3, 4, 5}; describes which kind of problem it is
 		                (2D pincell, 2D lattice, 3D assembly, 3D mini-core, 3D full-core)
-		case:           instance of vera_to_openmc.MC_Case
+		case:           instance of MC_Case
 	"""
 	# Process the Case and determine what kind it is (pincell, lattice, assembly, or fullcore)
 	try:
-		case = vera_to_openmc.MC_Case(case_file)
+		case = v2o.MC_Case(case_file)
 	except ParseError as e:
 		raise ParseError("Could not parse {}; \
 			is it a valid XML file?\n{}".format(case_file, e))
@@ -229,12 +228,12 @@ def convert_problem():
 		conv.export_to_xml()
 
 
-class Conversion(object):
+class Conversion:
 	"""Base class for conversion of VERA progression problems
 	
 	Parameters:
 	-----------
-	case:           instance of vera_to_openmc.MC_Case
+	case:           instance of MC_Case
 	particles:      int; number of particles per batch to run
 	inactive:       int; number of inactive batches to run
 	min_batches:    int; number of active batches to run,
@@ -256,6 +255,7 @@ class Conversion(object):
 		self._max_batches = max_batches
 		self.folder = folder
 		
+		## FIXME: I think this is where the problem is ##
 		self._pwr_assembly0 = None
 		self._assembly0 = list(self._case.assemblies.values())[0]
 		self._pwr_assembly0 = self._case.get_openmc_assembly(self._assembly0)
@@ -412,7 +412,7 @@ class PincellConversion(Conversion):
 		plot.pixels = [600, 600]
 		plot.color_by = 'material'
 		plot.colors = self._case.col_spec
-		self._plots.add_plot(plot)
+		self._plots.append(plot)
 
 
 class LatticeConversion(LatticeBaseConversion):
@@ -447,7 +447,7 @@ class LatticeConversion(LatticeBaseConversion):
 
 	def _set_case_tallies(self):
 		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
-		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
+		v2o.tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
 		
 	def _set_case_plots(self):
 		plot = openmc.Plot()
@@ -457,7 +457,7 @@ class LatticeConversion(LatticeBaseConversion):
 		plot.pixels = [1200, 1200]
 		plot.color_by = 'material'
 		plot.colors = self._case.col_spec
-		self._plots.add_plot(plot)
+		self._plots.append(plot)
 
 
 class AssemblyConversion(LatticeBaseConversion):
@@ -477,7 +477,7 @@ class AssemblyConversion(LatticeBaseConversion):
 		if lplate:
 			# Add the lower core plate
 			zbot = self._pwr_assembly0.bottom.z0 - lplate.thick
-			bot_surf = openmc.ZPlane(self._case.counter.add_surface(), z0=zbot, name="Bottom")
+			bot_surf = openmc.ZPlane(surface_id=self._case.counter.add_surface(), z0=zbot, name="Bottom")
 			bot_plate_cell = openmc.Cell(self._case.counter.add_cell(), "Lower Core Plate")
 			bot_plate_cell.fill = self._case.get_openmc_material(lplate.material)
 			bot_plate_cell.region = self._pwr_assembly0.wall_region & \
@@ -490,7 +490,7 @@ class AssemblyConversion(LatticeBaseConversion):
 		if uplate:
 			# Add the upper core plate
 			ztop = self._pwr_assembly0.top.z0 + uplate.thick
-			top_surf = openmc.ZPlane(self._case.counter.add_surface(), z0=ztop, name="Top")
+			top_surf = openmc.ZPlane(surface_id=self._case.counter.add_surface(), z0=ztop, name="Top")
 			top_plate_cell = openmc.Cell(self._case.counter.add_cell(), "Upper Core Plate")
 			top_plate_cell.fill = self._case.get_openmc_material(uplate.material)
 			top_plate_cell.region = self._pwr_assembly0.wall_region & \
@@ -521,7 +521,7 @@ class AssemblyConversion(LatticeBaseConversion):
 	
 	def _set_case_tallies(self):
 		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
-		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
+		v2o.tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
 		
 	def _get_zactive(self):
 		return self._pwr_assembly0.z_active
@@ -563,7 +563,7 @@ class AssemblyConversion(LatticeBaseConversion):
 			pl.pixels = [width, height]
 			pl.color_by = "material"
 			pl.colors = self._case.col_spec
-			self._plots.add_plot(pl)
+			self._plots.append(pl)
 
 
 class CoreBaseConversion(Conversion):
@@ -626,7 +626,7 @@ class MiniCoreConversion(CoreBaseConversion):
 			pl.color_by = "material"
 			pl.colors = self._case.col_spec
 			pl.width = [wx - .01, wy - .01]
-			self._plots.add_plot(pl)
+			self._plots.append(pl)
 		
 		# YZ
 		plot4 = openmc.Plot(plot_id=4)
@@ -638,7 +638,7 @@ class MiniCoreConversion(CoreBaseConversion):
 		plot4.pixels = [width, height]
 		plot4.color_by = "material"
 		plot4.colors = self._case.col_spec
-		self._plots.add_plot(plot4)
+		self._plots.append(plot4)
 
 
 class FullCoreConversion(CoreBaseConversion):
@@ -668,7 +668,7 @@ class FullCoreConversion(CoreBaseConversion):
 			plot.pixels = [width, height]
 			plot.color_by = "material"
 			plot.colors = self._case.col_spec
-			self._plots.add_plot(plot)
+			self._plots.append(plot)
 		for i, x in enumerate(xlist):
 			plot = openmc.Plot(plot_id=k + i + 2)
 			plot.basis = "yz"
@@ -678,7 +678,7 @@ class FullCoreConversion(CoreBaseConversion):
 			plot.pixels = [width, height]
 			plot.color_by = "material"
 			plot.colors = self._case.col_spec
-			self._plots.add_plot(plot)
+			self._plots.append(plot)
 
 
 if __name__ == "__main__":

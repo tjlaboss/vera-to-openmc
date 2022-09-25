@@ -81,16 +81,5 @@ def axial_plot(xlista, zlista, xlistb, zlistb):
 	pyplot.ylabel("z (cm)")
 	pyplot.xlim(0, 1.75)
 	pyplot.ylim(0, 400)
-	
 	pyplot.legend()
 	
-
-
-#sp = openmc.StatePoint(STATEPOINT)
-sp3a = openmc.StatePoint("Results/3/statepoint_3Aquick.h5")
-sp3b = openmc.StatePoint("Results/3/statepoint_3Bquick.h5")
-#process_fission_rate_tally(sp)
-x3a, z3a = axial_power_tally(sp3a)
-x3b, z3b = axial_power_tally(sp3b)
-axial_plot(x3a, z3a, x3b, z3b)
-pyplot.show()

@@ -2,20 +2,19 @@
 #
 # Module containing useful objects for read_xml.py
 
-import numpy
 from math import sqrt
 from copy import copy
-from functions import *
+from v2o.functions import *
 from openmc.data import atomic_mass
 
 FUELTEMP = -1
 MODTEMP = -2
 
 
-class Material(object):
+class Material:
 	"""Basics of a material card
 	Parameters:
-		name:			string; unique material name
+		key_name:		str; unique material name
 		density:		float; density in g/cm^3
 		isotopes:		dictionary of {"isotope name":isotope_fraction}
 		temperature:	float; temperature of the material in Kelvins [optional]
@@ -23,7 +22,7 @@ class Material(object):
 						0 is unknown. Positive values are real temperatures.  
 	"""
 	
-	def __init__(self, key_name, density, isotopes, temperature = 0):
+	def __init__(self, key_name, density, isotopes, temperature=0):
 		self.name = key_name
 		self.density = density
 		self.isotopes = isotopes
@@ -31,7 +30,7 @@ class Material(object):
 	
 	def __str__(self):
 		"""Use this to print a brief description of each material"""
-		description = self.name + '\t@ ' + str(self.density) + ' g/cc\t(' + str(len(self.isotopes)) + ' isotopes)'
+		description = f"{self.name}\t@ {self.density} g/cc\t({len(self.isotopes)} isotopes)"
 		return description
 	
 	def __eq__(self, other):
@@ -99,7 +98,7 @@ class Mixture(Material):
 		self.temperature = temperature
 
 
-class State(object):
+class State:
 	"""The [STATE] block defines the state of the core (power, flow, pressure, inlet temperature, rod
 	positions, boron concentration, etc.) at a particular point in time. These values will typically
 	change during a cycle depletion.
@@ -111,8 +110,6 @@ class State(object):
 		## boron:		float; boron concentration in ppm
 		mod:		instance of Material describing the moderator
 	Optional:
-		##b10:		atom fraction of boron which is b-10
-		##			[Default: 0.199]
 		name:		str; descriptive title of the state
 					[Default: empty string]
 		rodbank:	dictionary of control rod banks in the format { crd_key : crd_position }
@@ -120,25 +117,20 @@ class State(object):
 		 
 	"""
 	
-	def __init__(self, key, tfuel, tinlet, mod,
-	             # boron, b10 = 0.199,
-	             name = "",
-	             rodbank = None,
-	             params = {}, ):
+	def __init__(self, key, tfuel, tinlet, mod, name, rodbank, params):
 		self.key = key
 		self.tfuel = tfuel
 		self.tinlet = tinlet
 		self.mod = mod
 		self.name = name
-		
 		self.rodbank = rodbank
 		self.params = params
 
 
-class MonteCarlo(object):
+class MonteCarlo:
 	"""Container for all the Monte Carlo simulation parameters
 	
-	Inputs:
+	Parameters
 		min_batches:		int; minimum number of batches to simulate
 							[Default: 275]
 		inactive:			int; number of batches to ignore in criticality calculation
@@ -154,7 +146,7 @@ class MonteCarlo(object):
 		max_batches:		int; min_batches*max_batch_mult
 	"""
 	
-	def __init__(self, min_batches = 275, inactive = 75, particles = 200000, max_batch_mult = 10):
+	def __init__(self, min_batches=275, inactive=75, particles=200000, max_batch_mult=10):
 		self.min_batches = min_batches
 		self.max_batches = int(max_batch_mult * min_batches)
 		self.inactive = inactive
@@ -169,12 +161,12 @@ class MonteCarlo(object):
 		return d
 
 
-class Assembly(object):
+class Assembly:
 	"""VERA decks often contain descriptions of fuel assemblies.
 	Although I am not sure how to represent these in OpenMC/OpenCG yet,
 	it is useful to store assemblies as objects owned by a Case instance.
 	
-	Inputs:
+	Parameters
 		name: 			String containing the unique Assembly name
 		cells:			Dictionary of Cell objects in this assembly {cell.key:cell}
 		params:			Dictionary of all the other parameters provided
@@ -187,13 +179,18 @@ class Assembly(object):
 		pwr_spacers: 	Dictionary of pwr.SpacerGrid instances which have been created for this
 	"""
 	
-	def __init__(self, name, cells, params = {}, cellmaps = {}, spacergrids = {}):  # more inputs to come
+	def __init__(self, name, cells, params=None, cellmaps=None, spacergrids=None):  # more inputs to come
 		self.name = name
 		self.cells = cells
 		self.cellmaps = cellmaps
 		self.spacergrids = spacergrids
-		
 		self.params = params
+		if params is None:
+			self.params = {}
+		if cellmaps is None:
+			self.cellmaps = {}
+		if spacergrids is None:
+			self.spacergrids = {}
 		# Unpack the parameters that should appear in every case
 		self.label = params["label"].lower()
 		self.axial_labels = clean(params["axial_labels"], str)
@@ -203,26 +200,21 @@ class Assembly(object):
 		
 		self.pwr_spacers = {}
 		self.pwr_nozzles = {}
-		
+		self.celldict = {}
+		self.key_maps = {}
 		self.construct_maps()
 	
 	def construct_maps(self):
 		"""Construct the cell dictionary and key map"""
-		self.celldict = {}
 		for cell in self.cells.values():
 			self.celldict[cell.label] = cell.key
-		
-		self.key_maps = {}
 		for cmap in self.cellmaps:
-			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap].cell_map, name = self.name + '-' + cmap, label = cmap)
+			self.cellmaps[cmap] = CoreMap(self.cellmaps[cmap].cell_map, name=self.name + '-' + cmap, label=cmap)
 			self.key_maps[cmap] = CoreMap(fill_lattice(self.cellmaps[cmap], self.lookup, self.npins),
-			                              name = self.name + "-" + cmap + " (keymap)", label = cmap)
+			                              name=self.name + "-" + cmap + " (keymap)", label=cmap)
 	
 	def __str__(self):
-		rep = self.key
-		rep += ": "
-		rep += self.name
-		return rep
+		return self.name
 	
 	def lookup(self, c, blank = "-"):
 		if c != blank:
@@ -240,7 +232,7 @@ class Assembly(object):
 	def add_insert(self, insertion, depth = 0.0):
 		"""Merge levels
 		
-		Inputs:
+		Parameters
 			insertion:		instance of Insert
 			depth:			for partially withdrawn Inserts (such control rods),
 							the depth at which the Insert begins.
@@ -292,7 +284,7 @@ class Assembly(object):
 					break
 				
 			for k in range(ni_levels-1):
-				if (z == max(insert_elevations)) or (z <= insert_elevations[k+1] and z > insert_elevations[k]):
+				if (z == max(insert_elevations)) or (insert_elevations[k + 1] >= z > insert_elevations[k]):
 					i_label = insert_labels[k]
 					ikeymap = insertion.key_maps[i_label]
 					break
@@ -300,9 +292,9 @@ class Assembly(object):
 			if a_label and i_label:
 				# Then we've got an insertion acting here.
 				new_label = a_label + '+' + i_label
-				l = lambda i, j: self.get_cell_insert(insertion,
-                    insertion.key_maps[i_label], self.key_maps[a_label], i, j)
-				new_lattice = replace_lattice(new_keys = ikeymap, original = akeymap, lam = l)
+				def l(i, j):
+					return self.get_cell_insert(insertion, insertion.key_maps[i_label], self.key_maps[a_label], i, j)
+				new_lattice = replace_lattice(new_keys=ikeymap, original=akeymap, lam=l)
 				new_map = CoreMap(new_lattice, name = new_label + " (keymap)", label = new_label)
 			elif a_label:
 				# No insertion
@@ -322,20 +314,20 @@ class Assembly(object):
 		self.cells.update(insertion.cells)
 		self.key_maps.update(all_key_maps)
 	
-	def get_cell_insert(self, insertion, imap, amap, i, j, blank = "-"):
+	def get_cell_insert(self, insertion, imap, amap, i, j, blank="-"):
 		"""For a cell within a lattice, check if an insertion goes here.
 		If so, see if it exists. If it does, look it up in self.cells.
 		If it doesn't, make a copy of the original and modify it with
 		cell.insert(the insertion cell). Return the key of whichever cell
 		belongs at this position.
 		
-		Input:
+		Parameters
 			insertion:		Insert instance
 			amap:			CoreMap instance of the assembly pre-insertion
 			imap:			CoreMap instance of the insertion locations
 			i,j:			int; indices marking the location in imap and amap
 			new_label:		str; what to call the new cell+insert --> this may be unnecessary
-		Output:
+		Returns
 			akey:			If there is no insertion here, the original amap[i][j]
 			new_key			If there is an insertion here, key of the new cell
 		"""
@@ -364,7 +356,7 @@ class Insert(Assembly):
 	such as thimble plugs. The description of such inserts is given
 	in the VERA input deck under the [INSERT] block
 	
-	Inputs:
+	Parameters
 		key:			str; unique identifier of this insert
 		name:			str; more descriptive name of this insert
 						[Default: empty string]
@@ -376,15 +368,10 @@ class Insert(Assembly):
 		axial_elevs:	list of floats describing the axial elevations of the lattice layers
 	"""
 	
-	def __init__(self, key, name = "", npins = 0,
-				 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
-				 params = {}):
-		
-		
+	def __init__(self, key, name, npins, cells, cellmaps, axial_elevs, axial_labels, params):
 		if axial_elevs or axial_labels:
 			assert (len(axial_elevs) == len(axial_labels) + 1), \
 				"The number of axial elevations must be exactly one more than the number of axial labels."
-		
 		self.key = key
 		self.name = name
 		self.npins = npins
@@ -393,7 +380,8 @@ class Insert(Assembly):
 		self.axial_elevations = axial_elevs
 		self.axial_labels = axial_labels
 		self.params = params
-		
+		self.celldict = {}
+		self.key_maps = {}
 		self.construct_maps()
 
     
@@ -406,7 +394,7 @@ class Control(Insert):
 	such as thimble plugs. The description of such inserts is given
 	in the VERA input deck under the [INSERT] block
 	
-	Inputs:
+	Parameters
 		key:			str; unique identifier of this insert
 		name:			str; more descriptive name of this insert
 						[Default: empty string]
@@ -426,27 +414,24 @@ class Control(Insert):
 		step_size:		stroke/maxstep
 	"""
 		
-	def __init__(self, key, name = "", npins = 0,
-				 cells = [], cellmaps = {}, axial_elevs = [], axial_labels = [],
-				 params = {}, stroke = 0.0, maxstep = 0, depth = 0.0):
-	
-	
+	def __init__(self, key, name, npins, cells, cellmaps, axial_elevs, axial_labels,
+	             params, stroke, maxstep, depth=0.0):
 		super().__init__(key, name, npins, cells, cellmaps, axial_elevs, axial_labels, params)
 		self.stroke = stroke
 		self.maxstep = maxstep
 		self.step_size = stroke/float(maxstep)
 
 
-class SpacerGrid(object):
+class SpacerGrid:
 	"""Object to hold properties of an assembly's spacer grids
 	
-	Inputs:
+	Parameters
 		name: 		String containing the name, which serves as a dictionary key in Case.grids
 		height:		float
 		mass:		float
 		label:		string
 		material:	string; key referring to an instance of class Material
-		"""
+	"""
 	
 	def __init__(self, name, height, mass, label, material):
 		self.name = name
@@ -460,9 +445,9 @@ class SpacerGrid(object):
 		return self.name
 
 
-class CoreMap(object):
+class CoreMap:
 	"""A core mapping for assembly, control rod, and detector positions
-	Inputs: 
+	Parameters 
 		cell_map: 	    List of integers or strings describing the assembly layout
 						You can also give it a square_map, and it will process it appropriately
 		name: 		    String containing the descriptive Assembly name
@@ -476,7 +461,8 @@ class CoreMap(object):
 		str_map:        string depicting the core map, suitable for print(). It is
 						generated at instantiation and refreshed with get_str_map()
 	"""
-	def __init__(self, cell_map, name = "", label = ""):
+	
+	def __init__(self, cell_map, name="", label=""):
 		self.name = name
 		self.label = label
 		
@@ -502,9 +488,9 @@ class CoreMap(object):
 			self.nx = int(sqrt(len(cell_map)))
 			self.ny = self.nx
 			self.cell_map = cell_map
+		self.square_map = self.__get_square_map()
+		self.str_map = self.__get_str_map()
 		
-		self.square_map = self.get_square_map()
-		self.str_map = self.get_str_map()
 	
 	def __str__(self):
 		rep = self.name
@@ -530,7 +516,7 @@ class CoreMap(object):
 	#	self.square_map()[index] = value
 	
 	
-	def get_square_map(self):
+	def __get_square_map(self):
 		"""Return the cell map as a square array"""
 		nx = self.nx
 		ny = self.ny
@@ -541,21 +527,20 @@ class CoreMap(object):
 				smap[j, i] = self.cell_map[k]
 		return smap
 	
-	def get_str_map(self):
+	def __get_str_map(self):
 		"""Return a string of the square map nicely."""
-		smap = self.get_square_map()
 		ml = len(max(map(str, self.cell_map), key = len))  # max length of a key
 		printable = ""
-		for row in smap:
+		for row in self.square_map:
 			for col in row:
 				printable += str(col).rjust(ml) + ' '
 			printable += '\n'
 		return printable
 
 
-class Cell(object):
+class Cell:
 	"""
-	Inputs: 
+	Parameters 
 		name: 		String containing the full Cell name
 		num_rings:	Number of concentric rings of different materials
 		radii:		List of length {num_rings} containing the lengths of the respective rings
@@ -568,7 +553,7 @@ class Cell(object):
 					that has been inserted into this cell.
 	"""
 	
-	def __init__(self, name, num_rings, radii, mats, label, asname = ""):
+	def __init__(self, name, num_rings, radii, mats, label, asname=""):
 		self.name = name
 		self.num_rings = num_rings
 		self.radii = radii
@@ -588,7 +573,7 @@ class Cell(object):
 		This method allows the insertion of 'insert_cell' into the innermost
 		radius of self. 
 		
-		Input:
+		Parameters
 			insert_cell:		instance of Cell (same as self)
 		"""
 		
@@ -603,10 +588,10 @@ class Cell(object):
 		self.inname = insert_cell.asname
 
 
-class Core(object):
+class Core:
 	"""Container for all the general and full-core properties
 	
-	Inputs:
+	Parameters
 		pitch:		float; 	assembly pitch in cm
 		size:		int; 	number of assemblies across one axis of the full core
 		height:		float;	total axial distance (cm) from the bottom core plate
@@ -632,11 +617,10 @@ class Core(object):
 		insert_map,		 /
 		detector_map:	/
 	"""
-	
-	def __init__(self, pitch, size, height, shape, asmbly, params,  # rpower, rflow,
-	             bc = {"bot":"vacuum", "rad":"vacuum", "top":"vacuum"},
-	             bot_refl = None, top_refl = None, vessel_radii = [], vessel_mats = [],
-	             baffle = {}, control_bank = [], control_map = [], insert_map = [], detector_map = []):
+	default_bc = {"bot":"vacuum", "rad":"vacuum", "top":"vacuum"}
+	def __init__(self, pitch, size, height, core_shape, asmbly, params,  # rpower, rflow,
+	             bc, bot_refl, top_refl, vessel_radii, vessel_mats,
+	             baffle, control_bank, control_map, insert_map, detector_map):
 		
 		self.pitch = pitch
 		self.size = size
@@ -644,10 +628,10 @@ class Core(object):
 		self.asmbly = asmbly
 		self.params = params
 		
-		if not isinstance(shape, CoreMap):
-			self.shape = CoreMap(shape, "Core shape map")
+		if not isinstance(core_shape, CoreMap):
+			self.shape = CoreMap(core_shape, "Core shape map")
 		else:
-			self.shape = shape
+			self.shape = core_shape
 		if not isinstance(asmbly, CoreMap):
 			self.asmbly = CoreMap(asmbly, "Fuel assembly map")
 		else:
@@ -686,12 +670,12 @@ class Core(object):
 	def __asmbly_square_map(self, space = ' '):
 		"""Returns array of the assembly map
 		
-		Optional input:
+		Optional Parameters
 			space:	string (len=0 or 1) to represent a spot outside the core.
 					Default is whitespace."""
 		if space:
 			space = space[0]
-		smap = self.shape.get_square_map()
+		smap = self.shape.square_map
 		# Create a new blank map for the assembly layout
 		n = self.size
 		amap = numpy.empty((n, n), dtype = str)
@@ -739,26 +723,26 @@ class Core(object):
 		elif which in ("a", "ass", "asmbly", "assembly"):
 			return self.__asmbly_str_map(space)
 		elif not which:
-			return self.shape.str_map(), self.__asmbly_str_map(space)
+			return self.shape.str_map, self.__asmbly_str_map(space)
 		else:
 			return which + " is not a valid option."
 
 
-class Nozzle(object):
-	"""Attempt 2 at creating a pwr nozzle
-		
-	"""
-	def __init__(self, height, material, name = "nozzle"):
+class Nozzle:
+	"""Attempt 2 at creating a pwr nozzle"""
+	
+	def __init__(self, height, material, name="nozzle"):
 		self.height = height
 		self.name = name
 		self.material = material
 
 
-class Reflector(object):
-	"""Inputs:
+class Reflector:
+	"""
+	Parameters
 		mat:	string; key of an instance of Material or Mixture
 		thick:	float;	thickness in cm
-	Optional input:
+		vfrac:  not used?
 		name:	string;	default is empty string
 	"""
 	
@@ -771,13 +755,14 @@ class Reflector(object):
 		return self.name + " Reflector"
 
 
-class Baffle(object):
-	"""Inputs:
+class Baffle:
+	"""
+	Parameters
 		mat:	key referring to an instance of Material in Case.materials
 		thick:	thickness of baffle (cm)
 		gap:	thickness of gap (cm) between the outside assembly
 				(including the assembly gap) and the baffle itself
-		"""
+	"""
 	
 	def __init__(self, mat, thick, gap):
 		self.mat = mat

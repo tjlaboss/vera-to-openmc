@@ -7,10 +7,10 @@ import numpy
 import math
 import openmc
 import pwr
-import objects
 from copy import copy
-from read_xml import Case
-from functions import fill_lattice, clean
+from v2o.objects import Nozzle
+from v2o.read_xml import Case
+from v2o.functions import fill_lattice, clean
 
 
 class MC_Case(Case):
@@ -184,15 +184,8 @@ class MC_Case(Case):
 				if nuclide[-2:] == "00":
 					# Natural abundance-expand except for Carbon
 					ename = nuclide[:-2]
-					if ename == "C":
-						# Correct for OpenMC syntax
-						openmc_material.add_nuclide("C0", frac, 'wo')
-					else:
-						# Element.expand() breaks an element into its constituent nuclides
-						elem = openmc.Element(ename)
-						for nuclist in elem.expand(frac, 'wo'):
-							n, w = nuclist[0:2]
-							openmc_material.add_nuclide(n, w, 'wo')
+					# Element.expand() breaks an element into its constituent nuclides
+					openmc_material.add_element(openmc.Element(ename), frac, 'wo')
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
 			if material in self.colors:
@@ -361,7 +354,7 @@ class MC_Case(Case):
 					height = float(ps["lower_nozzle_height"])
 					lnozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch,
 					                                  "lower-nozzle-mat")
-					lnoz = objects.Nozzle(height, lnozmat, "Lower Nozzle")
+					lnoz = Nozzle(height, lnozmat, "Lower Nozzle")
 					vera_asmbly.pwr_nozzles["lower"] = lnoz
 				else:
 					lnoz = vera_asmbly.pwr_nozzles["lower"]
@@ -373,7 +366,7 @@ class MC_Case(Case):
 					height = float(ps["upper_nozzle_height"])
 					unozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch,
 					                                  "upper-nozzle-mat")
-					unoz = objects.Nozzle(height, unozmat, "Upper Nozzle")
+					unoz = Nozzle(height, unozmat, "Upper Nozzle")
 					vera_asmbly.pwr_nozzles["upper"] = unoz
 				else:
 					unoz = vera_asmbly.pwr_nozzles["upper"]
@@ -438,21 +431,19 @@ class MC_Case(Case):
 		
 		# Create the top and bottom planes of the core and core plate
 		# Intentionally does not use self.__get_surface() due to specific boundary conditions.
-		plate_bot = openmc.ZPlane(self.counter.add_surface(),
-		                          z0 = -self.core.bot_refl.thick, boundary_type = self.core.bc["bot"])
-		core_bot = openmc.ZPlane(self.counter.add_surface(), z0 = 0.0)
-		core_top = openmc.ZPlane(self.counter.add_surface(), z0 = self.core.height)
-		plate_top = openmc.ZPlane(self.counter.add_surface(),
-		                          z0 = self.core.height + self.core.top_refl.thick, boundary_type = self.core.bc["top"])
+		plate_bot = openmc.ZPlane(surface_id=self.counter.add_surface(),
+		                          z0=-self.core.bot_refl.thick, boundary_type=self.core.bc["bot"])
+		core_bot = openmc.ZPlane(surface_id=self.counter.add_surface(), z0 = 0.0)
+		core_top = openmc.ZPlane(surface_id=self.counter.add_surface(), z0 = self.core.height)
+		plate_top = openmc.ZPlane(surface_id=self.counter.add_surface(),
+		                          z0=self.core.height + self.core.top_refl.thick, boundary_type=self.core.bc["top"])
 		zregion = +core_bot & -core_top
 		
 		# Create the concentric cylinders of the vessel
 		for ring in range(len(self.core.vessel_radii) - 1):
 			r = self.core.vessel_radii[ring]
 			m = self.core.vessel_mats[ring]
-			
-			s = openmc.ZCylinder(self.counter.add_surface(), R = r)
-			
+			s = openmc.ZCylinder(surface_id=self.counter.add_surface(), r=r)
 			cell_name = "Vessel_" + str(ring)
 			new_cell = openmc.Cell(self.counter.add_cell(), cell_name)
 			
@@ -478,8 +469,9 @@ class MC_Case(Case):
 				core_cells.append(new_cell)
 		
 		# And finally, the outermost ring
-		vessel_outer = openmc.ZCylinder(self.counter.add_surface(), R = max(self.core.vessel_radii),
-		                                boundary_type = self.core.bc["rad"])
+		vessel_outer = openmc.ZCylinder(surface_id=self.counter.add_surface(),
+		                                r=max(self.core.vessel_radii),
+		                                boundary_type=self.core.bc["rad"])
 		new_cell = openmc.Cell(self.counter.add_cell(), "Vessel-Outer")
 		new_cell.region = -vessel_outer & +last_s & +plate_bot & -plate_top
 		m = self.core.vessel_mats[-1]

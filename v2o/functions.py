@@ -39,7 +39,7 @@ def calc_u234_u236_enrichments(w235):
 	return w234, w236
 
 
-def fill_lattice(keys, lam, n = 0, dtype = object):
+def fill_lattice(keys, lam, n=0, dtype=object):
 	"""Given a map of a lattice (such as a core map), fill it in with objects.
 	
 	Inputs:
