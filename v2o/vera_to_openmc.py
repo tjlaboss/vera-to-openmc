@@ -7,10 +7,10 @@ import numpy
 import math
 import openmc
 import pwr
-import objects
 from copy import copy
-from read_xml import Case
-from functions import fill_lattice, clean
+from v2o.objects import Nozzle
+from v2o.read_xml import Case
+from v2o.functions import fill_lattice, clean
 
 
 class MC_Case(Case):
@@ -361,7 +361,7 @@ class MC_Case(Case):
 					height = float(ps["lower_nozzle_height"])
 					lnozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch,
 					                                  "lower-nozzle-mat")
-					lnoz = objects.Nozzle(height, lnozmat, "Lower Nozzle")
+					lnoz = Nozzle(height, lnozmat, "Lower Nozzle")
 					vera_asmbly.pwr_nozzles["lower"] = lnoz
 				else:
 					lnoz = vera_asmbly.pwr_nozzles["lower"]
@@ -373,7 +373,7 @@ class MC_Case(Case):
 					height = float(ps["upper_nozzle_height"])
 					unozmat = self.get_nozzle_mixture(height, mass, nozzle_mat, self.mod, npins, pitch,
 					                                  "upper-nozzle-mat")
-					unoz = objects.Nozzle(height, unozmat, "Upper Nozzle")
+					unoz = Nozzle(height, unozmat, "Upper Nozzle")
 					vera_asmbly.pwr_nozzles["upper"] = unoz
 				else:
 					unoz = vera_asmbly.pwr_nozzles["upper"]

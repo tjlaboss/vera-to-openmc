@@ -7,9 +7,8 @@ import os
 from xml.etree.ElementTree import ParseError
 import openmc
 import openmc.stats
-import vera_to_openmc
 import pwr
-import tallies
+import v2o
 
 _OPTS = ("--particles", "--batches", "--max-batches", "--inactive",
          "--export", "--help", "-h", "--tallies", "--plots")
@@ -42,11 +41,11 @@ def get_case(case_file):
 	"""Outputs:
 		case_number:    int in {1, 2, 3, 4, 5}; describes which kind of problem it is
 		                (2D pincell, 2D lattice, 3D assembly, 3D mini-core, 3D full-core)
-		case:           instance of vera_to_openmc.MC_Case
+		case:           instance of MC_Case
 	"""
 	# Process the Case and determine what kind it is (pincell, lattice, assembly, or fullcore)
 	try:
-		case = vera_to_openmc.MC_Case(case_file)
+		case = v2o.MC_Case(case_file)
 	except ParseError as e:
 		raise ParseError("Could not parse {}; \
 			is it a valid XML file?\n{}".format(case_file, e))
@@ -234,7 +233,7 @@ class Conversion(object):
 	
 	Parameters:
 	-----------
-	case:           instance of vera_to_openmc.MC_Case
+	case:           instance of MC_Case
 	particles:      int; number of particles per batch to run
 	inactive:       int; number of inactive batches to run
 	min_batches:    int; number of active batches to run,
@@ -447,7 +446,7 @@ class LatticeConversion(LatticeBaseConversion):
 
 	def _set_case_tallies(self):
 		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
-		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
+		v2o.tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
 		
 	def _set_case_plots(self):
 		plot = openmc.Plot()
@@ -521,7 +520,7 @@ class AssemblyConversion(LatticeBaseConversion):
 	
 	def _set_case_tallies(self):
 		lattice = self._case.get_openmc_lattices(self._assembly0)[0]
-		tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
+		v2o.tallies.get_lattice_tally(lattice, scores=["fission"], tallies_file=self._tallies)
 		
 	def _get_zactive(self):
 		return self._pwr_assembly0.z_active
