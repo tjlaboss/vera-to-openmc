@@ -412,7 +412,7 @@ class PincellConversion(Conversion):
 		plot.pixels = [600, 600]
 		plot.color_by = 'material'
 		plot.colors = self._case.col_spec
-		self._plots.add_plot(plot)
+		self._plots.append(plot)
 
 
 class LatticeConversion(LatticeBaseConversion):
@@ -457,7 +457,7 @@ class LatticeConversion(LatticeBaseConversion):
 		plot.pixels = [1200, 1200]
 		plot.color_by = 'material'
 		plot.colors = self._case.col_spec
-		self._plots.add_plot(plot)
+		self._plots.append(plot)
 
 
 class AssemblyConversion(LatticeBaseConversion):
@@ -477,7 +477,7 @@ class AssemblyConversion(LatticeBaseConversion):
 		if lplate:
 			# Add the lower core plate
 			zbot = self._pwr_assembly0.bottom.z0 - lplate.thick
-			bot_surf = openmc.ZPlane(self._case.counter.add_surface(), z0=zbot, name="Bottom")
+			bot_surf = openmc.ZPlane(surface_id=self._case.counter.add_surface(), z0=zbot, name="Bottom")
 			bot_plate_cell = openmc.Cell(self._case.counter.add_cell(), "Lower Core Plate")
 			bot_plate_cell.fill = self._case.get_openmc_material(lplate.material)
 			bot_plate_cell.region = self._pwr_assembly0.wall_region & \
@@ -490,7 +490,7 @@ class AssemblyConversion(LatticeBaseConversion):
 		if uplate:
 			# Add the upper core plate
 			ztop = self._pwr_assembly0.top.z0 + uplate.thick
-			top_surf = openmc.ZPlane(self._case.counter.add_surface(), z0=ztop, name="Top")
+			top_surf = openmc.ZPlane(surface_id=self._case.counter.add_surface(), z0=ztop, name="Top")
 			top_plate_cell = openmc.Cell(self._case.counter.add_cell(), "Upper Core Plate")
 			top_plate_cell.fill = self._case.get_openmc_material(uplate.material)
 			top_plate_cell.region = self._pwr_assembly0.wall_region & \
@@ -563,7 +563,7 @@ class AssemblyConversion(LatticeBaseConversion):
 			pl.pixels = [width, height]
 			pl.color_by = "material"
 			pl.colors = self._case.col_spec
-			self._plots.add_plot(pl)
+			self._plots.append(pl)
 
 
 class CoreBaseConversion(Conversion):
@@ -626,7 +626,7 @@ class MiniCoreConversion(CoreBaseConversion):
 			pl.color_by = "material"
 			pl.colors = self._case.col_spec
 			pl.width = [wx - .01, wy - .01]
-			self._plots.add_plot(pl)
+			self._plots.append(pl)
 		
 		# YZ
 		plot4 = openmc.Plot(plot_id=4)
@@ -638,7 +638,7 @@ class MiniCoreConversion(CoreBaseConversion):
 		plot4.pixels = [width, height]
 		plot4.color_by = "material"
 		plot4.colors = self._case.col_spec
-		self._plots.add_plot(plot4)
+		self._plots.append(plot4)
 
 
 class FullCoreConversion(CoreBaseConversion):
@@ -668,7 +668,7 @@ class FullCoreConversion(CoreBaseConversion):
 			plot.pixels = [width, height]
 			plot.color_by = "material"
 			plot.colors = self._case.col_spec
-			self._plots.add_plot(plot)
+			self._plots.append(plot)
 		for i, x in enumerate(xlist):
 			plot = openmc.Plot(plot_id=k + i + 2)
 			plot.basis = "yz"
@@ -678,7 +678,7 @@ class FullCoreConversion(CoreBaseConversion):
 			plot.pixels = [width, height]
 			plot.color_by = "material"
 			plot.colors = self._case.col_spec
-			self._plots.add_plot(plot)
+			self._plots.append(plot)
 
 
 if __name__ == "__main__":

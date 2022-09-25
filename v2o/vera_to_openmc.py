@@ -184,15 +184,8 @@ class MC_Case(Case):
 				if nuclide[-2:] == "00":
 					# Natural abundance-expand except for Carbon
 					ename = nuclide[:-2]
-					if ename == "C":
-						# Correct for OpenMC syntax
-						openmc_material.add_nuclide("C0", frac, 'wo')
-					else:
-						# Element.expand() breaks an element into its constituent nuclides
-						elem = openmc.Element(ename)
-						for nuclist in elem.expand(frac, 'wo'):
-							n, w = nuclist[0:2]
-							openmc_material.add_nuclide(n, w, 'wo')
+					# Element.expand() breaks an element into its constituent nuclides
+					openmc_material.add_element(openmc.Element(ename), frac, 'wo')
 				else:
 					openmc_material.add_nuclide(nuclide, frac, 'wo')
 			if material in self.colors:

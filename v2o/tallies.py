@@ -24,7 +24,7 @@ def get_lattice_tally(lattice, scores, tallies_file=None):
 		assert isinstance(tallies_file, openmc.Tallies), \
 			"tallies_file must be an instance of openmc.Tallies(), or None."
 	
-	mesh = openmc.Mesh()
+	mesh = openmc.RegularMesh()
 	mesh.type = 'regular'
 	mesh.dimension = lattice.shape
 	mesh.lower_left = lattice.lower_left
