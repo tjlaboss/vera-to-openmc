@@ -4,5 +4,7 @@
 /settings.xml
 __pycache__
 *.pyc
+.idea
+.vscode
 README.md
 

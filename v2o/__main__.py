@@ -228,7 +228,7 @@ def convert_problem():
 		conv.export_to_xml()
 
 
-class Conversion(object):
+class Conversion:
 	"""Base class for conversion of VERA progression problems
 	
 	Parameters:
@@ -255,6 +255,7 @@ class Conversion(object):
 		self._max_batches = max_batches
 		self.folder = folder
 		
+		## FIXME: I think this is where the problem is ##
 		self._pwr_assembly0 = None
 		self._assembly0 = list(self._case.assemblies.values())[0]
 		self._pwr_assembly0 = self._case.get_openmc_assembly(self._assembly0)

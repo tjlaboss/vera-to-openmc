@@ -33,12 +33,12 @@ The goal here is to extract all of the information needed to construct OpenCG or
 '''
 
 
-class Case(object):
-	'''Each VERA input deck represents a unique case.
-	This is a class of such a case.'''
+class Case:
+	"""Each VERA input deck represents a unique case.
+	This is a class of such a case."""
 	
 	def __init__(self, source_file):
-		'''Loads the VERA XML file, creates some placeholder variables, and calls __read_xml()'''
+		"""Loads the VERA XML file, creates some placeholder variables, and calls __read_xml()"""
 		
 		# Location in the file system of the VERA XML.gold
 		self.source_file = source_file
@@ -126,8 +126,8 @@ class Case(object):
 		
 	
 	def __read_xml(self):
-		'''Get and categorize the important parameters from self.source_file
-		All entries should be either "Parameter" or "ParameterList"'''
+		"""Get and categorize the important parameters from self.source_file
+		All entries should be either "Parameter" or "ParameterList\""""
 		for child in self.root:
 			if child.tag == "Parameter":
 				# Get the name of the case
@@ -312,8 +312,8 @@ class Case(object):
 							self.errors += 1
 						asmbly_map = v2o.CoreMap(shape(asmbly, shape_map), "Core Assembly map")
 						self.core = v2o.Core(pitch, core_size, core_height, shape_map, asmbly_map, core_params,
-												 bcs, lower_refl, upper_refl, radii, mats, baffle,
-												 control_bank, control_map, insert_map, detector_map)
+						                     bcs, lower_refl, upper_refl, radii, mats, baffle,
+						                     control_bank, control_map, insert_map, detector_map)
 						
 					elif name == "ASSEMBLIES":
 						for asmbly in child:
@@ -368,7 +368,6 @@ class Case(object):
 													else:
 														# Exit the loop
 														exists = False
-													
 									elif aname == "cellmaps":
 										for cmap in asmbly_child:
 											new_map = self.__get_map(cmap)
@@ -377,31 +376,25 @@ class Case(object):
 										for grid in asmbly_child:
 											new_grid = self.__get_grid(grid)
 											grids[new_grid.label] = new_grid
-												
-									
 									else:
 										warn("Unknown ASSEMBLIES.ParameterList" + aname + "-- ignoring")
 										self.warnings += 1
-								
 								else:
 									print("Error: Entry", asmbly_child.tag, "is neither a Parameter nor ParameterList. Ignoring for now.")
 									self.errors += 1
 									
-							
 							# Instantiate an Assembly object and pass it the parameters
-							new_assembly = v2o.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
+							new_assembly = v2o.Assembly(name=cname, cells=cells, cellmaps=maps, spacergrids=grids,
+							                            params=asmbly_params)
 							self.assemblies[new_assembly.label] = new_assembly
-						
 						
 					elif name == "STATES":
 						# For different states: read all of them and create
 						# a description of each. Generate a geometry for each
 						# of them, or ask the user which one he wants?
-						
 						for stat in child:
 							new_state = self.__get_state(stat)
 							self.states.append(new_state)
-					
 					
 					elif name == "SHIFT":
 						particles = 0; cycles = 0; inactive = 0
@@ -461,24 +454,26 @@ class Case(object):
 					self.warnings += 1
 			
 			else:
-				print("Error: child.tag =", child.tag, "-- Ignoring.\n", \
-				"Expected either Parameter or ParameterList. There is probably something wrong with the XMl.")
+				print("Error: child.tag =", child.tag, "-- Ignoring.\n",
+				      "Expected either Parameter or ParameterList. There is probably something wrong with the XMl.")
 				self.errors += 1
 		
 		# note; end of the giant for loop
 	
 	
 	def __get_material(self, mat, asname = ""):
-		'''When a material or fuel block is encountered in the XML,
+		"""When a material or fuel block is encountered in the XML,
 		extract the useful information.
+		Pass on the assembly Parameters to the instance
 		
-		Inputs:Pass on the assembly Parameters to the instance
+		
+		Parameters
 			mat: 	The ParameterList object describing a VERA material
 			asname:	Assembly or Insert name in which the material is defined.
 					Cells made will check for materials suffixed with this first.
 		
-		Outputs:
-			a_material: Instance of the Material object populated with the properties from the XML.'''
+		Returns
+			a_material: Instance of the Material object populated with the properties from the XML."""
 		
 		# Initialize the 4 material properties
 		mname = ""; mdens = 0.0; mfracs = []; miso_names = []
@@ -517,16 +512,16 @@ class Case(object):
 	
 	
 	def __get_fuel(self, fuel, asname = ""):
-		'''When a fuel block is encountered in the XML, extract the useful information
+		"""When a fuel block is encountered in the XML, extract the useful information
 		and do the math to create a Material instance.
 		
-		Inputs:
+		Parameters
 			fuel: 	The ParameterList object describing a VERA fuel
 			asname:	The assembly in which this fuel appears
 		
-		Outputs:
+		Returns
 			a_material: Instance of the Material object. Should be indistinguishable from
-						one generated by self.__get_material().'''
+						one generated by self.__get_material()."""
 		
 		
 		
@@ -625,13 +620,13 @@ class Case(object):
 	
 	
 	def __get_state(self, state):
-		'''Similar to the other __get_thing() methods
+		"""Similar to the other __get_thing() methods
 		
 		Input:
 			state:		The ParameterList object describing an operating state
 		Output:
 			a_state:	instance of v2o.State
-		'''
+		"""
 		key = state.attrib["name"].lower()
 		
 		# Initialize variables
@@ -702,14 +697,14 @@ class Case(object):
 	
 	
 	def __get_insert(self, insert, is_control = False):
-		'''Similar to the other __get_thing() methods
+		"""Similar to the other __get_thing() methods
 		
-		Inputs:
+		Parameters
 			insert:			The ParameterList object describing an assembly insert
 			is_control:		Whether to instantiate this as a Control object.
 		Output:
 			an_insert:		instance of v2o.Insert
-		'''
+		"""
 		in_name = insert.attrib["name"].lower()
 		# dictionary of all independent parameters for this assembly
 		key = in_name; title = in_name
@@ -774,13 +769,13 @@ class Case(object):
 	
 	
 	def __get_grid(self, grid):
-		'''Same as self.__get_material, but for a grid
+		"""Same as self.__get_material, but for a grid
 		
-		Inputs:
+		Parameters
 			grid: The ParameterList object describing a spacer grid
 		
-		Outputs:
-			a_grid: Instance of the SpacerGrid object populated with the properties from the XML.'''
+		Returns
+			a_grid: Instance of the SpacerGrid object populated with the properties from the XML."""
 		
 		# Initialize the 5 grid properties
 		name = grid.attrib["name"]
@@ -807,10 +802,10 @@ class Case(object):
 	
 	def __get_map(self, cmap):
 		"""
-		Inputs:
+		Parameters
 			cmap: The ParameterList object describing a cell map
 		
-		Outputs:
+		Returns
 			a_map: Instance of the CoreMap object populated with the properties from the XML.
 		"""
 		
@@ -838,12 +833,12 @@ class Case(object):
 	def __get_cell(self, cell, asname):
 		"""Reads the CELL block
 		
-		Inputs:
+		Parameters
 			cell:		The ParameterList object describing a cell
 			asname:		Name of the assembly in which the cell exists   
 		
-		Outputs:
-			TBD
+		Returns
+			a_cell:     Cell
 		"""
 		
 		'''Cell cards are used to describe pin cells. A pin cell is defined as a configuration of concentric
