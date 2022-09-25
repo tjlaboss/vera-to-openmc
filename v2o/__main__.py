@@ -255,8 +255,11 @@ class Conversion:
 		self._max_batches = max_batches
 		self.folder = folder
 		
-		## FIXME: I think this is where the problem is ##
-		self._pwr_assembly0 = None
+		###################################################
+		# FIXME: This does the first assembly encountered #
+		###################################################
+		if len(self._case.assemblies) > 1:
+			raise RuntimeError(f"Multiple assembly definitions found: {self._case.assemblies}. Aborting.")
 		self._assembly0 = list(self._case.assemblies.values())[0]
 		self._pwr_assembly0 = self._case.get_openmc_assembly(self._assembly0)
 		self._pitch = self._get_pitch()

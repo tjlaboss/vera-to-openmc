@@ -96,7 +96,11 @@ class Case:
 		self.__read_xml()
 		
 		# And now, select a state and use its properties
-		#FIXME: Right now, this just selects the first state encountered
+		###################################################################
+		# FIXME: Right now, this just selects the first state encountered #
+		###################################################################
+		if len(self.states) > 1:
+			raise RuntimeError(f"Multiple states found: {self.states}. Aborting.")
 		self.state = self.states[0]
 		self.materials['mod'] = self.state.mod
 		'''
