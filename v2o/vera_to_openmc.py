@@ -7,10 +7,10 @@ import numpy
 import math
 import openmc
 import pwr
-import objects
 from copy import copy
-from read_xml import Case
-from functions import fill_lattice, clean
+from v2o.objects import Nozzle
+from v2o.read_xml import Case
+from v2o.functions import fill_lattice, clean
 
 
 class MC_Case(Case):
