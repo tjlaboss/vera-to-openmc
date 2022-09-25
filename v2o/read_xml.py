@@ -12,9 +12,9 @@
 
 import xml.etree.ElementTree as ET
 from warnings import warn
-from functions import clean, calc_u234_u236_enrichments, shape
-import objects
-from objects import FUELTEMP, MODTEMP
+import v2o
+from v2o.functions import clean, calc_u234_u236_enrichments, shape
+from v2o.objects import FUELTEMP, MODTEMP
 from openmc.data import atomic_mass
 
 
@@ -66,7 +66,7 @@ class Case(object):
 		
 		# Placeholder for an essential material
 		mod_density = 1.0; mod_isotopes = {"H1":-2.0/3, "O16":-1.0/3}
-		self.materials['mod'] = objects.Material("mod", mod_density, mod_isotopes)
+		self.materials['mod'] = v2o.Material("mod", mod_density, mod_isotopes)
 		
 		# Set the default colors for commonly-used materials
 		self.colors = {
@@ -89,7 +89,7 @@ class Case(object):
 		}
 		
 		# Set the default Monte Carlo simulation parameters (which may be changed later)
-		self.mc = objects.MonteCarlo()
+		self.mc = v2o.MonteCarlo()
 		
 		# Then populate everything:
 		self.errors = 0; self.warnings = 0
@@ -217,7 +217,7 @@ class Case(object):
 							elif p == "assm_map":
 								asmbly = clean(v, str)
 							elif p == "shape":
-								shape_map = objects.CoreMap(clean(v, int), "Core shape map")
+								shape_map = v2o.CoreMap(clean(v, int), "Core shape map")
 							elif p == "core_size":
 								core_size = int(v)
 							elif p == "height":
@@ -246,7 +246,7 @@ class Case(object):
 									continue
 								elif len(baffle) == 3:
 									# Redefine the variable from a dictionary to an object
-									baffle = objects.Baffle(baffle["mat"], baffle["thick"], baffle["gap"])
+									baffle = v2o.Baffle(baffle["mat"], baffle["thick"], baffle["gap"])
 							elif p[:6] == "lower_":
 								b = p[6:] 
 								if b == "mat":
@@ -255,11 +255,11 @@ class Case(object):
 									lower[b] = float(v)
 								if len(lower) == 3:
 									name = "lowerplate"
-									lower_mat = objects.Mixture(name = name, 
+									lower_mat = v2o.Mixture(name = name,
 												materials = (self.materials[lower["mat"]], self.materials["mod"]),
 												vfracs = (lower["vfrac"], 1.0 - lower["vfrac"]) )
 									self.materials[name] = lower_mat
-									lower_refl = objects.Reflector(name, lower["thick"], "lower")
+									lower_refl = v2o.Reflector(name, lower["thick"], "lower")
 								else:
 									continue
 							elif p[:6] == "upper_":
@@ -270,11 +270,11 @@ class Case(object):
 									upper[b] = float(v)
 								if len(upper) == 3:
 									name = "upperplate"
-									upper_mat = objects.Mixture(name = name, 
+									upper_mat = v2o.Mixture(name = name,
 												materials = (self.materials[upper["mat"]], self.materials["mod"]),
 												vfracs = (upper["vfrac"], 1.0 - upper["vfrac"]) )
 									self.materials[name] = upper_mat
-									upper_refl = objects.Reflector(name, upper["thick"], "upper")
+									upper_refl = v2o.Reflector(name, upper["thick"], "upper")
 								else:
 									continue
 							elif p == "vessel_radii":
@@ -285,23 +285,23 @@ class Case(object):
 						# Make an "empty" core map in case one does not exist
 						# TODO: Replace everything with arrays
 						empty_map = ['-']*len(shape_map[0, :])*len(shape_map[:, 0])
-						empty_core_map = objects.CoreMap(shape(empty_map, shape_map), "[EMPTY MAP]")
+						empty_core_map = v2o.CoreMap(shape(empty_map, shape_map), "[EMPTY MAP]")
 						# Take the ugly cellmaps, shape them to match the core shape,
 						# and then turn them into nice CoreMaps.
 						if insert_cellmap:
-							insert_map = objects.CoreMap(shape(insert_cellmap, shape_map), "Core insertion map")
+							insert_map = v2o.CoreMap(shape(insert_cellmap, shape_map), "Core insertion map")
 						else:
 							insert_map = empty_core_map
 						if control_bank_cellmap:
-							control_bank = objects.CoreMap(shape(control_bank_cellmap, shape_map), "Control rod bank map")
+							control_bank = v2o.CoreMap(shape(control_bank_cellmap, shape_map), "Control rod bank map")
 						else:
 							control_bank = empty_core_map
 						if control_cellmap:
-							control_map = objects.CoreMap(shape(control_cellmap, shape_map), "Control rod location map")
+							control_map = v2o.CoreMap(shape(control_cellmap, shape_map), "Control rod location map")
 						else:
 							control_map = empty_core_map
 						if detector_cellmap:
-							detector_map = objects.CoreMap(shape(detector_cellmap, shape_map), "Detector location map")
+							detector_map = v2o.CoreMap(shape(detector_cellmap, shape_map), "Detector location map")
 						else:
 							detector_map = empty_core_map
 							
@@ -310,8 +310,8 @@ class Case(object):
 						if len(radii) != len(mats):
 							warn("Error: there are " + str(len(radii)) + " core radii, but " + str(len(mats)) + " materials!")
 							self.errors += 1
-						asmbly_map = objects.CoreMap(shape(asmbly, shape_map), "Core Assembly map")
-						self.core = objects.Core(pitch, core_size, core_height, shape_map, asmbly_map, core_params,
+						asmbly_map = v2o.CoreMap(shape(asmbly, shape_map), "Core Assembly map")
+						self.core = v2o.Core(pitch, core_size, core_height, shape_map, asmbly_map, core_params,
 												 bcs, lower_refl, upper_refl, radii, mats, baffle,
 												 control_bank, control_map, insert_map, detector_map)
 						
@@ -389,7 +389,7 @@ class Case(object):
 									
 							
 							# Instantiate an Assembly object and pass it the parameters
-							new_assembly = objects.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
+							new_assembly = v2o.Assembly(name = cname, cells = cells, cellmaps = maps, spacergrids = grids, params = asmbly_params)
 							self.assemblies[new_assembly.label] = new_assembly
 						
 						
@@ -426,7 +426,7 @@ class Case(object):
 								warn(warnstr)
 								self.warnings += 1
 									
-						self.mc = objects.MonteCarlo(cycles, inactive, particles)
+						self.mc = v2o.MonteCarlo(cycles, inactive, particles)
 					
 					elif name == "EDITS":
 						for prop in child:
@@ -511,7 +511,7 @@ class Case(object):
 			isos[miso_names[i]] = mfracs[i]
 		
 		# Instantiate a new material return it
-		a_material = objects.Material(mname + asname, mdens, isos, MODTEMP)
+		a_material = v2o.Material(mname + asname, mdens, isos, MODTEMP)
 		return a_material
 	
 	
@@ -620,7 +620,7 @@ class Case(object):
 		
 		
 		# Instantiate a new material and add it to the dictionary
-		a_material = objects.Material(mname + asname, mdens, isos, FUELTEMP)
+		a_material = v2o.Material(mname + asname, mdens, isos, FUELTEMP)
 		return a_material
 	
 	
@@ -630,7 +630,7 @@ class Case(object):
 		Input:
 			state:		The ParameterList object describing an operating state
 		Output:
-			a_state:	instance of objects.State
+			a_state:	instance of v2o.State
 		'''
 		key = state.attrib["name"].lower()
 		
@@ -693,10 +693,10 @@ class Case(object):
 					"B11" : b11frac,
 					"H1"  : h2ofrac * hmass/(hmass + omass),
 					"O16" : h2ofrac * omass/(hmass + omass)}
-		mod = objects.Material("mod", density, mod_isos, tinlet)
+		mod = v2o.Material("mod", density, mod_isos, tinlet)
 		
 		# Instantiate and return the State object
-		a_state = objects.State(key, tfuel, tinlet, mod, name, 
+		a_state = v2o.State(key, tfuel, tinlet, mod, name,
 								rodbank, state_params)
 		return a_state
 	
@@ -708,7 +708,7 @@ class Case(object):
 			insert:			The ParameterList object describing an assembly insert
 			is_control:		Whether to instantiate this as a Control object.
 		Output:
-			an_insert:		instance of objects.Insert
+			an_insert:		instance of v2o.Insert
 		'''
 		in_name = insert.attrib["name"].lower()
 		# dictionary of all independent parameters for this assembly
@@ -764,10 +764,10 @@ class Case(object):
 		
 				
 		if is_control:
-			an_insert = objects.Control(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
+			an_insert = v2o.Control(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
 										insert_params, stroke, max_step)
 		else:
-			an_insert = objects.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
+			an_insert = v2o.Insert(key, title, npins, cells, cellmaps, axial_elevs, axial_labels,
 										insert_params)
 		return an_insert
 			
@@ -802,7 +802,7 @@ class Case(object):
 				self.warnings += 1
 		
 		# Instantiate a new material and add it to the dictionary
-		a_grid = objects.SpacerGrid(name, height, mass, label, mat)
+		a_grid = v2o.SpacerGrid(name, height, mass, label, mat)
 		return a_grid
 	
 	def __get_map(self, cmap):
@@ -831,7 +831,7 @@ class Case(object):
 				self.warnings += 1
 		
 		# Instantiate a new material and add it to the dictionary
-		a_cell_map = objects.CoreMap(map_itself, name, label)
+		a_cell_map = v2o.CoreMap(map_itself, name, label)
 		return a_cell_map
 	
 	
@@ -889,7 +889,7 @@ class Case(object):
 			print("Error: there are", num_rings, "rings of", name, "but", len(mats), "materials were provided!", '(' + asname + ')')
 			self.errors += 1
 			
-		a_cell = objects.Cell(name, num_rings, radii, mats, label, asname)
+		a_cell = v2o.Cell(name, num_rings, radii, mats, label, asname)
 		return a_cell
 	
 		
