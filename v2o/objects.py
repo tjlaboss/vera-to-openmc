@@ -5,7 +5,7 @@
 import numpy
 from math import sqrt
 from copy import copy
-from functions import *
+from v2o.functions import *
 from openmc.data import atomic_mass
 
 FUELTEMP = -1
